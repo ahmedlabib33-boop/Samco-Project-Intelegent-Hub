@@ -1,0 +1,1481 @@
+from __future__ import annotations
+
+import pandas as pd
+import streamlit as st
+import plotly.express as px
+from pathlib import Path
+
+from src.construction_system.steel_delay_tia import (
+    SteelTiaSettings,
+    build_requirement_df_from_client_supply_sheet,
+    parse_mixed_date,
+    run_steel_delay_tia_analysis,
+)
+
+from src.construction_system.analytics import (
+    get_change_orders,
+    get_contract_summary,
+    get_delay_analysis,
+    get_milestones,
+    get_project_control_summary,
+    get_risk_analysis,
+)
+from src.construction_system.database import DEFAULT_DB_PATH
+from src.construction_system.contract_matcher import (
+    match_event_to_clauses,
+    analyze_delay_event,
+    get_all_clauses,
+    search_clauses,
+)
+from src.construction_system.csv_loader import get_loader as get_csv_loader
+from src.construction_system.evm_loader import get_evm_loader
+from data.s_curve_data import get_s_curve_data, get_s_curve_summary
+from src.construction_system.reporting import generate_html_report
+
+
+# ── Page Config ───────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Project Intelligence Hub",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── Custom CSS for Professional Styling ────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #071938;
+    }
+    .samco-header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    .samco-title {
+       font-size: 32px;
+       font-weight: 700;
+       margin: 0;
+       color: #FFFFFF;
+       text-shadow: 0px 0px 12px rgba(255,255,255,0.25);
+    }
+    .samco-subtitle {
+       font-size: 18px;
+       color: #D6E4FF;
+       margin: 5px 0 15px 0;
+       font-weight: 500;
+    }
+    .samco-contract-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .samco-info-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 12px;
+        border-radius: 6px;
+        border-left: 3px solid #4a9eff;
+    }
+    .samco-info-label {
+        font-size: 12px;
+        color: #9EC5FF;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+    }
+    .samco-info-value {
+       font-size: 15px;
+       font-weight: 700;
+       color: #FFFFFF;
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #071938;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .metric-value {
+        font-size: 28px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    .metric-label {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+    .status-good { color: #28a745; font-weight: bold; }
+    .status-warning { color: #ffc107; font-weight: bold; }
+    .status-critical { color: #dc3545; font-weight: bold; }
+    .chart-container {
+        background: #071938;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 10px 0;
+    }
+     h1, h2, h3, h4, h5, h6, p, label, div, span {
+        color: #F5F7FA !important;
+    }
+
+     [data-testid="stMetricValue"] {
+        color: #FFFFFF !important;
+    }
+
+     [data-testid="stMetricLabel"] {
+        color: #B8C7E0 !important;
+    }
+
+     .stTabs [data-baseweb="tab"] {
+        color: #D6E4FF !important;
+        font-weight: 600;
+    }
+
+     table {
+    color: white !important;
+    }
+    </style>
+    """,    
+    unsafe_allow_html=True,
+)
+
+
+# ── Helper Functions ──────────────────────────────────────────────────────────
+def get_status_color(value, threshold_good=0.9, threshold_warning=0.8):
+    """Return status color based on value (SPI/CPI)."""
+    if value is None:
+        return "gray"
+    if value >= threshold_good:
+        return "green"
+    elif value >= threshold_warning:
+        return "orange"
+    else:
+        return "red"
+
+
+def format_currency(value):
+    """Format value as currency."""
+    if value is None:
+        return "$0"
+    return f"${value:,.0f}"
+
+
+def format_percentage(value):
+    """Format value as percentage."""
+    if value is None:
+        return "0%"
+    return f"{value:.1f}%"
+
+
+BASE_DIR = Path(__file__).resolve().parent
+STEEL_TIA_DIR = BASE_DIR / "steel_delay_tia_templates"
+
+
+def load_csv_or_empty(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except Exception:
+        return pd.DataFrame()
+
+
+def safe_qty_sum(series: pd.Series | None) -> float:
+    if series is None:
+        return 0.0
+    return float(pd.to_numeric(series, errors="coerce").fillna(0).sum())
+
+
+def format_date_label(value):
+    if value is None or pd.isna(value):
+        return "N/A"
+    parsed = value
+    if not isinstance(parsed, pd.Timestamp):
+        parsed = pd.to_datetime(parse_mixed_date(value), errors="coerce")
+    if pd.isna(parsed):
+        return str(value) if str(value).strip() else "N/A"
+    return parsed.strftime("%d-%b-%Y")
+
+
+def prepare_employer_supply_df(raw_df: pd.DataFrame) -> pd.DataFrame:
+    if raw_df.empty:
+        return pd.DataFrame(columns=[
+            "Date", "Steel Type / Diameter", "Delivered Qty", "Consumed Qty", "Balance Qty",
+            "Delivery Ref", "Remarks", "Building / Zone Allocation", "Activity ID consuming the steel",
+            "Remaining Required Qty", "Balance After Allocation"
+        ])
+    working = raw_df.copy()
+    date_col = working.columns[0]
+    qty_col = working.columns[1] if len(working.columns) > 1 else working.columns[0]
+    result = pd.DataFrame({
+        "Date": working[date_col],
+        "Steel Type / Diameter": "RFT STEEL",
+        "Delivered Qty": pd.to_numeric(working[qty_col], errors="coerce").fillna(0),
+        "Consumed Qty": 0.0,
+        "Balance Qty": 0.0,
+        "Delivery Ref": [f"ROYA-SUPPLY-{idx + 1:03d}" for idx in range(len(working))],
+        "Remarks": "Employer ROYA steel supply",
+        "Building / Zone Allocation": "MULTI",
+        "Activity ID consuming the steel": "",
+        "Remaining Required Qty": 0.0,
+        "Balance After Allocation": 0.0,
+    })
+    return result
+
+
+def build_delay_tia_context() -> dict:
+    master_df = load_csv_or_empty(STEEL_TIA_DIR / "01- master_activity_steel_analysis.csv")
+    employer_raw_df = load_csv_or_empty(STEEL_TIA_DIR / "02- employer_steel_supply.csv")
+    p6_df = load_csv_or_empty(STEEL_TIA_DIR / "03- p6_activity_export.csv")
+    relationship_df = load_csv_or_empty(STEEL_TIA_DIR / "04- relationship_file.csv")
+    contract_df = load_csv_or_empty(STEEL_TIA_DIR / "05- contract_library.csv")
+    samco_df = load_csv_or_empty(STEEL_TIA_DIR / "10- samco_steel_supplied_at_site.csv")
+    delay_events_df = load_csv_or_empty(BASE_DIR / "data" / "import_templates" / "delay_events.csv")
+
+    employer_supply_df = prepare_employer_supply_df(employer_raw_df)
+    requirement_df = build_requirement_df_from_client_supply_sheet(master_df) if not master_df.empty else pd.DataFrame()
+
+    settings = SteelTiaSettings(
+        usability_lag_days=2,
+        near_critical_float_threshold=10,
+        data_date=pd.Timestamp.today().normalize(),
+    )
+
+    analysis = run_steel_delay_tia_analysis(
+        p6_df=p6_df,
+        steel_df=employer_supply_df,
+        requirement_df=requirement_df,
+        relationship_df=relationship_df,
+        contract_library_df=contract_df,
+        delay_events_df=delay_events_df,
+        settings=settings,
+    )
+
+    employer_total = safe_qty_sum(employer_raw_df.iloc[:, 1] if not employer_raw_df.empty and employer_raw_df.shape[1] > 1 else None)
+    samco_total = safe_qty_sum(samco_df.get("Total Quantity") if not samco_df.empty else None)
+
+    return {
+        "master_df": master_df,
+        "employer_raw_df": employer_raw_df,
+        "samco_df": samco_df,
+        "analysis": analysis,
+        "employer_total": employer_total,
+        "samco_total": samco_total,
+        "employer_first_date": employer_raw_df.iloc[:, 0].iloc[0] if not employer_raw_df.empty else pd.NaT,
+        "employer_last_date": employer_raw_df.iloc[:, 0].iloc[-1] if not employer_raw_df.empty else pd.NaT,
+        "samco_first_date": samco_df.get("Date of delivery").iloc[0] if not samco_df.empty and "Date of delivery" in samco_df.columns else pd.NaT,
+        "samco_last_date": samco_df.get("Date of delivery").iloc[-1] if not samco_df.empty and "Date of delivery" in samco_df.columns else pd.NaT,
+    }
+
+
+def find_presentation_files() -> list[Path]:
+    presentation_dir = Path(r"C:\Users\pc\OneDrive\Desktop\Presentation")
+    if not presentation_dir.exists():
+        return []
+    return sorted(presentation_dir.glob("*.pptx"), key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def build_delay_tia_download_pack(analysis: dict) -> bytes:
+    import io, zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name in [
+            "executive_summary_df",
+            "stock_out_df",
+            "candidates_df",
+            "fragnet_df",
+            "assessment_df",
+            "data_quality_df",
+        ]:
+            df = analysis.get(name, pd.DataFrame())
+            if isinstance(df, pd.DataFrame) and not df.empty:
+                zf.writestr(f"{name}.csv", df.to_csv(index=False))
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+# ── Load Data ──────────────────────────────────────────────────────────────────
+project_data = get_project_control_summary(DEFAULT_DB_PATH)
+contracts = get_contract_summary(DEFAULT_DB_PATH)
+delays = get_delay_analysis(DEFAULT_DB_PATH)
+risks = get_risk_analysis(DEFAULT_DB_PATH)
+milestones = get_milestones(DEFAULT_DB_PATH)
+change_orders = get_change_orders(DEFAULT_DB_PATH)
+
+project = project_data["project"] or {}
+kpis = project_data["kpis"]
+activities = project_data["activities"]
+wbs_costs = project_data["wbs_costs"]
+monthly_spend = project_data["monthly_spend"]
+crit_progress = project_data["crit_progress"]
+
+delay_tia_context = build_delay_tia_context()
+delay_tia_analysis = delay_tia_context["analysis"]
+
+
+# ── Header ─────────────────────────────────────────────────────────────────────
+# SAMCO Egypt Branding Header
+st.markdown(
+    """
+    <div class='samco-header'>
+        <div class='samco-title'>🏗️ SAMCO Egypt - Projects Intelligence Hub</div>
+        <div class='samco-subtitle'>Integrated Project Controls System</div>
+        <div class='samco-contract-info'>
+            <div class='samco-info-item'>
+                <div class='samco-info-label'>Contractor</div>
+                <div class='samco-info-value'>SAMCO Egypt</div>
+            </div>
+            <div class='samco-info-item'>
+                <div class='samco-info-label'>Employer</div>
+                <div class='samco-info-value'>Roya</div>
+            </div>
+            <div class='samco-info-item'>
+                <div class='samco-info-label'>Contract Value</div>
+                <div class='samco-info-value'>EGP 367.3M</div>
+            </div>
+            <div class='samco-info-item'>
+                <div class='samco-info-label'>Duration</div>
+                <div class='samco-info-value'>19 Months</div>
+            </div>
+        </div>
+        <div style='margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.2); font-size: 12px; color: #b0b0b0;'>
+            <strong>Designed and Developed by:</strong> Eng Ahmed Labib | <strong>Department:</strong> Planning Department
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(f"**Project:** {project.get('project_name', 'No Project Loaded')}")
+
+# ── Tabs ───────────────────────────────────────────────────────────────────────
+tab_overview, tab_evm, tab_contracts, tab_delays, tab_risks, tab_milestones, tab_time_impact, tab_s_curve, tab_clause_matcher, tab_delay_tia, tab_output_studio = st.tabs(
+    ["📊 Overview", "📈 EVM Analysis", "📋 Contracts", "⚠️ Delays", "🎯 Risks", "🎪 Milestones", "⏳ Time Impact", "📉 S-Curve", "⚖️ Contract Clauses", "⏱️ Delay TIA", "🧰 Output Studio"]
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 1: OVERVIEW
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_overview:
+    st.subheader("Project Summary")
+
+    # KPI Cards
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric(
+            "Budget at Completion",
+            format_currency(kpis.get("bac", 0)),
+            delta=None,
+        )
+    with col2:
+        st.metric(
+            "Actual Cost",
+            format_currency(kpis.get("ac", 0)),
+            delta=None,
+        )
+    with col3:
+        spi = kpis.get("spi")
+        st.metric(
+            "Schedule Performance Index",
+            f"{spi:.2f}" if spi else "N/A",
+            delta="On Track" if spi and spi >= 0.9 else "Behind",
+        )
+    with col4:
+        cpi = kpis.get("cpi")
+        st.metric(
+            "Cost Performance Index",
+            f"{cpi:.2f}" if cpi else "N/A",
+            delta="On Budget" if cpi and cpi >= 0.9 else "Over Budget",
+        )
+
+    st.divider()
+
+    # Progress Overview
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric(
+            "Overall Progress",
+            format_percentage(kpis.get("overall_progress", 0))
+        )
+
+    with col2:
+        st.metric(
+            "Planned Progress",
+            format_percentage(kpis.get("planned_progress", 0))
+        )
+
+    with col3:
+        st.metric(
+            "Time Elapsed",
+            format_percentage(kpis.get("time_elapsed", 0))
+        )
+
+    with col4:
+        st.metric(
+            "Remaining Duration",
+            format_percentage(kpis.get("remaining_duration", 0))
+        )
+
+    st.divider()
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Total Activities",
+            int(kpis.get("total_activities", 0))
+        )
+
+    with col2:
+        st.metric(
+            "Critical Activities",
+            int(kpis.get("critical_activities", 0))
+        )
+
+    with col3:
+        st.metric(
+            "Schedule Variance",
+            format_currency(kpis.get("sv", 0))
+        )
+        
+        st.divider()
+
+        # WBS Cost Breakdown Chart
+        if wbs_costs:
+            st.subheader("WBS Cost Breakdown (Top 15)")
+            df_wbs = pd.DataFrame(wbs_costs)
+        else:
+            st.info("No WBS cost data available.")
+
+        # Monthly Spend Trend
+        if monthly_spend:
+            st.subheader("Monthly Spend Trend")
+            df_monthly = pd.DataFrame(monthly_spend)
+            st.line_chart(df_monthly.set_index("month")["actual_cost"])
+        else:
+            st.info("No monthly spend data available.")
+
+        # Critical vs Non-Critical Progress
+        if crit_progress:
+            st.subheader("Critical vs Non-Critical Activity Progress")
+            df_crit = pd.DataFrame(crit_progress)
+            df_crit["type"] = df_crit["is_critical"].apply(lambda x: "Critical" if x else "Non-Critical")
+            st.bar_chart(
+            df_crit.set_index("type")[["avg_planned_progress", "avg_actual_progress"]]
+            )
+        else:
+            st.info("No critical progress data available.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 2: EVM ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_evm:
+    st.subheader("Earned Value Management (EVM) Analysis")
+
+    # EVM KPIs
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("BAC (Budget at Completion)", format_currency(kpis.get("bac", 0)))
+    with col2:
+        st.metric("AC (Actual Cost)", format_currency(kpis.get("ac", 0)))
+    with col3:
+        st.metric("EV (Earned Value)", format_currency(kpis.get("ev", 0)))
+    with col4:
+        st.metric("PV (Planned Value)", format_currency(kpis.get("pv", 0)))
+
+    st.divider()
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        spi = kpis.get("spi")
+        status = "✅ On Track" if spi and spi >= 0.95 else ("⚠️ At Risk" if spi and spi >= 0.85 else "❌ Behind")
+        st.metric("SPI (Schedule Performance Index)", f"{spi:.3f}" if spi else "N/A", delta=status)
+    with col2:
+        cpi = kpis.get("cpi")
+        status = "✅ On Budget" if cpi and cpi >= 0.95 else ("⚠️ At Risk" if cpi and cpi >= 0.85 else "❌ Over Budget")
+        st.metric("CPI (Cost Performance Index)", f"{cpi:.3f}" if cpi else "N/A", delta=status)
+    with col3:
+        st.metric("SV (Schedule Variance)", format_currency(kpis.get("sv", 0)))
+    with col4:
+        st.metric("CV (Cost Variance)", format_currency(kpis.get("cv", 0)))
+
+    st.divider()
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("EAC (Estimate at Completion)", format_currency(kpis.get("eac", 0)))
+    with col2:
+        st.metric("ETC (Estimate to Complete)", format_currency(kpis.get("etc", 0)))
+    with col3:
+        tcpi = kpis.get("tcpi")
+        st.metric("TCPI (To-Complete Performance Index)", f"{tcpi:.3f}" if tcpi else "N/A")
+
+    st.divider()
+
+    # Activities Table
+    st.subheader("Activity Details")
+    if activities:
+        df_activities = pd.DataFrame(activities)
+        st.dataframe(
+            df_activities[[
+                "activity_id",
+                "activity_name",
+                "planned_start",
+                "planned_finish",
+                "forecast_finish",
+                "planned_weight",
+                "planned_progress",
+                "actual_progress",
+                "total_float_days",
+                "is_critical",
+                "responsible_party"
+            ]],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("No activity data available.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 3: CONTRACTS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_contracts:
+    st.subheader("Contract Management")
+
+    if contracts:
+        df_contracts = pd.DataFrame(contracts)
+
+        # Contract Summary Metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Contracts", len(df_contracts))
+        with col2:
+            total_value = df_contracts["revised_contract_value"].sum()
+            st.metric("Total Contract Value", format_currency(total_value))
+        with col3:
+            certified = df_contracts["certified_amount"].sum()
+            st.metric("Total Certified", format_currency(certified))
+        with col4:
+            paid = df_contracts["paid_amount"].sum()
+            st.metric("Total Paid", format_currency(paid))
+
+        st.divider()
+
+        # Contract Status Pie Chart
+        col1, col2 = st.columns(2)
+        with col1:
+            status_counts = df_contracts["status"].value_counts()
+            st.subheader("Contract Status Distribution")
+            fig = px.pie(values=status_counts.values, names=status_counts.index, title="Contract Status")
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.subheader("Contract Type Distribution")
+            type_counts = df_contracts["contract_type"].value_counts()
+            fig = px.pie(values=type_counts.values, names=type_counts.index, title="Contract Type")
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # Detailed Contract Table
+        st.subheader("Contract Details")
+        st.dataframe(
+            df_contracts[[
+                "contract_no", "contractor_name", "contract_type", "revised_contract_value",
+                "certified_amount", "paid_amount", "uncertified_balance", "status"
+            ]],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("No contract data available.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 4: DELAYS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_delays:
+    st.subheader("Delay Analysis")
+
+    if delays:
+        df_delays = pd.DataFrame(delays)
+
+        # Delay Summary
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Delay Events", len(df_delays))
+        with col2:
+            total_delay_days = df_delays["delay_days"].sum()
+            st.metric("Total Delay Days", int(total_delay_days))
+        with col3:
+            critical_delays = len(df_delays[df_delays["critical_impact"] == 1])
+            st.metric("Critical Delays", critical_delays)
+        with col4:
+            eot_potential = len(df_delays[df_delays["eot_potential"] == "Yes"])
+            st.metric("EOT Potential", eot_potential)
+
+        st.divider()
+
+        # Delay Details Table
+        st.subheader("Delay Events")
+        st.dataframe(
+            df_delays[[
+                "event_title", "event_date", "delay_days", "responsible_party",
+                "critical_impact", "eot_potential", "pending_exposure_days", "status"
+            ]],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("No delay data available.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 5: RISKS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_risks:
+    st.subheader("Risk Analysis")
+
+    if risks:
+        df_risks = pd.DataFrame(risks)
+
+        # Risk Summary
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Risks", len(df_risks))
+        with col2:
+            high_risks = len(df_risks[df_risks["severity_band"] == "High"])
+            st.metric("High Severity", high_risks)
+        with col3:
+            medium_risks = len(df_risks[df_risks["severity_band"] == "Medium"])
+            st.metric("Medium Severity", medium_risks)
+        with col4:
+            low_risks = len(df_risks[df_risks["severity_band"] == "Low"])
+            st.metric("Low Severity", low_risks)
+
+        st.divider()
+
+        # Risk Severity Distribution
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Risk Severity Distribution")
+            severity_counts = df_risks["severity_band"].value_counts()
+            fig = px.pie(values=severity_counts.values, names=severity_counts.index, title="Risk Severity")
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.subheader("Risk Category Distribution")
+            category_counts = df_risks["category"].value_counts()
+            df_category = pd.DataFrame({"Category": category_counts.index, "Count": category_counts.values})
+            fig = px.bar(df_category, x="Category", y="Count", title="Risk Category", color_discrete_sequence=["#8b5cf6"])
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # Risk Details Table
+        st.subheader("Risk Register")
+        st.dataframe(
+            df_risks[[
+                "risk_code", "risk_title", "category", "probability",
+                "time_impact_days", "cost_impact", "severity_band",
+                "response_strategy", "mitigation_status"
+            ]],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("No risk data available.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 6: MILESTONES
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_milestones:
+    st.subheader("Milestones & Change Orders")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Milestones")
+        if milestones:
+            df_milestones = pd.DataFrame(milestones)
+            st.dataframe(
+                df_milestones,
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.info("No milestone data available.")
+
+    with col2:
+        st.subheader("Change Orders")
+        if change_orders:
+            df_change_orders = pd.DataFrame(change_orders)
+            st.dataframe(
+                df_change_orders,
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.info("No change order data available.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 7: TIME IMPACT ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_time_impact:
+    st.markdown("<div class='section-header'><h3>Time Impact Analysis - Delay Events</h3></div>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    ### Overview
+    Time Impact Analysis evaluates how delay events affect project schedule and identifies critical path impacts.
+    This analysis tracks material delivery delays and their cascading effects on dependent activities.
+    """)
+    
+    st.divider()
+    
+    # Delay Event Summary
+    st.markdown("#### Delay Event Summary")
+    
+    delay_events_data = {
+        "Event ID": ["Event 1", "Event 2"],
+        "Activity": ["CON-B01-BAS02-1010", "CON-B04-FOOT-1050"],
+        "Activity Name": [
+            "RFT for Walls, Col. & Cores (B01) (Bas 02)",
+            "RFT for RC Raft & Footings (B04)"
+        ],
+        "Original Duration (days)": [15, 8],
+        "Planned Start": ["25-Dec-25", "22-Mar-26"],
+        "Planned Finish": ["12-Jan-26", "30-Mar-26"],
+        "Delay Days": [46, 45],
+        "Root Cause": [
+            "Material Delivery Delay",
+            "Material Delivery Delay"
+        ],
+        "Activity % Complete": ["41%", "28%"],
+        "Impact Type": ["Critical Path", "Critical Path"]
+    }
+    
+    df_delay_events = pd.DataFrame(delay_events_data)
+    st.dataframe(df_delay_events, use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    # Time Impact Metrics
+    st.markdown("#### Time Impact Metrics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Delay Events", 2)
+    with col2:
+        st.metric("Total Delay Days", 91)
+    with col3:
+        st.metric("Critical Path Impact", "2 Activities")
+    with col4:
+        st.metric("Average Delay", "45.5 days")
+    
+    st.divider()
+    
+    # Delay Impact Analysis
+    st.markdown("#### Detailed Delay Impact Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Event 1: Material Delivery Delay (B01)**")
+        st.markdown("""
+        - **Activity**: RFT for Walls, Col. & Cores (B01) (Bas 02)
+        - **Activity ID**: CON-B01-BAS02-1010
+        - **Original Duration**: 15 days
+        - **Planned Period**: 25-Dec-25 to 12-Jan-26
+        - **Delay Days**: 46 days
+        - **Material Delivery**: 13-Feb-26 (partial - 371 tons out of 726 tons)
+        - **Activity Progress**: 41% complete
+        - **Fragment Strategy**: 
+          - Part 1: 6 days (25-Dec-25 to 31-Dec-25)
+          - Part 2: Remaining (16-Feb-26 to 25-Feb-26)
+        - **Root Cause**: Delay on Employee free-issue materials
+        - **Impact**: Cascading delay to dependent activities
+        """)
+    
+    with col2:
+        st.markdown("**Event 2: Material Delivery Delay (B04)**")
+        st.markdown("""
+        - **Activity**: RFT for RC Raft & Footings (B04)
+        - **Activity ID**: CON-B04-FOOT-1050
+        - **Original Duration**: 8 days
+        - **Planned Period**: 22-Mar-26 to 30-Mar-26
+        - **Delay Days**: 45 days
+        - **Material Delivery**: 05-May-26
+        - **Activity Progress**: 28% complete
+        - **Fragment Strategy**:
+          - Part 1: 2 days (24-Mar-26)
+          - Part 2: Remaining (08-May-26 to 14-May-26)
+        - **Root Cause**: Delay on Employee free-issue materials
+        - **Impact**: Pushes subsequent activities (B04-FOOT-1070, B04-BAS02-1010)
+        """)
+    
+    st.divider()
+    
+    # Schedule Impact Chart
+    st.markdown("#### Schedule Impact Visualization")
+    
+    schedule_data = {
+        "Activity": ["B01-BAS02-1010", "B04-FOOT-1050"],
+        "Original Duration": [15, 8],
+        "Delay Impact": [46, 45],
+        "Total Duration": [61, 53]
+    }
+    
+    df_schedule = pd.DataFrame(schedule_data)
+    
+    fig = px.bar(
+        df_schedule,
+        x="Activity",
+        y=["Original Duration", "Delay Impact"],
+        title="Schedule Impact: Original vs Delay",
+        labels={"value": "Days", "variable": "Duration Type"},
+        barmode="stack",
+        color_discrete_map={"Original Duration": "#3b82f6", "Delay Impact": "#ef4444"}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.divider()
+    
+    # Critical Path Analysis
+    st.markdown("#### Critical Path Analysis")
+    
+    critical_path_data = {
+        "Activity Sequence": [
+            "B01-FOOT-1050 → B01-FOOT-1070 → B01-BAS02-1010",
+            "B04-FOOT-1050 → B04-FOOT-1070 → B04-BAS02-1010"
+        ],
+        "Original Duration": ["30 days", "23 days"],
+        "With Delay": ["76 days", "68 days"],
+        "Schedule Slip": ["46 days", "45 days"],
+        "Status": ["Critical", "Critical"]
+    }
+    
+    df_critical = pd.DataFrame(critical_path_data)
+    st.dataframe(df_critical, use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    # Mitigation Strategies
+    st.markdown("#### Mitigation Strategies Applied")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Activity Fragmentation**")
+        st.markdown("""
+        ✓ Split activities into multiple parts
+        ✓ Execute Part 1 with available resources
+        ✓ Resume Part 2 after material delivery
+        ✓ Reduces idle time and maintains crew productivity
+        """)
+    
+    with col2:
+        st.markdown("**Resource Optimization**")
+        st.markdown("""
+        ✓ Reallocate crews to non-impacted activities
+        ✓ Accelerate parallel activities (B02, B03)
+        ✓ Prepare for material receipt (staging, inspection)
+        ✓ Maintain schedule buffer for other activities
+        """)
+    
+    st.divider()
+    
+    # Key Metrics
+    st.markdown("#### Key Performance Indicators")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Schedule Variance (Days)",
+            "-91",
+            delta="Behind Schedule",
+            delta_color="inverse"
+        )
+    
+    with col2:
+        st.metric(
+            "Critical Activities Impacted",
+            "2",
+            delta="On Critical Path",
+            delta_color="inverse"
+        )
+    
+    with col3:
+        st.metric(
+            "Average Delay Impact",
+            "45.5 days",
+            delta="Per Activity",
+            delta_color="inverse"
+        )
+    
+    with col4:
+        st.metric(
+            "Material Delivery Reliability",
+            "50%",
+            delta="Partial Delivery",
+            delta_color="inverse"
+        )
+    
+    st.divider()
+    
+    # Recommendations
+    st.markdown("#### Recommendations")
+    
+    st.info("""
+    **1. Material Supply Chain Management**
+    - Establish backup suppliers for critical materials
+    - Implement early warning system for delivery delays
+    - Increase safety stock for high-impact materials
+    
+    **2. Schedule Optimization**
+    - Compress non-critical path activities
+    - Implement concurrent execution where possible
+    - Maintain activity buffers for risk mitigation
+    
+    **3. Stakeholder Communication**
+    - Weekly delay impact reports
+    - Escalation protocol for critical delays
+    - Contingency plan activation triggers
+    
+    **4. Resource Planning**
+    - Cross-train crews for activity flexibility
+    - Maintain resource buffer for acceleration
+    - Plan for extended project duration
+    """)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 8: S-CURVE ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_s_curve:
+    st.markdown("<div class='section-header'><h3>S-Curve Analysis - Financial Progress Tracking</h3></div>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    ### Overview
+    The S-Curve is a cumulative cost curve that tracks planned vs actual project spending over time.
+    It shows the project's financial progress and helps identify schedule and cost variances.
+    """)
+    
+    st.divider()
+    
+    # Load S-Curve data
+    s_curve_data = get_s_curve_data()
+    s_curve_summary = get_s_curve_summary()
+    
+    # S-Curve Summary Metrics
+    st.markdown("#### S-Curve Summary Metrics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Total Planned Budget",
+            f"EGP {s_curve_summary['planned_total']:,.0f}",
+            delta="Full Project"
+        )
+    
+    with col2:
+        st.metric(
+            "Total Actual Spend",
+            f"EGP {s_curve_summary['actual_total']:,.0f}",
+            delta=f"{(s_curve_summary['actual_total']/s_curve_summary['planned_total']*100):.1f}% of Budget"
+        )
+    
+    with col3:
+        st.metric(
+            "Total Invoiced",
+            f"EGP {s_curve_summary['invoiced_total']:,.0f}",
+            delta=f"{s_curve_summary['invoicing_to_actual_ratio']:.1f}% of Actual"
+        )
+    
+    with col4:
+        st.metric(
+            "Last Actual Month",
+            s_curve_summary['last_actual_month'],
+            delta="Data Current"
+        )
+    
+    st.divider()
+    
+    # S-Curve Chart
+    st.markdown("#### Cumulative Spend Curve (Planned vs Actual vs Invoiced)")
+    
+    import pandas as pd
+    
+    # Create DataFrame for charting
+    df_s_curve = pd.DataFrame({
+        "Month": s_curve_data["months"],
+        "Planned": s_curve_data["monthly_planned_cumm"],
+        "Actual": s_curve_data["monthly_actual_cumm"],
+        "Invoiced": s_curve_data["monthly_invoiced_cumm"]
+    })
+    
+    # Create line chart
+    fig = px.line(
+        df_s_curve,
+        x="Month",
+        y=["Planned", "Actual", "Invoiced"],
+        title="S-Curve: Cumulative Project Spend",
+        labels={"value": "Cumulative Cost (EGP)", "variable": "Curve Type"},
+        markers=True,
+        color_discrete_map={
+            "Planned": "#3b82f6",
+            "Actual": "#10b981",
+            "Invoiced": "#f59e0b"
+        }
+    )
+    
+    fig.update_layout(
+        hovermode="x unified",
+        height=500,
+        xaxis_title="Month",
+        yaxis_title="Cumulative Cost (EGP)"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.divider()
+    
+    # Variance Analysis
+    st.markdown("#### Variance Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Schedule Variance (SV)**")
+        sv = s_curve_summary['schedule_variance']
+        sv_pct = s_curve_summary['schedule_variance_pct']
+        
+        if sv >= 0:
+            st.success(f"✅ Ahead of Schedule: EGP {sv:,.0f} ({sv_pct:.1f}%)")
+        else:
+            st.error(f"❌ Behind Schedule: EGP {sv:,.0f} ({sv_pct:.1f}%)")
+        
+        st.markdown("""
+        **Interpretation:**
+        - Positive SV: Actual spending is ahead of planned spending
+        - Negative SV: Actual spending is behind planned spending
+        - This indicates schedule performance (not cost performance)
+        """)
+    
+    with col2:
+        st.markdown("**Invoicing Performance**")
+        invoicing_ratio = s_curve_summary['invoicing_to_actual_ratio']
+        
+        st.metric(
+            "Invoiced to Actual Ratio",
+            f"{invoicing_ratio:.1f}%",
+            delta="Payment Collection"
+        )
+        
+        st.markdown(f"""
+        **Interpretation:**
+        - Invoiced: EGP {s_curve_summary['invoiced_to_date']:,.0f}
+        - Actual Spend: EGP {s_curve_summary['actual_to_date']:,.0f}
+        - Outstanding: EGP {s_curve_summary['actual_to_date'] - s_curve_summary['invoiced_to_date']:,.0f}
+        - Collection Rate: {invoicing_ratio:.1f}%
+        """)
+    
+    st.divider()
+    
+    # Monthly Breakdown
+    st.markdown("#### Monthly Breakdown")
+    
+    df_monthly = pd.DataFrame({
+        "Month": s_curve_data["months"],
+        "Planned": s_curve_data["monthly_planned"],
+        "Actual": s_curve_data["monthly_actual"],
+        "Invoiced": s_curve_data["monthly_invoiced"]
+    })
+    
+    # Create grouped bar chart
+    fig_monthly = px.bar(
+        df_monthly,
+        x="Month",
+        y=["Planned", "Actual", "Invoiced"],
+        title="Monthly Spend Comparison",
+        labels={"value": "Monthly Cost (EGP)", "variable": "Type"},
+        barmode="group",
+        color_discrete_map={
+            "Planned": "#3b82f6",
+            "Actual": "#10b981",
+            "Invoiced": "#f59e0b"
+        }
+    )
+    
+    fig_monthly.update_layout(height=400)
+    st.plotly_chart(fig_monthly, use_container_width=True)
+    
+    st.divider()
+    
+    # Key Insights
+    st.markdown("#### Key Insights & Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Project Status**")
+        
+        # Calculate progress
+        actual_pct = (s_curve_summary['actual_total'] / s_curve_summary['planned_total'] * 100)
+        invoiced_pct = (s_curve_summary['invoiced_total'] / s_curve_summary['planned_total'] * 100)
+        
+        st.markdown(f"""
+        - **Actual Progress**: {actual_pct:.1f}% of total budget spent
+        - **Invoicing Progress**: {invoiced_pct:.1f}% of total budget invoiced
+        - **Outstanding Invoicing**: {100 - invoiced_pct:.1f}% pending
+        - **Last Update**: {s_curve_summary['last_actual_month']}
+        
+        **Status**: Project is in active execution phase with regular monthly spending.
+        """)
+    
+    with col2:
+        st.markdown("**Financial Health**")
+        
+        # Calculate metrics
+        monthly_avg_actual = s_curve_summary['actual_total'] / 7  # 7 months of data
+        remaining_budget = s_curve_summary['planned_total'] - s_curve_summary['actual_total']
+        months_remaining = 11  # Approximate
+        
+        st.markdown(f"""
+        - **Average Monthly Spend**: EGP {monthly_avg_actual:,.0f}
+        - **Remaining Budget**: EGP {remaining_budget:,.0f}
+        - **Months Remaining**: ~{months_remaining}
+        - **Projected Monthly Rate**: EGP {remaining_budget/months_remaining:,.0f}
+        
+        **Forecast**: Project is on track for budget completion by Mar-27.
+        """)
+    
+    st.divider()
+    
+    # Detailed Data Table
+    st.markdown("#### Detailed S-Curve Data")
+    
+    df_detailed = pd.DataFrame({
+        "Month": s_curve_data["months"],
+        "Monthly Planned": s_curve_data["monthly_planned"],
+        "Cumulative Planned": s_curve_data["monthly_planned_cumm"],
+        "Monthly Actual": s_curve_data["monthly_actual"],
+        "Cumulative Actual": s_curve_data["monthly_actual_cumm"],
+        "Monthly Invoiced": s_curve_data["monthly_invoiced"],
+        "Cumulative Invoiced": s_curve_data["monthly_invoiced_cumm"]
+    })
+    
+    st.dataframe(
+        df_detailed,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Monthly Planned": st.column_config.NumberColumn(format="EGP %.0f"),
+            "Cumulative Planned": st.column_config.NumberColumn(format="EGP %.0f"),
+            "Monthly Actual": st.column_config.NumberColumn(format="EGP %.0f"),
+            "Cumulative Actual": st.column_config.NumberColumn(format="EGP %.0f"),
+            "Monthly Invoiced": st.column_config.NumberColumn(format="EGP %.0f"),
+            "Cumulative Invoiced": st.column_config.NumberColumn(format="EGP %.0f"),
+        }
+    )
+    
+    st.divider()
+    
+    # Recommendations
+    st.markdown("#### Recommendations")
+    
+    st.info("""
+    **1. Invoicing Acceleration**
+    - Current invoicing is at 133.1% of actual spend (over-invoicing)
+    - Continue aggressive invoicing strategy
+    - Monitor payment collection closely
+    
+    **2. Schedule Monitoring**
+    - Actual spending is ahead of planned schedule
+    - Maintain current execution pace
+    - Monitor for potential acceleration impacts
+    
+    **3. Budget Management**
+    - Remaining budget: EGP 259.4M
+    - Projected completion: Mar-27
+    - Monitor monthly spend trends
+    
+    **4. Cash Flow**
+    - Outstanding invoicing: EGP 0 (fully invoiced)
+    - Focus on payment collection
+    - Maintain invoicing momentum
+    """)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 9: CONTRACT CLAUSE MATCHING ENGINE
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_clause_matcher:
+    st.markdown("<div class='section-header'><h3>Contract Clause Matching Engine</h3></div>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    ### Overview
+    This tool matches project events to applicable contract clauses and provides:
+    - Entitlement analysis
+    - Notice requirements
+    - Financial and schedule impacts
+    - Critical actions and evidence requirements
+    """)
+    
+    st.divider()
+    
+    # Event Matching Section
+    st.markdown("#### Event-to-Clause Matching")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        event_type = st.selectbox(
+            "Select Event Type",
+            [
+                "Material Delivery Delay",
+                "Variation / Change Order",
+                "Payment Delay",
+                "Remeasurement",
+                "Other"
+            ]
+        )
+    
+    with col2:
+        event_description = st.text_input(
+            "Event Description",
+            placeholder="e.g., Steel delivery delayed by 46 days"
+        )
+    
+    if st.button("🔍 Find Applicable Clauses"):
+        if event_description:
+            applicable_clauses = match_event_to_clauses(event_type, event_description)
+            
+            if applicable_clauses:
+                st.success(f"Found {len(applicable_clauses)} applicable clauses")
+                
+                for i, match in enumerate(applicable_clauses, 1):
+                    with st.expander(f"**{i}. {match['clause'].topic}** (Clause {match['clause'].clause_id}) - {match['relevance']}"):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**Plain English:**")
+                            st.write(match['clause'].plain_english)
+                            
+                            st.markdown("**Beneath the Lines:**")
+                            st.write(match['clause'].beneath_lines)
+                        
+                        with col2:
+                            st.markdown("**Leverage Holder:**")
+                            st.write(match['clause'].leverage_holder)
+                            
+                            st.markdown("**Notice Requirement:**")
+                            st.write(match['clause'].notice_requirement)
+                        
+                        st.divider()
+                        
+                        st.markdown("**Analysis:**")
+                        st.write(f"**Reason:** {match['reason']}")
+                        st.write(f"**Action Required:** {match['action_required']}")
+                        st.write(f"**Entitlement Risk:** {match['entitlement_risk']}")
+                        st.write(f"**Time Impact:** {match['time_impact']}")
+                        st.write(f"**Cost Impact:** {match['cost_impact']}")
+                        
+                        st.markdown("**Practical Action:**")
+                        st.write(match['clause'].practical_action)
+            else:
+                st.warning("No applicable clauses found for this event type.")
+        else:
+            st.warning("Please enter an event description.")
+    
+    st.divider()
+    
+    # Delay Event Analysis
+    st.markdown("#### Delay Event Analysis")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        delay_days = st.number_input("Delay Days", min_value=1, value=46)
+    
+    with col2:
+        is_contractor_caused = st.checkbox("Contractor-Caused?", value=False)
+    
+    with col3:
+        is_critical_path = st.checkbox("Critical Path?", value=True)
+    
+    if st.button("📊 Analyze Delay Event"):
+        analysis = analyze_delay_event(
+            event_id="DEL-001",
+            event_name="Material Delivery Delay",
+            delay_days=delay_days,
+            is_contractor_caused=is_contractor_caused,
+            is_critical_path=is_critical_path
+        )
+        
+        # Display analysis results
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Delay Days", analysis['delay_days'])
+        
+        with col2:
+            st.metric("Entitlement", analysis['entitlement'])
+        
+        with col3:
+            st.metric(
+                "Delay Damages/Week",
+                f"EGP {analysis['delay_damages_per_week']:,.0f}",
+                delta="Per week"
+            )
+        
+        with col4:
+            st.metric(
+                "Total Exposure",
+                f"EGP {analysis['delay_damages_exposure']:,.0f}",
+                delta="Capped at 10%"
+            )
+        
+        st.divider()
+        
+        st.markdown("**Critical Actions Required:**")
+        for i, action in enumerate(analysis['critical_actions'], 1):
+            st.write(f"{i}. {action}")
+        
+        st.divider()
+        
+        st.markdown("**Applicable Clauses:**")
+        for match in analysis['applicable_clauses']:
+            with st.expander(f"{match['clause'].topic} (Clause {match['clause'].clause_id})"):
+                st.write(f"**Relevance:** {match['relevance']}")
+                st.write(f"**Reason:** {match['reason']}")
+                st.write(f"**Action:** {match['action_required']}")
+    
+    st.divider()
+    
+    # Clause Library Browser
+    st.markdown("#### Contract Clause Library")
+    
+    search_term = st.text_input(
+        "🔍 Search Clauses",
+        placeholder="e.g., 'delay', 'payment', 'variation'"
+    )
+    
+    if search_term:
+        search_results = search_clauses(search_term)
+        st.info(f"Found {len(search_results)} clauses matching '{search_term}'")
+        
+        for clause in search_results:
+            with st.expander(f"**{clause.topic}** (Clause {clause.clause_id})"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Location:**")
+                    st.write(clause.location)
+                    
+                    st.markdown("**Plain English:**")
+                    st.write(clause.plain_english)
+                    
+                    st.markdown("**Beneath the Lines:**")
+                    st.write(clause.beneath_lines)
+                
+                with col2:
+                    st.markdown("**Leverage Holder:**")
+                    st.write(clause.leverage_holder)
+                    
+                    st.markdown("**Notice Requirement:**")
+                    st.write(clause.notice_requirement)
+                    
+                    st.markdown("**Money Impact:**")
+                    st.write(clause.money_impact)
+                    
+                    st.markdown("**Schedule Impact:**")
+                    st.write(clause.schedule_impact)
+                
+                st.divider()
+                
+                st.markdown("**Practical Action:**")
+                st.write(clause.practical_action)
+    else:
+        st.info("Enter a search term to find relevant clauses")
+    
+    st.divider()
+    
+    # All Clauses Summary Table
+    st.markdown("#### All Contract Clauses Summary")
+    
+    all_clauses = get_all_clauses()
+    
+    clause_data = {
+        "Clause ID": [c.clause_id for c in all_clauses],
+        "Topic": [c.topic for c in all_clauses],
+        "Location": [c.location for c in all_clauses],
+        "Leverage": [c.leverage_holder for c in all_clauses],
+        "Money Impact": [c.money_impact[:50] + "..." if len(c.money_impact) > 50 else c.money_impact for c in all_clauses],
+        "Schedule Impact": [c.schedule_impact[:50] + "..." if len(c.schedule_impact) > 50 else c.schedule_impact for c in all_clauses]
+    }
+    
+    df_clauses = pd.DataFrame(clause_data)
+    st.dataframe(df_clauses, use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    # Key Takeaways
+    st.markdown("#### Key Takeaways")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("**⚠️ Critical Clauses**")
+        st.markdown("""
+        - Clause 20.1: Claims Time Bar
+        - Clause 8.7: Delay Damages
+        - Clause 13.3: Variation Procedure
+        
+        *Missed procedures = waived claims*
+        """)
+    
+    with col2:
+        st.markdown("**💰 Financial Exposure**")
+        st.markdown("""
+        - Delay Damages: 1% per week
+        - Cap: 10% of contract value
+        - Contract Value: EGP 367.3M
+        - Max Exposure: EGP 36.7M
+        """)
+    
+    with col3:
+        st.markdown("**📋 Required Evidence**")
+        st.markdown("""
+        - Approved programme
+        - Requisitions & delivery notes
+        - Monthly claim accounts
+        - Critical path analysis
+        - Timely notices
+        """)
+
+
+# ── Footer ─────────────────────────────────────────────────────────────────────
+st.divider()
+st.markdown(
+    "<p style='text-align: center; color: gray; font-size: 12px;'>"
+    "Construction Project Control Dashboard | Data updated in real-time"
+    "</p>",
+    unsafe_allow_html=True,
+)

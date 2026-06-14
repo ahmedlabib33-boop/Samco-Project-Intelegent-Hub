@@ -1,0 +1,14 @@
+﻿Primary Event ID,Concurrent Event ID,Activity ID,Overlap Start,Overlap Finish,Concurrent Delay Days,Concurrent Source,Driving / Non-Driving,Reviewer Position
+STEEL-STOCKOUT-05-Feb-2026-B01,RFI-001,CON-B01-FOOT-1050,16-Feb-26,16-Feb-26,0,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI-001,CON-B04-FOOT-1050,10-Mar-26,29-Mar-26,19,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI-002,CON-B04-FOOT-1050,10-Mar-26,18-Mar-26,8,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI--003,CON-B04-FOOT-1050,10-Mar-26,7-Apr-26,28,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI-005,CON-B04-FOOT-1050,10-Mar-26,5-Apr-26,26,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI-001,CON-B04-FOOT-1070,10-Mar-26,29-Mar-26,19,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI-002,CON-B04-FOOT-1070,10-Mar-26,18-Mar-26,8,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI--003,CON-B04-FOOT-1070,10-Mar-26,7-Apr-26,28,RFI,Potentially concurrent,Needs case-by-case causation review
+STEEL-STOCKOUT-10-Mar-2026-B04,RFI-005,CON-B04-FOOT-1070,10-Mar-26,5-Apr-26,26,RFI,Potentially concurrent,Needs case-by-case causation review
+RFI-CLAIM6-001,STEEL-STOCKOUT-10-Mar-2026-B04,CON-B04-WT-1070,26-Feb-2026,29-Mar-2026,31.0,RFI Delay.xlsx vs steel delay event register,To be determined by TIA / path movement,"Potential concurrent owner-risk stream; final claim days must use net critical-path impact, not simple sum."
+RFI-CLAIM6-002,STEEL-STOCKOUT-10-Mar-2026-B04,CON-B04-WT-1110,27-Feb-2026,18-Mar-2026,19.0,RFI Delay.xlsx vs steel delay event register,To be determined by TIA / path movement,"Potential concurrent owner-risk stream; final claim days must use net critical-path impact, not simple sum."
+RFI-CLAIM6-003,No matching steel event by building in current register,CON-B01-FOOT-1050,20-Mar-2026,07-Apr-2026,18.0,RFI Delay.xlsx,To be determined by TIA / path movement,Do not add arithmetically until overlap and driving path are tested.
+RFI-CLAIM6-005,STEEL-STOCKOUT-10-Mar-2026-B04,CON-B04-WT-1110,20-Mar-2026,05-Apr-2026,16.0,RFI Delay.xlsx vs steel delay event register,To be determined by TIA / path movement,"Potential concurrent owner-risk stream; final claim days must use net critical-path impact, not simple sum."

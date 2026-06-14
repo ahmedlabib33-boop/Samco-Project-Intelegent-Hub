@@ -1,0 +1,13 @@
+﻿Order,Work Package,Objective,Target File / Module,Output,Priority,Status
+1,Freeze baseline behavior,Preserve current Delay TIA outputs before changes,dashboard.py / steel_delay_tia.py,Regression-safe starting point,Critical,Pending
+2,Canonical dataset builders,Create formal internal datasets,steel_delay_tia.py,project_metadata_df ... xer_build_context,Critical,Pending
+3,Delay event register,Unify steel / IFC / RFI / payment events,steel_delay_tia.py,delay_event_register_df,Critical,Pending
+4,Activity impact register,Formal first-affected-activity engine,steel_delay_tia.py,activity_impact_df,Critical,Pending
+5,Claimed delay engine,Automatic claimed delay duration,steel_delay_tia.py,claimed_delay_df,Critical,Pending
+6,Fragnet logic register,Formalize fragnet reasoning,steel_delay_tia.py,fragnet_logic_df,High,Pending
+7,Causation / concurrency,Prove primary and concurrent causes,steel_delay_tia.py,causation_matrix_df / concurrency_matrix_df,High,Pending
+8,Evidence register,Trace every conclusion to a record,steel_delay_tia.py + letters logic,evidence_register_df,High,Pending
+9,DOCX hardening,Populate template without changing design,dashboard.py,Director report from canonical datasets,High,Pending
+10,Primavera import pack,Upgrade CSV to import-grade structure,dashboard.py,primavera_fragnet_import_df export,High,Pending
+11,XER-ready pack,Stage-1 XER support,dashboard.py,XER preparation export set,Medium,Pending
+12,True XER builder,Stage-2 XER generation,new module,Validated XER writer,Medium,Pending

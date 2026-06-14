@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Create demo database",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["scripts/init_database.py"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Generate HTML report",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+      "args": ["scripts/generate_html_report.py"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Streamlit dashboard",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\streamlit.exe",
+      "args": ["run", "dashboard.py"],
+      "problemMatcher": []
+    }
+  ]
+}
+

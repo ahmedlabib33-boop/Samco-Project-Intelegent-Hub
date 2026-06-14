@@ -1,0 +1,11 @@
+﻿Report Section,Primary Dataset,Secondary Dataset,Current Program Source,Gap Closed By
+Executive summary,delay_event_register_df,activity_impact_df,Current Delay TIA KPIs,Formal event register and activity impact
+Methodology,Static methodology block,,Current TIA Methodology tab,"No design change, content hardening only"
+Delay event register,delay_event_register_df,,Stock-out / support views,Unified event register
+Affected activity impact,activity_impact_df,claimed_delay_df,Affected Activity Finder,Formal impact and duration fields
+Fragnet logic,fragnet_logic_df,,Primavera fragnet CSV,Formal fragnet logic dataset
+Causation / concurrency,causation_matrix_df,concurrency_matrix_df,Support delay streams,Formal matrices
+Contract position,delay_event_register_df,contract assessment,Contractual Delay Assessment,Topic-linked register
+Evidence appendix,evidence_register_df,Predicted notice register,Letters Intelligence,Formal evidence register
+Delay Event Register and Classification,02-delay_event_register_template.csv,18-rfi_delay_claim6_normalized.csv,RFI Delay.xlsx claim 6,RFI delay event rows with affected Activity ID / Activity Name and delay beyond 10-day response period
+"Causation, Concurrency and Entitlement Matrix",06-causation_matrix_template.csv,07-concurrency_matrix_template.csv,RFI Delay.xlsx + P6 relationship check,RFI causation and potential concurrency rows

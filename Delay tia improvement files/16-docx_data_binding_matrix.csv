@@ -1,0 +1,11 @@
+﻿Template Area,Field / Table,Binding Dataset,Binding Column / Logic,Required
+Cover,Project Name,project_metadata_df,Project Name,Yes
+Cover,Contract No,project_metadata_df,Contract No,Yes
+Executive KPI table,Total working delay days,delay_event_register_df,Sum Working Delay Days,Yes
+Event register table,Delay events,delay_event_register_df,All rows,Yes
+Affected activities table,Claimed delay duration,claimed_delay_df,Claimed Delay Duration (days),Yes
+Fragnet table,Primavera fragnet logic,fragnet_logic_df,All rows,Yes
+Causation matrix,Cause and concurrency,causation_matrix_df / concurrency_matrix_df,All rows,Yes
+Appendix,Evidence register,evidence_register_df,All rows,Yes
+Delay Event Register and Classification,RFI Claim 6 delay events,02-delay_event_register_template.csv,Rows where Event Type = RFI Delay and Event ID starts RFI-CLAIM6,Yes
+Fragnet Design Requirements,RFI delay fragnet rows,04-fragnet_logic_register_template.csv,Rows where Delay Event ID starts RFI-CLAIM6; Successor Activity ID uses affected Activity ID from workbook,Yes

@@ -1,0 +1,9 @@
+payment_id,contract_id,project_id,invoice_no,invoice_date,certified_amount,paid_amount,payment_status,,,,,,,,,
+1,Ph-01,The Big -P.01-UP-20-April-26,1,9-Jan-26,23485862.02,23485862.02,Paid,,,,,,,,,
+2,Ph-01,The Big -P.01-UP-20-April-26,2,21-Jan-26,26309019.51,26309019.51,Paid,,,,,,,,,
+3,Ph-01,The Big -P.01-UP-20-April-26,3,25-Jan-26,20099944,20099944,Paid,,,,,,,,,
+4,Ph-01,The Big -P.01-UP-20-April-26,4,25-Feb-26,40393706.06,40393706.06,Paid,,,,,,,,,
+5,Ph-01,The Big -P.01-UP-20-April-26,5,25-Mar-26,17641618.94,0,Under Payment,,,,,,,,,
+6,Ph-01,The Big -P.01-UP-20-April-26,6,26-Apr-26,15475615,0,Under Payment,,,,,,,,,
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,11

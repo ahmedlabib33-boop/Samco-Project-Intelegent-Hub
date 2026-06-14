@@ -1,0 +1,2 @@
+﻿Project ID,Project Short Name,WBS Root,Default Calendar,Activity ID Prefix,Relationship Code Standard,Lag Unit,Duration Unit,Baseline Source,Update Source,Sample XER Reference,Validation Status,Comment
+The Big -P.01-UP-20-April-26,The Big - P.01,The Big - P.01 - UP-24-MAY-26.KD.MI,,FRAG-,FS default for fragnet insertion until exact link mapping is formalized,Days,Days,03- p6_activity_export.csv + BL fixed files,The Big -P.01-UP-20-April-26,,Needs sample accepted Primavera XER,Stage-1 XER-ready context seeded from existing project files
