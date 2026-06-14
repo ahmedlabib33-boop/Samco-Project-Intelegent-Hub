@@ -12,5 +12,4 @@ __pycache__/
 .env.*
 .streamlit/secrets.toml
 generated_outputs/
-exports/
 tmp_letters_ocr/
