@@ -55,13 +55,22 @@ def inventory(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
 def kpis(frames: dict[str, pd.DataFrame]) -> dict[str, float | int]:
     claimed_df = frames.get("Delay tia improvement files/05-claimed_delay_register_template.csv", pd.DataFrame())
     fragnet_df = frames.get("Delay tia improvement files/04-fragnet_logic_register_template.csv", pd.DataFrame())
-    concurrency_df = frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame())
+    concurrency_df = frames.get(
+        "steel_delay_tia_templates/11-concurrency_matrix_template.updated.csv",
+        frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame()),
+    )
     rfi_df = frames.get("Delay tia improvement files/18-rfi_delay_claim6_normalized.csv", pd.DataFrame())
     events_df = frames.get("Delay tia improvement files/02-delay_event_register_template.csv", pd.DataFrame())
     evidence_df = frames.get("Delay tia improvement files/08-evidence_register_template.csv", pd.DataFrame())
-    p6_df = frames.get("steel_delay_tia_templates/03- p6_activity_export.csv", pd.DataFrame())
-    employer_df = frames.get("steel_delay_tia_templates/02- employer_steel_supply.csv", pd.DataFrame())
-    samco_df = frames.get("steel_delay_tia_templates/09- samco_steel_supplied_at_site.csv", pd.DataFrame())
+    p6_df = frames.get("steel_delay_tia_templates/04- p6_activity_export.csv", pd.DataFrame())
+    employer_df = frames.get(
+        "steel_delay_tia_templates/03- employer_steel_supply_at_site.csv",
+        frames.get("steel_delay_tia_templates/03- employer_steel_supply.csv", pd.DataFrame()),
+    )
+    samco_df = frames.get(
+        "steel_delay_tia_templates/10- contractor_steel_supplied_at_site.csv",
+        frames.get("steel_delay_tia_templates/10- samco_steel_supplied_at_site.csv", pd.DataFrame()),
+    )
 
     claimed_days = number(claimed_df, "Claimed Delay Duration (days)")
     fragnet_days = number(fragnet_df, "Claimed Delay Duration")
@@ -124,7 +133,10 @@ def main() -> None:
     values = kpis(frames)
     claimed = frames.get("Delay tia improvement files/05-claimed_delay_register_template.csv", pd.DataFrame())
     fragnet = frames.get("Delay tia improvement files/04-fragnet_logic_register_template.csv", pd.DataFrame())
-    concurrency = frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame())
+    concurrency = frames.get(
+        "steel_delay_tia_templates/11-concurrency_matrix_template.updated.csv",
+        frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame()),
+    )
     answer = (
         f"The conservative answer is {int(values['Recommended Conservative Days'])} days. "
         "The methodology avoids adding overlapping streams together: it compares the strongest claimed/modelled delay durations, "

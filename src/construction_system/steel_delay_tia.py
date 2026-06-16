@@ -1135,12 +1135,16 @@ def build_contract_support_scoring(matches_df: pd.DataFrame, top_candidate: pd.S
     notice_ref = ""
     if not delay_events_df.empty:
         target_activity = str(top_candidate["Activity ID"]).strip().upper()
-        activity_tokens = delay_events_df["activity_id"].astype(str).str.upper().apply(
-            lambda value: [item.strip() for item in re.split(r"[,;|]", value) if item.strip()]
-        )
-        steel_delay_rows = delay_events_df[activity_tokens.apply(lambda items: target_activity in items)]
-        if not steel_delay_rows.empty:
-            notice_ref = str(steel_delay_rows.iloc[0].get("notice_ref", "")).strip()
+        normalized_columns = {normalize_name(col): col for col in delay_events_df.columns}
+        activity_col = normalized_columns.get("activityid")
+        notice_col = normalized_columns.get("noticeref")
+        if activity_col:
+            activity_tokens = delay_events_df[activity_col].astype(str).str.upper().apply(
+                lambda value: [item.strip() for item in re.split(r"[,;|]", value) if item.strip()]
+            )
+            steel_delay_rows = delay_events_df[activity_tokens.apply(lambda items: target_activity in items)]
+            if not steel_delay_rows.empty and notice_col:
+                notice_ref = str(steel_delay_rows.iloc[0].get(notice_col, "")).strip()
     score_lines = [
         ("Relevant Clause / Topic matched", 20 if str(row.get("Clause / Topic", "")).strip() else 0),
         ("Location / contract reference available", 10 if str(row.get("Location", "")).strip() else 0),

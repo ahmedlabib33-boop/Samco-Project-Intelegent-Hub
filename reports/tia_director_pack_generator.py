@@ -186,7 +186,10 @@ def _build_eot_claim_position_df(context: dict) -> pd.DataFrame:
     rows = []
     for decision, group in delay_events_df.groupby("Claim Decision", dropna=False):
         events = ", ".join(group["Event ID"].astype(str).tolist())
-        total_days = pd.to_numeric(group.get(working_days_col), errors="coerce").fillna(0).sum()
+        if working_days_col in group.columns:
+            total_days = pd.to_numeric(group[working_days_col], errors="coerce").fillna(0).sum()
+        else:
+            total_days = 0
         if str(decision).strip().lower() == "valid for tia":
             action = "Proceed to formal EOT narrative and substantiation pack."
         else:
@@ -398,7 +401,7 @@ class TIADirectorPackGenerator:
             "file_name": output_path.name,
             "file_path": str(output_path),
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "generated_by": _text(context.get("generated_by"), "Codex"),
+            "generated_by": _text(context.get("generated_by"), "Planning Department"),
             "project_name": _text(context.get("project_name")),
             "data_date": _format_date(context.get("data_date")),
             "revision": _text(context.get("revision")),

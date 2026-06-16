@@ -1,15 +1,50 @@
-﻿.venv/
-venv/
+﻿# Python cache
 __pycache__/
-.pytest_cache/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+.env.local
+.streamlit/secrets.toml
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+construction_system*.db
+*.backup*.db
+
+# Backups
+*.bak
+backover-return-*/
+*.backup*/
+
+# Logs
 *.log
 *.err
-*.vsix
-.env
-.env.*
-.streamlit/secrets.toml
+*.out
+*.err.log
+*.out.log
+
+# Generated/local output
 generated_outputs/
 tmp_letters_ocr/
+PROJECT_DIAGNOSTIC_OUTPUT.txt
+NO_GIT_PROJECT_DIAGNOSTIC.txt
+
+# Large local files
+*.vsix
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,8 +1,8 @@
 # Letters Intelligence Ingest Report
 
 - Source workbook: `C:\Users\pc\Downloads\01-SAMCO-ACEPM_letters_linked (Final).xlsx`
-- Updated workbook: `C:\Users\pc\OneDrive\Documents\Codex\2026-05-20\Project Intelegent Hub\data\letters\01-SAMCO-ACEPM_letters_linked_updated.xlsx`
-- Source docs folder: `C:\Users\pc\OneDrive\Documents\Codex\2026-05-20\Project Intelegent Hub\docs`
+- Updated workbook: `C:\Users\pc\OneDrive\Documents\Project Intelligence Hub\data\letters\01-SAMCO-ACEPM_letters_linked_updated.xlsx`
+- Source docs folder: `C:\Users\pc\OneDrive\Documents\Project Intelligence Hub\docs`
 
 ## Findings
 

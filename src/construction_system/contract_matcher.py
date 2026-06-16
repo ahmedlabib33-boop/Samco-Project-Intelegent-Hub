@@ -28,7 +28,13 @@ class ContractClause:
     practical_action: str
 
 
-CLAUSE_LIBRARY_PATH = Path(r"C:\Users\pc\Downloads\Overall_Contract_clause_library.xlsx")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CLAUSE_LIBRARY_CANDIDATES = [
+    PROJECT_ROOT / "project_data" / "contracts" / "Overall_Contract_clause_library.xlsx",
+    PROJECT_ROOT / "data" / "import_templates" / "Overall_Contract_clause_library.xlsx",
+    Path(r"C:\Users\pc\Downloads\Overall_Contract_clause_library.xlsx"),
+]
+CLAUSE_LIBRARY_PATH = next((path for path in CLAUSE_LIBRARY_CANDIDATES if path.exists()), CLAUSE_LIBRARY_CANDIDATES[0])
 
 
 def _seed_clauses() -> List[ContractClause]:

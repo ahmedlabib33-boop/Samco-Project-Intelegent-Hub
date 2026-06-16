@@ -10,6 +10,13 @@ import pandas as pd
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 LEGACY_WORKBOOK = Path(r"C:\Users\pc\Downloads\01-SAMCO-ACEPM_letters_linked (Final).xlsx")
 UPDATED_WORKBOOK = PROJECT_DIR / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked_updated.xlsx"
+SOURCE_WORKBOOK_CANDIDATES = [
+    UPDATED_WORKBOOK,
+    PROJECT_DIR / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked (Final).xlsx",
+    PROJECT_DIR / "data" / "import_templates" / "01-SAMCO-ACEPM_letters_linked_updated.xlsx",
+    PROJECT_DIR / "data" / "import_templates" / "01-SAMCO-ACEPM_letters_linked (Final).xlsx",
+    LEGACY_WORKBOOK,
+]
 REPORT_PATH = PROJECT_DIR / "reports" / "letters_intelligence_ingest_report.md"
 DOCS_DIR = PROJECT_DIR / "docs"
 OCR_DIR = PROJECT_DIR / "tmp_letters_ocr"
@@ -461,13 +468,14 @@ def update_issue_threads(threads_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    if not LEGACY_WORKBOOK.exists():
-        raise FileNotFoundError(f"Legacy workbook not found: {LEGACY_WORKBOOK}")
+    source_workbook = next((path for path in SOURCE_WORKBOOK_CANDIDATES if path.exists()), None)
+    if source_workbook is None:
+        raise FileNotFoundError("Letters workbook not found in data/letters, data/import_templates, or Downloads.")
 
     UPDATED_WORKBOOK.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    sheets = pd.read_excel(LEGACY_WORKBOOK, sheet_name=None)
+    sheets = pd.read_excel(source_workbook, sheet_name=None)
     samco_df = sheets[SAMCO_SHEET].copy()
     ace_df = sheets[ACE_SHEET].copy()
     samco_links_df = sheets[SAMCO_LINKS_SHEET].copy()
@@ -553,7 +561,7 @@ def main() -> None:
     report_lines = [
         "# Letters Intelligence Ingest Report",
         "",
-        f"- Source workbook: `{LEGACY_WORKBOOK}`",
+        f"- Source workbook: `{source_workbook}`",
         f"- Updated workbook: `{UPDATED_WORKBOOK}`",
         f"- Source docs folder: `{DOCS_DIR}`",
         "",

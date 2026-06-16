@@ -22,7 +22,23 @@ COLUMN_ALIASES: dict[str, dict[str, str]] = {
         "responsibility":       "responsible_party",
         "estimated_delay_days": "delay_days",
         "approved_eot_days":    "eot_days",
+        "primary_event_id":     "delay_event_id",
+        "activity_id":          "activity_id",
+        "start":                "event_date",
+        "overlap_start":        "event_date",
+        "delayed_duration_after_overlap": "delay_days",
+        "delayed_duration":     "delay_days",
         # cause_category / notice_ref are ignored (no matching DB column)
+    },
+    "payments": {
+        "payment":        "payment_id",
+        "invoice_no":     "invoice_no",
+        "invoice_date":   "payment_date",
+        "paid_amount":    "amount",
+        "certified_amount": "amount",
+        "payment_status": "status",
+        "project":        "project_id",
+        "contract":       "contract_id",
     },
     "milestones": {
         "activity_name": "milestone_name",
@@ -207,17 +223,51 @@ DATE_COLUMNS = {
 def _apply_aliases(row: dict, table_name: str) -> dict:
     """Rename CSV columns to DB column names using COLUMN_ALIASES."""
     aliases = COLUMN_ALIASES.get(table_name, {})
+    normalized_aliases = {
+        re.sub(r"[^a-z0-9]+", "_", key.strip().lower()).strip("_"): value
+        for key, value in aliases.items()
+    }
     result = {}
     for k, v in row.items():
-        mapped = aliases.get(k, k)
+        normalized_key = re.sub(r"[^a-z0-9]+", "_", str(k).strip().lower()).strip("_")
+        mapped = aliases.get(k, normalized_aliases.get(normalized_key, normalized_key))
         # Don't overwrite a key that already exists with the canonical name
         if mapped not in result:
             result[mapped] = v
     return result
 
 
+def _normalize_modified_template_row(row: dict, table_name: str) -> dict:
+    if table_name == "delay_events":
+        if not row.get("event_title"):
+            row["event_title"] = row.get("delay_event_id") or row.get("activity_name") or "Delay Event"
+        if not row.get("delay_event_id"):
+            row["delay_event_id"] = row.get("event_title") or row.get("activity_id")
+        if row.get("delay_event_id") and row.get("activity_id"):
+            event_id = str(row.get("delay_event_id")).strip()
+            activity_id = str(row.get("activity_id")).strip()
+            if event_id and activity_id and activity_id.upper() not in event_id.upper():
+                row["delay_event_id"] = f"{event_id}-{activity_id}"
+        if not row.get("responsible_party"):
+            row["responsible_party"] = "Employer / Client"
+        if not row.get("status"):
+            row["status"] = "Open"
+        if not row.get("eot_days"):
+            row["eot_days"] = 0
+        if not row.get("critical_impact"):
+            critical_value = str(row.get("current_critical_path") or row.get("bl_critical_path") or "").strip().lower()
+            row["critical_impact"] = 1 if critical_value in {"yes", "true", "1", "y"} else 0
+    elif table_name == "payments":
+        if not row.get("payment_id") and row.get("invoice_no"):
+            row["payment_id"] = row.get("invoice_no")
+        if not row.get("status") and row.get("payment_status"):
+            row["status"] = row.get("payment_status")
+    return row
+
+
 def _clean_row(row: dict, table_name: str) -> dict:
     """Apply type coercions and drop columns not in the DB schema."""
+    row = _normalize_modified_template_row(row, table_name)
     if table_name == "wbs":
         row = _normalize_wbs_row(row)
     valid_cols = TABLE_COLUMNS.get(table_name, set())

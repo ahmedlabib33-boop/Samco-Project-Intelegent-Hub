@@ -57,6 +57,13 @@ def load_app_csv(name: str) -> pd.DataFrame:
     return pd.read_csv(path).fillna("")
 
 
+def load_first_existing_csv(paths: list[Path]) -> pd.DataFrame:
+    for path in paths:
+        if path.exists():
+            return pd.read_csv(path).fillna("")
+    return pd.DataFrame()
+
+
 def dataframe_records(df: pd.DataFrame, limit: int = 5) -> list[dict[str, Any]]:
     if not isinstance(df, pd.DataFrame) or df.empty:
         return []
@@ -98,12 +105,21 @@ def score_boolean_checks(checks: list[tuple[str, bool, float]]) -> tuple[float, 
 
 
 def build_analysis() -> tuple[dict[str, pd.DataFrame | dict[str, Any]], dict[str, pd.DataFrame]]:
-    master_df = load_csv("01- master_activity_steel_analysis.csv")
-    employer_df = load_csv("02- employer_steel_supply.csv")
-    p6_df = load_csv("03- p6_activity_export.csv")
-    relationship_df = load_csv("04- relationship_file.csv")
-    contract_df = load_csv("05- contract_library.csv")
-    rfi_df = load_csv("RFI Delay.csv")
+    master_df = load_csv("02- master_activity_steel_analysis.csv")
+    employer_df = load_first_existing_csv(
+        [
+            TEMPLATE_DIR / "03- employer_steel_supply_at_site.csv",
+            TEMPLATE_DIR / "03- employer_steel_supply.csv",
+        ]
+    )
+    p6_df = load_csv("04- p6_activity_export.csv")
+    relationship_df = load_csv("05- relationship_file.csv")
+    contract_df = load_csv("06- contract_library.csv")
+    rfi_df = load_first_existing_csv(
+        [
+            TEMPLATE_DIR / "09- rfi_status.csv",
+        ]
+    )
     delay_events_df = load_app_csv("delay_events.csv")
     requirement_df = build_requirement_df_from_client_supply_sheet(master_df)
     analysis = run_steel_delay_tia_analysis(

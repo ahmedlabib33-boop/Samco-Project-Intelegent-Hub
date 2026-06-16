@@ -39,8 +39,7 @@ EXPECTED_OUTPUT_PATHS = [
     "The Big - Dashboard",
     "Original presentation print-only",
     "Linked executive dashboard",
-    "Super premium progress report",
-    "Canva-style flexible dashboard",
+    "Detailed Progress report",
 ]
 
 EXPECTED_EXPORTS = [
@@ -49,13 +48,13 @@ EXPECTED_EXPORTS = [
     "Download Linked Executive Dashboard (.html)",
     "Download Linked Executive Dashboard PowerPoint (.pptx) - Landscape",
     "Download Summarized Linked Dashboard (.html) - A3 Landscape One Page",
-    "Download Super Premium Workbook (.xlsx)",
-    "Download Printable Dashboard Pack (.html)",
-    "Download Flexible Presentation (.pptx)",
-    "Download Combined Selection (.csv)",
+    "Download Detailed Progress Report (.xlsx)",
+    "Download Detailed Progress Report (.html)",
+    "Download Detailed Progress Report (.docx)",
+    "Download Power BI Style Dashboard (.html)",
 ]
 
-EXPECTED_PREMIUM_TERMS = [
+EXPECTED_DESIGN_TERMS = [
     "management decision",
     "executive",
     "critical alerts",
@@ -66,8 +65,7 @@ EXPECTED_PREMIUM_TERMS = [
     "action",
     "dashboard",
     "Power BI",
-    "Canva",
-    "premium",
+    "modern",
     "digital",
     "governance",
     "validation",
@@ -181,7 +179,7 @@ def build_artifact_html(scores: dict[str, Any], data_inventory: pd.DataFrame, ge
             ("LLM Average", float(scores["llm_average"])),
             ("Data Coverage", float(scores["data_coverage_score"])),
             ("Export Coverage", float(scores["export_coverage_score"])),
-            ("Premium Design", float(scores["premium_design_score"])),
+            ("Design Quality", float(scores["design_quality_score"])),
             ("Reliability", float(scores["reliability_score"])),
         ]
     )
@@ -221,7 +219,7 @@ def build_artifact_html(scores: dict[str, Any], data_inventory: pd.DataFrame, ge
 <body>
   <main>
     <h1>Output Studio Eval Scorecard</h1>
-    <p>Eval-driven quality loop for premium digital reports, dashboards, exports, and Canva-style management output.</p>
+    <p>Eval-driven quality loop for modern digital reports, dashboards, exports, and governed management output.</p>
     <section class="cards">{score_cards}</section>
     <section class="panel"><h2>Failed / Weak Checks</h2>{table(failed_rows, 120)}</section>
     <section class="panel"><h2>All Output Data Inspected</h2>{table(data_inventory, 120)}</section>
@@ -252,49 +250,49 @@ def evaluate(label: str) -> dict[str, Any]:
     export_checks = [(f"output path visible: {name}", name in studio_source, 5) for name in EXPECTED_OUTPUT_PATHS]
     export_checks.extend([(f"download export visible: {name}", name in studio_source, 4) for name in EXPECTED_EXPORTS])
     export_checks.extend([
-        ("password remains AhmedLabib", 'output_password == "AhmedLabib"' in studio_source, 6),
-        ("all modes have export/download controls", studio_source.count("download_button") >= 14, 8),
-        ("HTML, PPTX, XLSX, CSV exports available", all(term in studio_source for term in ["text/html", "presentationml.presentation", "spreadsheetml.sheet", "text/csv"]), 8),
+        ("Output Studio has no password gate", "output_password" not in studio_source and "AhmedLabib" not in studio_source, 6),
+        ("all modes have export/download controls", studio_source.count("download_button") >= 12, 8),
+        ("HTML, PPTX, XLSX, DOCX exports available", all(term in studio_source for term in ["text/html", "presentationml.presentation", "spreadsheetml.sheet", "wordprocessingml.document"]), 8),
     ])
     export_coverage_score, export_detail = score_checks(export_checks)
 
-    premium_checks = [(f"premium term present: {term}", term.lower() in studio_source.lower(), 2) for term in EXPECTED_PREMIUM_TERMS]
-    premium_checks.extend([
+    design_checks = [(f"design term present: {term}", term.lower() in studio_source.lower(), 2) for term in EXPECTED_DESIGN_TERMS]
+    design_checks.extend([
         ("A3 / print-ready output referenced", "A3" in studio_source and "print" in studio_source.lower(), 6),
-        ("Canva-style flexible builder present", "Canva-Style Flexible Builder" in studio_source, 8),
-        ("The Big dashboard uses premium dark executive surface", "build_the_big_decision_dashboard_html" in source and "Critical Alerts" in source, 8),
-        ("visual controls include smart charts", "Smart Chart Builder" in studio_source and "plotly_chart" in studio_source, 8),
+        ("Flexible dashboard builder removed", "Flexible Builder" not in studio_source and "flexible dashboard" not in studio_source.lower(), 8),
+        ("The Big dashboard uses dark executive surface", "build_the_big_decision_dashboard_html" in source and "Critical Alerts" in source, 8),
+        ("Detailed Progress digital generators present", all(term in source for term in ["build_detailed_progress_report_html", "build_detailed_progress_report_docx_bytes", "build_detailed_progress_power_bi_style_html"]), 8),
         ("management-ready wording visible", all(term in studio_source.lower() for term in ["management", "executive", "decision"]), 8),
     ])
-    premium_design_score, premium_detail = score_checks(premium_checks)
+    design_quality_score, design_detail = score_checks(design_checks)
 
     reliability_checks = [
-        ("super premium validates openpyxl availability", "OPENPYXL_AVAILABLE" in studio_source, 8),
+        ("detailed progress validates openpyxl availability", "OPENPYXL_AVAILABLE" in studio_source, 8),
         ("download buttons disable empty original presentation", "disabled=not bool(original_template_bytes)" in studio_source, 8),
-        ("empty data sources handled in flexible builder", "is empty" in studio_source and "Choose a source with data" in studio_source, 8),
+        ("detailed HTML handles empty data sources", "No records available." in source, 8),
         ("report assumptions displayed", "Assumptions / Limitations" in studio_source, 8),
         ("validation checks displayed", "Validation Checks" in studio_source, 8),
-        ("combined selection export disabled when empty", "disabled=combined_selection_df.empty" in studio_source, 8),
+        ("Word export has DOCX availability guard", "DOCX_AVAILABLE" in source and "wordprocessingml.document" in studio_source, 8),
         ("artifact evaluator generated", True, 6),
     ]
     reliability_score, reliability_detail = score_checks(reliability_checks)
 
     llm_checks = [
-        ("narrative explains output paths", "Two Different Output Paths" in studio_source, 10),
+        ("narrative explains output paths", "Governed Output Paths" in studio_source, 10),
         ("narrative explains original path constraint", "preserves the original presentation design" in studio_source, 8),
         ("narrative explains linked dashboard data refresh", "linked to the platform CSV files" in studio_source, 8),
         ("narrative explains Power BI workflow", "Power BI Connection Steps" in studio_source, 8),
-        ("narrative explains flexible row-level selection", "one line from one source" in studio_source, 8),
+        ("narrative explains detailed report formats", all(term in studio_source for term in ["Excel workbook", "HTML report", "Word report", "Power BI-style dashboard HTML"]), 8),
         ("narrative includes governance/validation", "Governance Rules" in source and "Validation Checks" in studio_source, 8),
         ("narrative includes decision/action language", all(term in studio_source.lower() for term in ["decision", "action", "management"]), 10),
-        ("narrative references digital dashboard/report quality", all(term in studio_source.lower() for term in ["premium", "dashboard", "report"]), 10),
+        ("narrative references digital dashboard/report quality", all(term in studio_source.lower() for term in ["modern", "dashboard", "report"]), 10),
     ]
     llm_average, llm_detail = score_checks(llm_checks)
 
     overall_score = round(
         data_coverage_score * 0.22
         + export_coverage_score * 0.24
-        + premium_design_score * 0.22
+        + design_quality_score * 0.22
         + reliability_score * 0.16
         + llm_average * 0.16,
         2,
@@ -306,14 +304,14 @@ def evaluate(label: str) -> dict[str, Any]:
         "llm_average": llm_average,
         "data_coverage_score": data_coverage_score,
         "export_coverage_score": export_coverage_score,
-        "premium_design_score": premium_design_score,
+        "design_quality_score": design_quality_score,
         "reliability_score": reliability_score,
         "data_sources_inspected": int(len(data_inventory)),
         "generated_outputs_inspected": int(len(generated_inventory)),
         "details": {
             "data_coverage": data_detail,
             "export_coverage": export_detail,
-            "premium_design": premium_detail,
+            "design_quality": design_detail,
             "reliability": reliability_detail,
             "llm_quality": llm_detail,
         },

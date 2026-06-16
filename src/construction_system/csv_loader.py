@@ -2,7 +2,9 @@
 
 import pandas as pd
 import os
+import re
 from pathlib import Path
+from typing import Any
 from typing import Dict, Optional
 
 # Define CSV file paths
@@ -22,6 +24,62 @@ CSV_FILES = {
     "claims": DATA_DIR / "claims.csv",
     "wbs": DATA_DIR / "wbs.csv",
 }
+
+
+def _normalized_column_lookup(df: pd.DataFrame) -> dict[str, str]:
+    return {
+        re.sub(r"[^a-z0-9]+", "", str(col).strip().lower()): col
+        for col in df.columns
+    }
+
+
+def _first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    lookup = _normalized_column_lookup(df)
+    for candidate in candidates:
+        if candidate in df.columns:
+            return candidate
+        match = lookup.get(re.sub(r"[^a-z0-9]+", "", str(candidate).strip().lower()))
+        if match is not None:
+            return match
+    return None
+
+
+def _copy_column_if_missing(df: pd.DataFrame, target: str, candidates: list[str], default: Any = "") -> None:
+    if target in df.columns:
+        return
+    source = _first_existing_column(df, candidates)
+    df[target] = df[source] if source is not None else default
+
+
+def normalize_import_template_frame(file_key: str, df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    working = df.loc[:, [col for col in df.columns if str(col).strip()]].copy()
+    if file_key == "payments":
+        _copy_column_if_missing(working, "payment_id", ["payment", "payment id", "payment_id"])
+        _copy_column_if_missing(working, "contract_id", ["contract", "contract id", "contract_id"])
+        _copy_column_if_missing(working, "project_id", ["project", "project id", "project_id"])
+        _copy_column_if_missing(working, "invoice_no", ["invoice no", "invoice_no", "invoice"])
+        _copy_column_if_missing(working, "invoice_date", ["invoice date", "invoice_date", "payment_date"])
+        _copy_column_if_missing(working, "payment_date", ["Date of Cash Cheque Receipt", "payment date", "payment_date", "invoice date"])
+        _copy_column_if_missing(working, "certified_amount", ["certified amount", "certified_amount", "certified"])
+        _copy_column_if_missing(working, "paid_amount", ["paid amount", "paid_amount", "paid"])
+        _copy_column_if_missing(working, "payment_status", ["payment status", "payment_status", "status"])
+    elif file_key == "delay_events":
+        _copy_column_if_missing(working, "delay_id", ["delay_id", "delay event id", "event id", "Primary Event ID"])
+        _copy_column_if_missing(working, "delay_title", ["delay_title", "event_title", "Primary Event ID", "Activity Name"])
+        _copy_column_if_missing(working, "project_id", ["project_id", "project"], "The Big -P.01-UP-20-April-26")
+        _copy_column_if_missing(working, "activity_id", ["activity_id", "Activity ID"])
+        _copy_column_if_missing(working, "activity_name", ["activity_name", "Activity Name"])
+        _copy_column_if_missing(working, "start_date", ["start_date", "Start", "Overlap Start", "BL Start"])
+        _copy_column_if_missing(working, "end_date", ["end_date", "Finish", "Overlap Finish", "BL Finish"])
+        _copy_column_if_missing(working, "estimated_delay_days", ["estimated_delay_days", "Delayed duration after overlap", "Delayed duration", "Concurrent delay"])
+        _copy_column_if_missing(working, "approved_eot_days", ["approved_eot_days", "approved eot days"], 0)
+        _copy_column_if_missing(working, "responsibility", ["responsibility", "responsible_party"], "Employer / Client")
+        _copy_column_if_missing(working, "cause_category", ["cause_category", "Primary Event ID"], "Delay")
+        _copy_column_if_missing(working, "notice_ref", ["notice_ref", "notice ref"], "")
+        _copy_column_if_missing(working, "status", ["status"], "Open")
+    return working
 
 
 class CSVDataLoader:
@@ -63,7 +121,7 @@ class CSVDataLoader:
         
         try:
             # Load CSV
-            df = pd.read_csv(file_path)
+            df = normalize_import_template_frame(file_key, pd.read_csv(file_path))
             self.cache[file_key] = df
             self.load_status[file_key] = f"Loaded: {len(df)} rows"
             return df

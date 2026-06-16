@@ -1,0 +1,362 @@
+﻿project_id,wbs_code,wbs_name,total_activities,bl_project_duration,remaining_duration,total_float,bl_project_start,bl_project_finish,actual_start,actual_finish,schedule_%_complete,performance_%_complete,budget_at_completion,earned_value_cost,planned_value_cost
+The Big -P.01-UP-20-April-26,No Priority,,1363,577,473,0.0,11-Sep-25,10-Apr-27,11-Sep-25,,0.6916,0.3105,367286025.0,114050908.4,254009356.2
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26,ROYA-BIG PROJECT PHASE01 (B1-4),1363,577,473,0.0,11-Sep-25,10-Apr-27,11-Sep-25,,0.6916,0.3105,367286025.0,114050908.4,254009356.2
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.KD,Key Dates,8,577,344,-144.0,11-Sep-25,10-Apr-27,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.KD.MI,Milestone,5,577,344,-144.0,11-Sep-25,10-Apr-27,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.KD.MO,Mobilization,0,15,0,,11-Sep-25,28-Sep-25,13-Sep-25,29-Sep-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN,Engineering,387,270,40,247.0,11-Sep-25,7-Jun-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.1,Design Reviewing,1,60,0,,11-Sep-25,9-Nov-25,11-Sep-25,9-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2,Shop Drawing,386,219,31,205.0,11-Sep-25,7-Jun-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S,Submittal,193,209,21,205.0,11-Sep-25,21-May-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02,Part 02,94,179,21,205.0,11-Sep-25,16-Apr-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01,B01,56,179,21,205.0,11-Sep-25,16-Apr-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUB,Substructre,17,172,0,,11-Sep-25,7-Apr-26,11-Sep-25,31-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUB.1,Replacement,1,18,0,,11-Sep-25,1-Oct-25,11-Sep-25,13-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUB.F,Footing,4,27,0,,1-Oct-25,2-Nov-25,16-Sep-25,30-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUB.2ndB,Basement 2,7,122,0,,10-Nov-25,7-Apr-26,10-Nov-25,8-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUB.2ndB.SOG,S.O.G,2,21,0,,10-Mar-26,7-Apr-26,12-Feb-26,8-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUB.1stB,Basement 1,5,30,0,,17-Nov-25,21-Dec-25,22-Oct-25,31-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP,Superstructure,39,120,21,205.0,20-Nov-25,16-Apr-26,26-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.GF,Ground Floor,4,27,21,-60.0,20-Nov-25,21-Dec-25,26-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.1stF,1st Floor,4,26,20,-30.0,10-Dec-25,10-Jan-26,26-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.2ndF,2nd Floor,4,27,21,3.0,20-Dec-25,20-Jan-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.3rdF,3rd Floor,4,27,21,22.0,30-Dec-25,1-Feb-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.4thF,4th Floor,4,27,21,55.0,14-Jan-26,15-Feb-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.5thF,5th Floor,4,27,21,101.0,24-Jan-26,24-Feb-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.6thF,6th Floor,4,27,21,131.0,3-Feb-26,5-Mar-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.7thF,7th Floor,4,27,21,159.0,14-Feb-26,21-Mar-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.8thF,8th Floor,4,27,21,185.0,28-Feb-26,4-Apr-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B01.SUP.RF,Roof Floor,3,24,18,208.0,15-Mar-26,16-Apr-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02,B02,38,176,21,200.0,11-Sep-25,12-Apr-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUB,Substructre,15,176,21,191.0,11-Sep-25,12-Apr-26,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUB.1,Replacement,1,8,0,,11-Sep-25,20-Sep-25,11-Sep-25,20-Sep-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUB.F,Footing,4,24,0,,7-Oct-25,3-Nov-25,7-Oct-25,3-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUB.2ndB,Basement 2,6,126,21,191.0,10-Nov-25,12-Apr-26,15-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUB.2ndB.2,S.O.G,2,21,21,191.0,15-Mar-26,12-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUB.1stB,Basement 1,4,27,0,,20-Nov-25,21-Dec-25,19-Oct-25,31-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP,Superstructure,23,95,21,200.0,25-Nov-25,22-Mar-26,19-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP.GF,Ground Floor,4,27,21,-51.0,25-Nov-25,25-Dec-25,19-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP.1stF,1st Floor,4,27,21,6.0,15-Dec-25,15-Jan-26,19-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP.2ndF,2nd Floor,4,27,21,55.0,25-Dec-25,27-Jan-26,19-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP.3rdF,3rd Floor,4,27,21,106.0,14-Jan-26,15-Feb-26,19-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP.4thF,4th Floor,4,27,21,158.0,29-Jan-26,1-Mar-26,19-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P02.B02.SUP.RF,Roof Floor,3,24,21,200.0,18-Feb-26,22-Mar-26,25-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01,Part 01,99,208,21,205.0,13-Sep-25,21-May-26,21-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03,B03,38,132,21,200.0,27-Sep-25,2-Mar-26,27-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUB,Substructre,15,125,21,193.0,27-Sep-25,22-Feb-26,27-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUB.1,Replacement,1,18,0,,27-Sep-25,18-Oct-25,27-Sep-25,18-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUB.F,Footing,4,24,0,,11-Oct-25,6-Nov-25,11-Oct-25,6-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUB.2ndB,Basement 2,6,88,21,193.0,10-Nov-25,22-Feb-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUB.2ndB.1,S.O.G,2,21,21,193.0,29-Jan-26,22-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUB.1stB,Basement 1,4,27,0,,20-Nov-25,21-Dec-25,1-Jan-26,12-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP,Superstructure,23,78,21,200.0,30-Nov-25,2-Mar-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP.GF,Ground Floor,4,27,21,-47.0,30-Nov-25,30-Dec-25,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP.1stF,1st Floor,4,27,21,0.0,10-Dec-25,11-Jan-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP.2ndF,2nd Floor,4,27,21,55.0,20-Dec-25,20-Jan-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP.3rdF,3rd Floor,4,27,21,108.0,30-Dec-25,1-Feb-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP.4thF,4th Floor,4,27,21,162.0,19-Jan-26,19-Feb-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B03.SUP.RF,Roof Floor,3,24,21,200.0,3-Feb-26,2-Mar-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04,B04,61,208,21,205.0,13-Sep-25,21-May-26,21-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB,Substructre,22,180,21,205.0,13-Sep-25,19-Apr-26,21-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB.1,Replacement,1,18,0,,21-Oct-25,10-Nov-25,21-Oct-25,10-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB.F,Footing,4,39,0,,21-Sep-25,5-Nov-25,21-Sep-25,5-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB.2ndB,Basement 2,12,180,21,205.0,13-Sep-25,19-Apr-26,1-Nov-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB.2ndB.1,Water Tank,5,30,0,,13-Sep-25,18-Oct-25,1-Nov-25,30-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB.2ndB.2,S.O.G,2,21,21,205.0,25-Mar-26,19-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUB.1stB,Basement 1,5,30,0,,30-Nov-25,3-Jan-26,1-Jan-26,10-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP,Superstructure,39,129,21,205.0,15-Dec-25,21-May-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.GF,Ground Floor,4,27,21,-45.0,15-Dec-25,15-Jan-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.1stF,1st Floor,4,27,21,-19.0,25-Dec-25,27-Jan-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.2ndF,2nd Floor,4,27,21,15.0,10-Jan-26,10-Feb-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.3rdF,3rd Floor,4,27,21,49.0,24-Jan-26,24-Feb-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.4thF,4th Floor,4,27,21,81.0,8-Feb-26,10-Mar-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.5thF,5th Floor,4,27,21,113.0,28-Feb-26,4-Apr-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.6thF,6th Floor,4,27,21,140.0,15-Mar-26,20-Apr-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.7thF,7th Floor,4,27,21,165.0,4-Apr-26,5-May-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.8thF,8th Floor,4,27,21,189.0,19-Apr-26,19-May-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.S.P01.B04.SUP.RF,Roof Floor,3,24,21,205.0,25-Apr-26,21-May-26,1-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A,Approval,193,207,31,205.0,25-Sep-25,7-Jun-26,23-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02,Part 02,94,177,31,205.0,25-Sep-25,28-Apr-26,23-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01,B01,56,171,31,205.0,2-Oct-25,28-Apr-26,23-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUB,Substructre,17,164,10,197.0,2-Oct-25,20-Apr-26,23-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUB.1,Replacement,1,10,0,,2-Oct-25,14-Oct-25,2-Oct-25,23-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUB.F,Footing,4,19,0,,23-Oct-25,13-Nov-25,23-Sep-25,27-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUB.2ndB,Basement 2,7,114,10,197.0,1-Dec-25,20-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUB.2ndB.1,S.O.G,2,13,10,197.0,5-Apr-26,20-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUB.1stB,Basement 1,5,22,0,,8-Dec-25,1-Jan-26,1-Feb-26,2-Apr-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP,Superstructure,39,112,31,205.0,11-Dec-25,28-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.GF,Ground Floor,4,19,13,-60.0,11-Dec-25,1-Jan-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.1stF,1st Floor,4,18,12,-30.0,31-Dec-25,21-Jan-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.2ndF,2nd Floor,4,19,13,3.0,11-Jan-26,2-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.3rdF,3rd Floor,4,19,13,22.0,21-Jan-26,12-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.4thF,4th Floor,4,19,13,55.0,5-Feb-26,26-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.5thF,5th Floor,4,19,13,101.0,15-Feb-26,8-Mar-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.6thF,6th Floor,4,19,13,131.0,24-Feb-26,22-Mar-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.7thF,7th Floor,4,19,13,159.0,7-Mar-26,1-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.8thF,8th Floor,4,19,13,185.0,25-Mar-26,16-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B01.SUP.RF,Roof Floor,3,16,28,208.0,9-Apr-26,28-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02,B02,38,174,13,200.0,25-Sep-25,25-Apr-26,25-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUB,Substructre,15,174,13,191.0,25-Sep-25,25-Apr-26,25-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUB.1,Replacement,1,10,0,,25-Sep-25,7-Oct-25,25-Sep-25,7-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUB.F,Footing,4,16,0,,28-Oct-25,15-Nov-25,1-Dec-25,11-Dec-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUB.2ndB,Basement 2,6,118,13,191.0,1-Dec-25,25-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUB.2ndB.SOG,S.O.G,2,13,13,191.0,9-Apr-26,25-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUB.1stB,Basement 1,4,19,0,,11-Dec-25,1-Jan-26,1-Feb-26,17-Feb-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP,Superstructure,23,87,13,200.0,16-Dec-25,2-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP.GF,Ground Floor,4,19,13,-41.0,16-Dec-25,6-Jan-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP.1stF,1st Floor,4,19,13,6.0,5-Jan-26,28-Jan-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP.2ndF,2nd Floor,4,19,13,55.0,17-Jan-26,8-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP.3rdF,3rd Floor,4,19,13,106.0,5-Feb-26,26-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP.4thF,4th Floor,4,19,13,158.0,19-Feb-26,12-Mar-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P02.B02.SUP.RF,Roof Floor,3,16,13,200.0,11-Mar-26,2-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01,Part 01,99,200,23,205.0,4-Oct-25,7-Jun-26,7-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03,B03,38,134,13,200.0,7-Oct-25,14-Mar-26,7-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUB,Substructre,15,127,13,193.0,7-Oct-25,5-Mar-26,7-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUB.4,Replacement,1,10,0,,7-Oct-25,18-Oct-25,7-Oct-25,18-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUB.1,Footing,4,16,0,,1-Nov-25,18-Nov-25,30-Nov-25,10-Dec-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUB.3,Basement 2,6,80,13,193.0,1-Dec-25,5-Mar-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUB.3.2,S.O.G,2,13,13,193.0,19-Feb-26,5-Mar-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUB.2,Basement 1,4,19,0,,11-Dec-25,1-Jan-26,1-Jan-26,25-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP,Superstructure,23,70,13,200.0,21-Dec-25,14-Mar-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP.GF,Ground Floor,4,19,13,-45.0,21-Dec-25,12-Jan-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP.1stF,1st Floor,4,19,13,0.0,31-Dec-25,22-Jan-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP.2ndF,2nd Floor,4,19,13,55.0,11-Jan-26,2-Feb-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP.3rdF,3rd Floor,4,19,13,108.0,21-Jan-26,12-Feb-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP.4thF,4th Floor,4,19,13,162.0,10-Feb-26,3-Mar-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B03.SUP.RF,Roof Floor,3,16,13,200.0,24-Feb-26,14-Mar-26,7-Jan-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04,B04,61,200,23,205.0,4-Oct-25,7-Jun-26,7-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB,Substructre,22,162,13,205.0,4-Oct-25,19-Apr-26,7-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB.1,Replacement,1,10,0,,11-Nov-25,22-Nov-25,11-Nov-25,22-Nov-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB.F,Footing,4,31,0,,13-Oct-25,17-Nov-25,30-Nov-25,10-Dec-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB.2ndF,Basement 2,12,162,13,205.0,4-Oct-25,19-Apr-26,7-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB.2ndF.WT,Water Tank,5,22,0,,4-Oct-25,29-Oct-25,7-Oct-25,17-Dec-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB.2ndF.SOG,S.O.G,2,13,13,205.0,4-Apr-26,19-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUB.1stB,Basement 1,5,22,0,,21-Dec-25,15-Jan-26,1-Feb-26,5-Mar-26,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP,Superstructure,39,121,13,205.0,5-Jan-26,7-Jun-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.GF,Ground Floor,4,19,13,-42.0,5-Jan-26,28-Jan-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.1stF,1st Floor,4,19,13,-19.0,17-Jan-26,8-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.2ndF,2nd Floor,4,19,13,15.0,1-Feb-26,22-Feb-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.3rdF,3rd Floor,4,19,13,49.0,15-Feb-26,8-Mar-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.4thF,4th Floor,4,19,13,81.0,1-Mar-26,26-Mar-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.5thF,5th Floor,4,19,13,113.0,25-Mar-26,16-Apr-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.6thF,6th Floor,4,19,13,140.0,9-Apr-26,2-May-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.7thF,7th Floor,4,19,13,165.0,26-Apr-26,17-May-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.8thF,8th Floor,4,19,13,189.0,10-May-26,4-Jun-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.EN.2.A.P01.B04.SUP.RF,Roof Floor,3,16,13,205.0,16-May-26,7-Jun-26,1-Feb-26,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P,Procurement,54,493,245,228.0,11-Sep-25,16-Jan-27,11-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.MS,Material Submittal,14,38,0,,11-Sep-25,26-Oct-25,11-Sep-25,26-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.MS.SS,Sample Submittal,7,28,0,,11-Sep-25,14-Oct-25,11-Sep-25,14-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.MS.SA,Sample Approval,7,20,0,,2-Oct-25,26-Oct-25,2-Oct-25,26-Oct-25,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.PC,Procurement Cycle,40,456,245,228.0,18-Oct-25,16-Jan-27,27-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.PC.PO,Create POs,20,335,161,144.0,18-Oct-25,29-Nov-26,27-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.PC.PO.1,POs for Rebar,14,334,161,45.0,19-Oct-25,29-Nov-26,27-Sep-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.PC.DS,Delivery to Site,20,453,245,228.0,21-Oct-25,16-Jan-27,16-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.P.PC.DS.DR,Delivery for Rebar,14,441,245,27.0,2-Nov-25,16-Jan-27,28-Oct-25,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON,Construction,522,505,445,28.0,25-Oct-25,13-Mar-27,5-Oct-25,,0.6916,0.3105,367286025.0,114050908.4,254009356.2
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.EW,Earth Works,8,55,0,,3-Nov-25,5-Jan-26,10-Oct-25,3-Dec-25,1.0,1.0,7596000.0,7596000.0,7596000.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.EW.B01,B01,2,18,0,,3-Nov-25,23-Nov-25,30-Oct-25,29-Nov-25,1.0,1.0,2643783.88,2643783.88,2643783.88
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.EW.B02,B02,2,23,0,,12-Nov-25,8-Dec-25,30-Oct-25,29-Nov-25,1.0,1.0,1409334.54,1409334.54,1409334.54
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.EW.B03,B03,2,23,0,,29-Nov-25,24-Dec-25,10-Oct-25,3-Dec-25,1.0,1.0,1528768.92,1528768.92,1528768.92
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.EW.B04,B04,2,9,0,,27-Dec-25,5-Jan-26,10-Oct-25,3-Dec-25,1.0,1.0,2014112.66,2014112.66,2014112.66
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02,Part 02,246,473,445,28.0,26-Nov-25,13-Mar-27,26-Nov-25,,0.6586,0.2915,174864941.9,50978599.75,115165246.2
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01,B01,145,473,445,-130.0,26-Nov-25,13-Mar-27,26-Nov-25,,0.6669,0.2793,118088212.4,32977443.94,78754236.56
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUB,Substructure,52,189,164,151.0,26-Nov-25,2-Jun-26,26-Nov-25,,0.9662,0.4472,73746463.03,32977443.94,71252718.84
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUB.F,Footing,13,35,54,174.0,26-Nov-25,30-Dec-25,26-Nov-25,,1.0,0.9724,33912970.47,32977443.94,33912970.47
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUB.2ndB,Basement 2,23,160,161,151.0,25-Dec-25,2-Jun-26,,,0.8887,0.0,22399322.42,0.0,19905578.23
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUB.2ndB.SOG,S.O.G,7,49,46,151.0,15-Apr-26,2-Jun-26,,,0.5326,0.0,5335552.16,0.0,2841807.96
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUB.1stB,Basement 1,16,58,56,-148.0,9-Feb-26,7-Apr-26,,,1.0,0.0,17434170.14,0.0,17434170.14
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP,Superstructure,93,357,354,-144.0,22-Mar-26,13-Mar-27,,,0.1692,0.0,44341749.33,0.0,7501517.72
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.GF,GR Floor,12,55,57,-148.0,22-Mar-26,15-May-26,,,1.0,0.0,6200342.12,0.0,6200342.12
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.1stF,1st Floor,9,58,55,-140.0,29-Apr-26,25-Jun-26,,,0.2376,0.0,5475294.68,0.0,1301175.6
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.2ndF,2nd Floor,9,48,47,-136.0,14-Jun-26,31-Jul-26,,,0.0,0.0,5453782.95,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.3rdF,3rd Floor,9,52,53,-138.0,20-Jul-26,9-Sep-26,,,0.0,0.0,4442127.13,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.4thF,4th Floor,9,54,55,-139.0,30-Aug-26,22-Oct-26,,,0.0,0.0,4444864.57,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.5thF,5th Floor,9,47,51,-142.0,11-Oct-26,26-Nov-26,,,0.0,0.0,4441284.84,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.6thF,6th Floor,9,48,49,-144.0,14-Nov-26,31-Dec-26,,,0.0,0.0,4439666.09,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.7thF,7th Floor,9,46,46,-144.0,19-Dec-26,2-Feb-27,,,0.0,0.0,4441342.59,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.8thF,8th Floor,9,43,42,-144.0,20-Jan-27,3-Mar-27,,,0.0,0.0,4287130.76,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B01.SUP.RF,Roof Floor,9,21,21,-144.0,21-Feb-27,13-Mar-27,,,0.0,0.0,715913.59,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02,B02,101,451,396,75.0,9-Dec-25,4-Mar-27,27-Nov-25,,0.6413,0.3171,56776729.54,18001155.81,36411009.65
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUB,Substructure,44,194,178,293.0,9-Dec-25,20-Jun-26,27-Nov-25,,0.9286,0.5439,33097067.48,18001155.81,30733193.66
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUB.F,Footing,13,34,5,419.0,9-Dec-25,11-Jan-26,27-Nov-25,,1.0,0.9746,16865555.93,16437678.31,16865555.93
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUB.2ndB,Basement 2,19,167,178,135.0,5-Jan-26,20-Jun-26,19-Apr-26,,0.7446,0.1689,9256007.18,1563477.5,6892133.35
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUB.2ndB.1,S.O.G,7,59,54,135.0,23-Apr-26,20-Jun-26,,,0.1552,0.0,2798310.69,0.0,434436.87
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUB.1stB,Basement 1,12,57,55,-112.0,15-Feb-26,12-Apr-26,,,1.0,0.0,6975504.38,0.0,6975504.38
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP,Superstructure,57,340,335,-83.0,30-Mar-26,4-Mar-27,,,0.2398,0.0,23679662.06,0.0,5677816.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP.GF,GR Floor,12,65,62,-76.0,30-Mar-26,2-Jun-26,,,1.0,0.0,5677816.0,0.0,5677816.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP.1stF,1st Floor,9,58,57,-72.0,1-Jun-26,28-Jul-26,,,0.0,0.0,4661114.61,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP.2ndF,2nd Floor,9,62,61,-73.0,28-Jul-26,27-Sep-26,,,0.0,0.0,4624060.77,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP.3rdF,3rd Floor,9,61,65,-76.0,28-Sep-26,27-Nov-26,,,0.0,0.0,4120387.11,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP.4thF,4th Floor,9,61,59,-72.0,29-Nov-26,28-Jan-27,,,0.0,0.0,4155415.18,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P02.B02.SUP.RF,Roof Floor,9,36,35,-83.0,28-Jan-27,4-Mar-27,,,0.0,0.0,440868.4,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01,Part 01,268,505,430,-115.0,25-Oct-25,13-Mar-27,5-Oct-25,,0.7101,0.3002,184825083.1,55476308.59,131248110.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04,B04,167,505,430,-115.0,25-Oct-25,13-Mar-27,5-Oct-25,,0.7189,0.2598,122501879.9,31821823.82,88065415.36
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUB,Substructure,74,194,110,205.0,25-Oct-25,6-May-26,5-Oct-25,,1.0,0.3921,81153001.47,31821823.82,81153001.47
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUB.1,Footing,13,33,56,196.0,6-Jan-26,7-Feb-26,1-Dec-25,,1.0,0.6652,30841796.03,20515451.98,30841796.03
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUB.3,Basement 2,45,194,110,205.0,25-Oct-25,6-May-26,5-Oct-25,,1.0,0.3448,32788559.73,11306371.84,32788559.73
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUB.3.2,Water Tank,22,115,33,-103.0,25-Oct-25,16-Feb-26,5-Oct-25,,1.0,0.8604,13140453.7,11306371.84,13140453.7
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUB.3.1,S.O.G,7,40,40,205.0,28-Mar-26,6-May-26,,,1.0,0.0,2633260.87,0.0,2633260.87
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUB.2,Basement 1,16,51,46,-113.0,10-Mar-26,29-Apr-26,,,1.0,0.0,17522645.7,0.0,17522645.7
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP,Superstructure,93,333,350,-129.0,15-Apr-26,13-Mar-27,,,0.1672,0.0,41348878.45,0.0,6912413.89
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.GF,GR Floor,12,40,41,-104.0,15-Apr-26,24-May-26,,,1.0,0.0,6912413.89,0.0,6912413.89
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.1stF,1st Floor,9,53,49,-119.0,16-May-26,7-Jul-26,,,0.0,0.0,5305427.87,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.2ndF,2nd Floor,9,52,50,-118.0,27-Jun-26,17-Aug-26,,,0.0,0.0,5183397.49,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.3rdF,3rd Floor,9,51,52,-122.0,8-Aug-26,27-Sep-26,,,0.0,0.0,3878960.56,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.4thF,4th Floor,9,50,50,-120.0,15-Sep-26,3-Nov-26,,,0.0,0.0,3874303.58,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.5thF,5th Floor,9,45,48,-126.0,25-Oct-26,8-Dec-26,,,0.0,0.0,3874998.98,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.6thF,6th Floor,9,39,40,-127.0,29-Nov-26,6-Jan-27,,,0.0,0.0,3876436.07,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.7thF,7th Floor,9,40,38,-126.0,28-Dec-26,5-Feb-27,,,0.0,0.0,3899091.85,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.8thF,8th Floor,9,36,35,-128.0,27-Jan-27,3-Mar-27,,,0.0,0.0,3811552.6,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B04.SUP.RF,Roof Floor,9,20,20,-129.0,22-Feb-27,13-Mar-27,,,0.0,0.0,732295.57,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03,B03,101,444,414,-99.0,25-Dec-25,13-Mar-27,1-Dec-25,,0.6929,0.3795,62323203.19,23654484.78,43182694.61
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUB,Substructure,44,120,96,219.0,25-Dec-25,23-Apr-26,1-Dec-25,,1.0,0.6222,38018490.45,23654484.78,38018490.45
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUB.F,Footing,13,38,57,183.0,25-Dec-25,31-Jan-26,1-Dec-25,,1.0,0.9749,20706874.01,20187996.0,20706874.01
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUB.2ndB,Basement 2,19,92,87,219.0,22-Jan-26,23-Apr-26,15-Feb-26,,1.0,0.3639,9525721.7,3466488.78,9525721.7
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUB.2ndB.SOG,S.O.G,7,44,39,219.0,11-Mar-26,23-Apr-26,,,1.0,0.0,1413696.28,0.0,1413696.28
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUB.1stB,Basement 1,12,53,55,-106.0,1-Mar-26,22-Apr-26,,,1.0,0.0,7785894.74,0.0,7785894.74
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP,Superstructure,57,334,335,-99.0,14-Apr-26,13-Mar-27,,,0.2125,0.0,24304712.74,0.0,5164204.16
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP.GF,GR Floor,12,43,44,-82.0,14-Apr-26,26-May-26,,,1.0,0.0,5164204.16,0.0,5164204.16
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP.1stF,1st Floor,9,65,64,-85.0,2-Jun-26,5-Aug-26,,,0.0,0.0,4672025.8,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP.2ndF,2nd Floor,9,65,65,-89.0,8-Aug-26,11-Oct-26,,,0.0,0.0,4678514.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP.3rdF,3rd Floor,9,62,66,-91.0,11-Oct-26,11-Dec-26,,,0.0,0.0,4656462.51,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP.4thF,4th Floor,9,61,59,-96.0,13-Dec-26,11-Feb-27,,,0.0,0.0,4504540.48,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.CON.P01.B03.SUP.RF,Roof Floor,9,29,29,-99.0,13-Feb-27,13-Mar-27,,,0.0,0.0,628965.79,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO,Handover,392,512,473,-144.0,15-Nov-25,10-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1,As-built,386,415,385,-120.0,15-Nov-25,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S,Submittal,193,409,379,-116.0,15-Nov-25,29-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02,Part 02,94,401,379,-120.0,24-Nov-25,29-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01,B01,56,401,379,-120.0,24-Nov-25,29-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUB,Substructre,17,171,150,109.0,24-Nov-25,23-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUB.1,Replacement,1,18,18,241.0,24-Nov-25,14-Dec-25,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUB.F,Footing,4,38,18,241.0,29-Nov-25,12-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUB.2ndB,Basement 2,7,124,127,109.0,19-Jan-26,23-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUB.2ndB.SOG,S.O.G,2,22,22,109.0,25-May-26,23-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUB.1stB,Basement 1,5,33,33,168.0,1-Mar-26,12-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP,Superstructure,39,292,293,-120.0,7-Apr-26,29-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.GF,Ground Floor,4,36,36,137.0,7-Apr-26,19-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.1stF,1st Floor,4,37,37,102.0,17-May-26,4-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.2ndF,2nd Floor,4,33,33,72.0,1-Jul-26,9-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.3rdF,3rd Floor,4,35,35,39.0,8-Aug-26,17-Sep-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.4thF,4th Floor,4,37,37,4.0,16-Sep-26,29-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.5thF,5th Floor,4,33,33,-26.0,27-Oct-26,3-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.6thF,6th Floor,4,33,33,-56.0,1-Dec-26,9-Jan-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.7thF,7th Floor,4,32,32,-83.0,3-Jan-27,10-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.8thF,8th Floor,4,30,30,-107.0,4-Feb-27,14-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B01.SUP.RF,Roof Floor,3,24,23,-120.0,27-Feb-27,29-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02,B02,38,377,336,-77.0,9-Dec-25,16-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUB,Substructre,15,173,165,94.0,9-Dec-25,12-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUB.1,Replacement,1,18,18,241.0,9-Dec-25,29-Dec-25,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUB.F,Footing,4,42,58,201.0,11-Dec-25,31-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUB.2ndB,Basement 2,6,133,163,94.0,27-Jan-26,12-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUB.2ndB.2,S.O.G,2,18,18,94.0,21-Jun-26,12-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUB.1stB,Basement 1,4,32,32,195.0,5-Mar-26,16-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP,Superstructure,23,272,271,-77.0,19-Apr-26,16-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP.GF,Ground Floor,4,38,39,155.0,19-Apr-26,6-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP.1stF,1st Floor,4,37,37,105.0,22-Jun-26,5-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP.2ndF,2nd Floor,4,40,40,53.0,19-Aug-26,5-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP.3rdF,3rd Floor,4,40,40,2.0,21-Oct-26,6-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP.4thF,4th Floor,4,39,39,-46.0,21-Dec-26,6-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P02.B02.SUP.RF,Roof Floor,3,28,28,-77.0,9-Feb-27,16-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01,Part 01,99,407,359,-96.0,15-Nov-25,27-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03,B03,38,372,351,-92.0,25-Dec-25,27-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUB,Substructre,15,114,95,164.0,25-Dec-25,14-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUB.1,Replacement,1,18,18,241.0,25-Dec-25,15-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUB.F,Footing,4,42,58,201.0,28-Dec-25,16-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUB.2ndB,Basement 2,6,74,92,164.0,12-Feb-26,14-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUB.2ndB.1,S.O.G,2,22,22,164.0,20-Apr-26,14-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUB.1stB,Basement 1,4,32,32,182.0,25-Mar-26,2-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP,Superstructure,23,273,277,-92.0,28-Apr-26,27-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP.GF,Ground Floor,4,28,28,157.0,28-Apr-26,3-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP.1stF,1st Floor,4,40,40,94.0,27-Jun-26,13-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP.2ndF,2nd Floor,4,40,40,39.0,2-Sep-26,19-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP.3rdF,3rd Floor,4,40,40,-14.0,4-Nov-26,20-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP.4thF,4th Floor,4,37,37,-65.0,6-Jan-27,20-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B03.SUP.RF,Roof Floor,3,26,26,-92.0,22-Feb-27,27-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04,B04,61,402,359,-96.0,15-Nov-25,21-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB,Substructre,22,160,106,153.0,15-Nov-25,1-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB.1,Replacement,1,18,18,241.0,6-Jan-26,28-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB.F,Footing,4,39,58,201.0,10-Jan-26,24-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB.2ndB,Basement 2,12,160,106,153.0,15-Nov-25,1-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB.2ndB.1,Water Tank,5,61,29,230.0,15-Nov-25,26-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB.2ndB.2,S.O.G,2,18,18,153.0,7-May-26,1-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUB.1stB,Basement 1,5,32,32,178.0,29-Mar-26,5-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP,Superstructure,39,266,283,-96.0,30-Apr-26,21-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.GF,Ground Floor,4,28,28,155.0,30-Apr-26,6-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.1stF,1st Floor,4,35,35,107.0,4-Jun-26,15-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.2ndF,2nd Floor,4,35,35,73.0,15-Jul-26,25-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.3rdF,3rd Floor,4,35,35,38.0,25-Aug-26,5-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.4thF,4th Floor,4,34,34,7.0,3-Oct-26,11-Nov-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.5thF,5th Floor,4,32,32,-23.0,10-Nov-26,16-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.6thF,6th Floor,4,30,30,-45.0,12-Dec-26,16-Jan-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.7thF,7th Floor,4,29,29,-73.0,11-Jan-27,14-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.8thF,8th Floor,4,27,27,-95.0,9-Feb-27,15-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.S.P01.B04.SUP.RF,Roof Floor,3,17,16,-107.0,27-Feb-27,21-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A,Approval,193,403,373,-120.0,29-Nov-25,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02,Part 02,94,395,373,-120.0,8-Dec-25,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01,B01,56,395,373,-120.0,8-Dec-25,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUB,Substructre,17,165,144,109.0,8-Dec-25,1-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUB.1,Replacement,1,12,12,241.0,8-Dec-25,21-Dec-25,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUB.F,Footing,4,32,12,241.0,13-Dec-25,19-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUB.2ndB,Basement 2,7,118,121,109.0,3-Feb-26,1-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUB.2ndB.1,S.O.G,2,16,16,109.0,13-Jun-26,1-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUB.1stB,Basement 1,5,27,27,168.0,15-Mar-26,20-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP,Superstructure,39,286,287,-120.0,22-Apr-26,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.GF,Ground Floor,4,30,30,137.0,22-Apr-26,26-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.1stF,1st Floor,4,31,31,102.0,4-Jun-26,11-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.2ndF,2nd Floor,4,27,27,72.0,15-Jul-26,16-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.3rdF,3rd Floor,4,29,29,39.0,22-Aug-26,24-Sep-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.4thF,4th Floor,4,31,31,4.0,30-Sep-26,5-Nov-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.5thF,5th Floor,4,27,27,-26.0,10-Nov-26,10-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.6thF,6th Floor,4,27,27,-56.0,15-Dec-26,16-Jan-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.7thF,7th Floor,4,26,26,-83.0,18-Jan-27,17-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.8thF,8th Floor,4,24,24,-107.0,18-Feb-27,21-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B01.SUP.RF,Roof Floor,3,18,17,-120.0,16-Mar-27,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02,B02,38,371,330,-77.0,23-Dec-25,23-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUB,Substructre,15,167,159,94.0,23-Dec-25,19-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUB.1,Replacement,1,12,12,241.0,23-Dec-25,5-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUB.F,Footing,4,36,52,201.0,25-Dec-25,7-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUB.2ndB,Basement 2,6,127,157,94.0,10-Feb-26,19-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUB.2ndB.SOG,S.O.G,2,12,12,94.0,6-Jul-26,19-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUB.1stB,Basement 1,4,26,26,195.0,24-Mar-26,23-Apr-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP,Superstructure,23,266,265,-77.0,3-May-26,23-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP.GF,Ground Floor,4,32,33,155.0,3-May-26,13-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP.1stF,1st Floor,4,31,31,105.0,7-Jul-26,12-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP.2ndF,2nd Floor,4,34,34,53.0,3-Sep-26,13-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP.3rdF,3rd Floor,4,34,34,2.0,4-Nov-26,13-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP.4thF,4th Floor,4,33,33,-46.0,4-Jan-27,13-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P02.B02.SUP.RF,Roof Floor,3,22,22,-77.0,23-Feb-27,23-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01,Part 01,99,403,360,-107.0,29-Nov-25,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03,B03,38,368,347,-94.0,10-Jan-26,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUB,Substructre,15,108,89,164.0,10-Jan-26,21-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUB.4,Replacement,1,12,12,241.0,10-Jan-26,22-Jan-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUB.1,Footing,4,36,52,201.0,12-Jan-26,23-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUB.3,Basement 2,6,68,86,164.0,26-Feb-26,21-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUB.3.2,S.O.G,2,16,16,164.0,4-May-26,21-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUB.2,Basement 1,4,26,26,182.0,8-Apr-26,9-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP,Superstructure,23,269,273,-94.0,12-May-26,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP.GF,Ground Floor,4,22,22,157.0,12-May-26,10-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP.1stF,1st Floor,4,34,34,94.0,12-Jul-26,20-Aug-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP.2ndF,2nd Floor,4,34,34,39.0,16-Sep-26,26-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP.3rdF,3rd Floor,4,34,34,-14.0,18-Nov-26,27-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP.4thF,4th Floor,4,31,31,-65.0,21-Jan-27,27-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B03.SUP.RF,Roof Floor,3,22,22,-94.0,8-Mar-27,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04,B04,61,403,360,-107.0,29-Nov-25,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB,Substructre,22,154,100,153.0,29-Nov-25,8-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB.1,Replacement,1,12,12,241.0,21-Jan-26,4-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB.F,Footing,4,33,52,201.0,24-Jan-26,3-Mar-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB.2ndF,Basement 2,12,154,100,153.0,29-Nov-25,8-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB.2ndF.WT,Water Tank,5,55,23,230.0,29-Nov-25,2-Feb-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB.2ndF.SOG,S.O.G,2,12,12,153.0,21-May-26,8-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUB.1stB,Basement 1,5,26,26,178.0,12-Apr-26,12-May-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP,Superstructure,39,267,284,-107.0,14-May-26,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.GF,Ground Floor,4,22,22,155.0,14-May-26,13-Jun-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.1stF,1st Floor,4,29,29,107.0,18-Jun-26,22-Jul-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.2ndF,2nd Floor,4,29,29,73.0,30-Jul-26,2-Sep-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.3rdF,3rd Floor,4,29,29,38.0,9-Sep-26,13-Oct-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.4thF,4th Floor,4,28,28,7.0,18-Oct-26,18-Nov-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.5thF,5th Floor,4,26,26,-23.0,24-Nov-26,23-Dec-26,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.6thF,6th Floor,4,24,24,-49.0,26-Dec-26,23-Jan-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.7thF,7th Floor,4,23,23,-73.0,26-Jan-27,21-Feb-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.8thF,8th Floor,4,21,21,-95.0,23-Feb-27,22-Mar-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.1.A.P01.B04.SUP.RF,Roof Floor,3,18,17,-107.0,16-Mar-27,5-Apr-27,,,0.0,0.0,0.0,0.0,0.0
+The Big -P.01-UP-20-April-26,The Big - P.01 - UP-20-April-26.HO.2,Handover Works,6,36,75,-144.0,6-Mar-27,10-Apr-27,,,0.0,0.0,0.0,0.0,0.0

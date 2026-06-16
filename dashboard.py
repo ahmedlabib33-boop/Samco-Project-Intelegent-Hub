@@ -7,6 +7,7 @@ import io
 import json
 import re
 import site
+import textwrap
 from pathlib import Path
 import tempfile
 import zipfile
@@ -125,25 +126,35 @@ from src.construction_system.steel_delay_tia import (
 
 APP_DIR = Path(__file__).parent
 LOGO_PATH = APP_DIR / "assets" / "logo.png"
-LETTERS_PATH = Path(r"C:\Users\pc\Downloads\01-SAMCO-ACEPM_letters_linked (Final).xlsx")
+LETTERS_CANDIDATE_PATHS = [
+    APP_DIR / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked_updated.xlsx",
+    APP_DIR / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked (Final).xlsx",
+    APP_DIR / "data" / "import_templates" / "01-SAMCO-ACEPM_letters_linked_updated.xlsx",
+    APP_DIR / "data" / "import_templates" / "01-SAMCO-ACEPM_letters_linked (Final).xlsx",
+    Path(r"C:\Users\pc\Downloads\01-SAMCO-ACEPM_letters_linked (Final).xlsx"),
+]
+LETTERS_PATH = next((path for path in LETTERS_CANDIDATE_PATHS if path.exists()), LETTERS_CANDIDATE_PATHS[0])
 PRESENTATION_TEMPLATE_PATH = Path(r"C:\Users\pc\OneDrive\Desktop\Presentation\08-Presentations the big - 11.5.2026.pptx")
-PROJECTS_CSV_PATH = APP_DIR / "data" / "import_templates" / "projects.csv"
-ACTIVITIES_CSV_PATH = APP_DIR / "data" / "import_templates" / "activities.csv"
-EVM_CSV_PATH = APP_DIR / "data" / "import_templates" / "evm.csv"
-CONTRACTS_CSV_PATH = APP_DIR / "data" / "import_templates" / "contracts.csv"
-PAYMENTS_CSV_PATH = APP_DIR / "data" / "import_templates" / "payments.csv"
-DELAYS_CSV_PATH = APP_DIR / "data" / "import_templates" / "delay_events.csv"
-RISKS_CSV_PATH = APP_DIR / "data" / "import_templates" / "risks.csv"
-MILESTONES_CSV_PATH = APP_DIR / "data" / "import_templates" / "milestones.csv"
-CHANGE_ORDERS_CSV_PATH = APP_DIR / "data" / "import_templates" / "change_orders.csv"
-STEEL_DELAY_CSV_PATH = APP_DIR / "data" / "import_templates" / "steel_delay_status_mployer_free_issue_material.csv"
-RFI_STATUS_CSV_PATH = APP_DIR / "data" / "import_templates" / "rfi_ status.csv"
-IFC_CONFLICT_CSV_PATH = APP_DIR / "data" / "import_templates" / "ifc_conflict.csv"
+DATA_PROJECTS_DIR = APP_DIR / "data" / "projects"
+IMPORT_TEMPLATES_DIR = APP_DIR / "data" / "import_templates"
+STEEL_TIA_DIR = APP_DIR / "steel_delay_tia_templates"
+BL_FIXED_DIR = APP_DIR / "BL fixed"
+PROJECTS_CSV_PATH = IMPORT_TEMPLATES_DIR / "projects.csv"
+ACTIVITIES_CSV_PATH = IMPORT_TEMPLATES_DIR / "activities.csv"
+EVM_CSV_PATH = IMPORT_TEMPLATES_DIR / "evm.csv"
+CONTRACTS_CSV_PATH = IMPORT_TEMPLATES_DIR / "contracts.csv"
+PAYMENTS_CSV_PATH = IMPORT_TEMPLATES_DIR / "payments.csv"
+DELAYS_CSV_PATH = IMPORT_TEMPLATES_DIR / "delay_events.csv"
+RISKS_CSV_PATH = IMPORT_TEMPLATES_DIR / "risks.csv"
+MILESTONES_CSV_PATH = IMPORT_TEMPLATES_DIR / "milestones.csv"
+CHANGE_ORDERS_CSV_PATH = IMPORT_TEMPLATES_DIR / "change_orders.csv"
+STEEL_DELAY_CSV_PATH = IMPORT_TEMPLATES_DIR / "steel_delay_status_mployer_free_issue_material.csv"
+RFI_STATUS_CSV_PATH = IMPORT_TEMPLATES_DIR / "rfi_ status.csv"
+IFC_CONFLICT_CSV_PATH = IMPORT_TEMPLATES_DIR / "ifc_conflict.csv"
 TIME_IMPACT_REPORT_PATH = Path(r"C:\Users\pc\Desktop\01 Letters\labib tia folders\deep-research-report.md")
-S_CURVE_CSV_PATH = APP_DIR / "data" / "import_templates" / "s_curve.csv"
-WBS_CSV_PATH = APP_DIR / "data" / "import_templates" / "wbs.csv"
+S_CURVE_CSV_PATH = IMPORT_TEMPLATES_DIR / "s_curve.csv"
+WBS_CSV_PATH = IMPORT_TEMPLATES_DIR / "wbs.csv"
 EVM_COMMENTS_PATH = APP_DIR / "data" / "evm_comments.json"
-SUPER_PREMIUM_PROMPT_PATH = APP_DIR / "Codex_Prompt_Super_Premium_Interactive_Progress_Report.md"
 PRE_LOGO_PATH = Path(r"C:\Users\pc\OneDrive\Desktop\01 Letters\labib tia folders\Logos\PRE logo.png")
 ROYA_LOGO_PATH = Path(r"C:\Users\pc\OneDrive\Desktop\01 Letters\labib tia folders\Logos\Roya logo.png")
 ACEPM_LOGO_PATH = Path(r"C:\Users\pc\OneDrive\Desktop\01 Letters\labib tia folders\Logos\ACEPM logo.png")
@@ -175,7 +186,7 @@ def read_text_file(path: Path) -> str:
 
 def require_openpyxl():
     if not OPENPYXL_AVAILABLE:
-        raise RuntimeError("openpyxl is required for the Super Premium workbook export but is not installed.")
+        raise RuntimeError("openpyxl is required for the Detailed Progress report workbook export but is not installed.")
 
 
 def egp(value) -> str:
@@ -202,7 +213,17 @@ def pct(value) -> str:
 def parse_project_date(value):
     if pd.isna(value):
         return None
-    return pd.to_datetime(str(value).strip(), format="%d-%b-%y", errors="coerce")
+    parsed = pd.to_datetime(str(value).strip(), format="%d-%b-%y", errors="coerce")
+    return None if pd.isna(parsed) else parsed
+
+
+def format_project_date(value, fallback: str = "N/A") -> str:
+    if value is None or pd.isna(value):
+        return fallback
+    try:
+        return pd.Timestamp(value).strftime("%d-%b-%Y")
+    except (TypeError, ValueError):
+        return fallback
 
 
 def parse_numeric(value):
@@ -210,6 +231,84 @@ def parse_numeric(value):
         return 0.0
     cleaned = str(value).replace("$", "").replace(",", "").replace("%", "").strip()
     return float(cleaned) if cleaned else 0.0
+
+
+def normalized_column_lookup(df: pd.DataFrame) -> dict[str, str]:
+    return {
+        re.sub(r"[^a-z0-9]+", "", str(col).strip().lower()): col
+        for col in df.columns
+    }
+
+
+def first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
+    lookup = normalized_column_lookup(df)
+    for candidate in candidates:
+        if candidate in df.columns:
+            return candidate
+        match = lookup.get(re.sub(r"[^a-z0-9]+", "", str(candidate).strip().lower()))
+        if match is not None:
+            return match
+    return None
+
+
+def copy_column_if_missing(df: pd.DataFrame, target: str, candidates: list[str], default: Any = "") -> None:
+    if target in df.columns:
+        return
+    source = first_existing_column(df, candidates)
+    df[target] = df[source] if source is not None else default
+
+
+def normalize_import_template_frame(path: Path, df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    working = df.loc[:, [col for col in df.columns if str(col).strip()]].copy()
+    file_name = path.name.lower()
+
+    if file_name == "payments.csv":
+        copy_column_if_missing(working, "payment_id", ["payment", "payment id", "payment_id"])
+        copy_column_if_missing(working, "contract_id", ["contract", "contract id", "contract_id"])
+        copy_column_if_missing(working, "project_id", ["project", "project id", "project_id"])
+        copy_column_if_missing(working, "invoice_no", ["invoice no", "invoice_no", "invoice"])
+        copy_column_if_missing(working, "invoice_date", ["invoice date", "invoice_date", "payment_date"])
+        copy_column_if_missing(working, "payment_date", ["Date of Cash Cheque Receipt", "payment date", "payment_date", "invoice date"])
+        copy_column_if_missing(working, "certified_amount", ["certified amount", "certified_amount", "certified"])
+        copy_column_if_missing(working, "paid_amount", ["paid amount", "paid_amount", "paid"])
+        copy_column_if_missing(working, "payment_status", ["payment status", "payment_status", "status"])
+        copy_column_if_missing(working, "delayed_duration_days", ["delayed duration(Days)", "delayed duration days", "delay days"])
+
+    elif file_name == "delay_events.csv":
+        copy_column_if_missing(working, "delay_id", ["delay_id", "delay event id", "event id", "Primary Event ID"])
+        copy_column_if_missing(working, "delay_title", ["delay_title", "event_title", "Primary Event ID", "Activity Name"])
+        copy_column_if_missing(working, "project_id", ["project_id", "project"])
+        copy_column_if_missing(working, "activity_id", ["activity_id", "Activity ID"])
+        copy_column_if_missing(working, "activity_name", ["activity_name", "Activity Name"])
+        copy_column_if_missing(working, "start_date", ["start_date", "Start", "Overlap Start", "BL Start"])
+        copy_column_if_missing(working, "end_date", ["end_date", "Finish", "Overlap Finish", "BL Finish"])
+        copy_column_if_missing(working, "estimated_delay_days", ["estimated_delay_days", "Delayed duration after overlap", "Delayed duration", "Concurrent delay"])
+        copy_column_if_missing(working, "approved_eot_days", ["approved_eot_days", "approved eot days"], 0)
+        copy_column_if_missing(working, "responsibility", ["responsibility", "responsible_party"], "Employer / Client")
+        copy_column_if_missing(working, "cause_category", ["cause_category", "Primary Event ID"], "Delay")
+        copy_column_if_missing(working, "notice_ref", ["notice_ref", "notice ref"], "")
+        copy_column_if_missing(working, "status", ["status"], "Open")
+        if "delay_id" in working.columns:
+            blank_delay_id = working["delay_id"].astype(str).str.strip().eq("")
+            working.loc[blank_delay_id, "delay_id"] = working.index[blank_delay_id].map(lambda idx: f"DELAY-{idx + 1:03d}")
+        if "project_id" in working.columns:
+            blank_project = working["project_id"].astype(str).str.strip().eq("")
+            working.loc[blank_project, "project_id"] = "The Big -P.01-UP-20-April-26"
+
+    elif file_name == "rfi_ status.csv":
+        copy_column_if_missing(working, "RFI No.", ["RFI", "RFI No.", "rfi_no"])
+        copy_column_if_missing(working, "Submission Date", ["Submittion date", "Submission date", "Submission Date"])
+        copy_column_if_missing(working, "Reply Date", ["Reply", "Reply Date"])
+        copy_column_if_missing(working, "Delay Beyond 10 Days", ["Delay beyond 10d", "Delay Beyond 10 Days"])
+
+    elif file_name == "ifc_conflict.csv":
+        copy_column_if_missing(working, "Delay Days", ["Delayed days", "Delayed Days"])
+        copy_column_if_missing(working, "Revised Start", ["Re-Start", "Restart", "Revised Start"])
+        copy_column_if_missing(working, "Revised Finish", ["Finish.1", "Revised Finish"])
+
+    return working
 
 
 def _xlsx_column_letters(cell_ref):
@@ -283,10 +382,108 @@ def _read_xlsx_sheets(path: Path):
 
 
 @st.cache_data(show_spinner=False)
-def load_core_csv(path: Path):
+def _load_core_csv_cached(path_str: str, modified_ns: int, file_size: int):
+    path = Path(path_str)
+    return normalize_import_template_frame(path, pd.read_csv(path).fillna(""))
+
+
+def load_core_csv(path: Path, project_id: str | None = None):
+    path = project_scoped_file(path, project_id)
     if not path.exists():
         return pd.DataFrame()
-    return pd.read_csv(path).fillna("")
+    stat = path.stat()
+    return _load_core_csv_cached(str(path), stat.st_mtime_ns, stat.st_size)
+
+
+def project_filter_options(projects_df: pd.DataFrame) -> list[dict[str, str]]:
+    if projects_df.empty:
+        return [{"label": "All projects", "project_id": ""}]
+    options = [{"label": "All projects", "project_id": ""}]
+    for _, row in projects_df.iterrows():
+        project_id = str(row.get("project_id", "")).strip()
+        project_name = str(row.get("project_name", "")).strip()
+        if not project_id and not project_name:
+            continue
+        label = project_name or project_id
+        if project_id and project_id not in label:
+            label = f"{label} ({project_id})"
+        options.append({"label": label, "project_id": project_id})
+    return options
+
+
+def selected_project_id() -> str:
+    return str(st.session_state.get("active_project_id", "") or "").strip()
+
+
+def project_scoped_file(path: Path, project_id: str | None = None) -> Path:
+    project_id = selected_project_id() if project_id is None else str(project_id or "").strip()
+    if not project_id:
+        return path
+
+    source_map = [
+        (IMPORT_TEMPLATES_DIR, DATA_PROJECTS_DIR / project_id / "data" / "import_templates"),
+        (STEEL_TIA_DIR, DATA_PROJECTS_DIR / project_id / "delay_analysis" / "steel_delay_tia_templates"),
+        (BL_FIXED_DIR, DATA_PROJECTS_DIR / project_id / "bl"),
+    ]
+    try:
+        resolved_path = path.resolve()
+    except FileNotFoundError:
+        resolved_path = path.absolute()
+
+    for source_root, project_root in source_map:
+        try:
+            relative_path = resolved_path.relative_to(source_root.resolve())
+        except ValueError:
+            continue
+        if source_root == IMPORT_TEMPLATES_DIR and relative_path.name == PROJECTS_CSV_PATH.name:
+            return path
+        candidate = project_root / relative_path
+        if candidate.exists():
+            return candidate
+    return path
+
+
+def filter_active_project(df: pd.DataFrame, project_id: str | None = None) -> pd.DataFrame:
+    if df.empty:
+        return df
+    project_id = selected_project_id() if project_id is None else str(project_id or "").strip()
+    if not project_id or "project_id" not in df.columns:
+        return df
+    project_values = df["project_id"].astype(str).str.strip()
+    return df[project_values.eq(project_id)].copy()
+
+
+def project_has_core_output_data(project_id: str) -> bool:
+    project_id = str(project_id or "").strip()
+    if not project_id:
+        return True
+    for path in [ACTIVITIES_CSV_PATH, WBS_CSV_PATH, EVM_CSV_PATH, S_CURVE_CSV_PATH]:
+        df = load_core_csv(path, project_id=project_id)
+        if df.empty or "project_id" not in df.columns:
+            continue
+        if df["project_id"].astype(str).str.strip().eq(project_id).any():
+            return True
+    return False
+
+
+def first_project_with_core_output_data(projects_df: pd.DataFrame) -> str:
+    if projects_df.empty or "project_id" not in projects_df.columns:
+        return ""
+    for project_id in projects_df["project_id"].astype(str).str.strip():
+        if project_id and project_has_core_output_data(project_id):
+            return project_id
+    return ""
+
+
+def active_project_row(projects_df: pd.DataFrame) -> pd.Series:
+    if projects_df.empty:
+        return pd.Series(dtype=object)
+    project_id = selected_project_id()
+    if project_id and "project_id" in projects_df.columns:
+        match = projects_df[projects_df["project_id"].astype(str).str.strip().eq(project_id)]
+        if not match.empty:
+            return match.iloc[0]
+    return projects_df.iloc[0]
 
 
 @st.cache_data(show_spinner=False)
@@ -298,12 +495,12 @@ def load_markdown_text(path: Path) -> str:
 
 def build_overview_metrics():
     projects_df = load_core_csv(PROJECTS_CSV_PATH)
-    activities_df = load_core_csv(ACTIVITIES_CSV_PATH)
+    activities_df = filter_active_project(load_core_csv(ACTIVITIES_CSV_PATH))
 
     if projects_df.empty:
         return {}
 
-    project_row = projects_df.iloc[0]
+    project_row = active_project_row(projects_df)
     project_start = parse_project_date(project_row.get("planned_start"))
     project_finish = parse_project_date(project_row.get("planned_finish"))
     duration_days = (project_finish - project_start).days if project_start is not None and project_finish is not None else 0
@@ -337,7 +534,7 @@ def build_overview_metrics():
 
 
 def build_evm_metrics():
-    evm_df = load_core_csv(EVM_CSV_PATH)
+    evm_df = filter_active_project(load_core_csv(EVM_CSV_PATH))
     if evm_df.empty:
         return {}
 
@@ -365,10 +562,11 @@ def build_evm_metrics():
     }
 
 
-def build_earned_value_analysis_data():
-    bac = 367286025.00
-    pv = 229253314.00
-    ev = 107893864.33
+def build_earned_value_analysis_data(evm_metrics: dict | None = None):
+    metrics = evm_metrics if evm_metrics is not None else build_evm_metrics()
+    bac = float(metrics.get("bac", 0.0) or 0.0)
+    pv = float(metrics.get("pv", 0.0) or 0.0)
+    ev = float(metrics.get("ev", 0.0) or 0.0)
     sv = ev - pv
     spi = ev / pv if pv else 0.0
     planned_completion_value_position = pv / bac * 100 if bac else 0.0
@@ -378,7 +576,7 @@ def build_earned_value_analysis_data():
         "The project is underperforming against the planned value baseline. "
         "The earned value is significantly below the planned value, creating a negative "
         f"schedule variance of SAR {abs(sv)/1_000_000:.2f}M and an SPI of {spi:.2f}. "
-        "This indicates that the project is progressing at approximately 47% of the planned schedule efficiency."
+        f"This indicates that the project is progressing at approximately {spi * 100:.0f}% of the planned schedule efficiency."
     )
     executive_summary = (
         "Earned Value Analysis confirms material schedule underperformance against the planned value baseline. "
@@ -556,8 +754,8 @@ def clear_evm_comment_with_widget(section_key: str, widget_key: str) -> None:
 
 
 def build_contract_metrics():
-    contracts_df = load_core_csv(CONTRACTS_CSV_PATH)
-    payments_df = load_core_csv(PAYMENTS_CSV_PATH)
+    contracts_df = filter_active_project(load_core_csv(CONTRACTS_CSV_PATH))
+    payments_df = filter_active_project(load_core_csv(PAYMENTS_CSV_PATH))
 
     if not contracts_df.empty:
         contracts_df["original_value_num"] = contracts_df["original_value"].apply(parse_numeric)
@@ -582,9 +780,20 @@ def build_contract_metrics():
 
 
 def build_delay_metrics():
-    delays_df = load_core_csv(DELAYS_CSV_PATH)
+    delays_source_df = filter_active_project(load_core_csv(DELAYS_CSV_PATH))
+    delays_df = delays_source_df.copy()
     if delays_df.empty:
-        return {"delays_df": delays_df}
+        return {
+            "delays_df": delays_df,
+            "display_delays_df": pd.DataFrame(),
+            "raw_delay_columns": [col for col in delays_source_df.columns if str(col).strip()],
+            "total_delay_events": 0,
+            "total_delay_days": 0.0,
+            "employer_delays": 0,
+            "eot_potential_count": 0,
+            "open_delays": 0,
+            "closed_delays": 0,
+        }
 
     delays_df = delays_df.loc[:, [col for col in delays_df.columns if str(col).strip()]]
     delays_df = delays_df[delays_df["delay_id"].astype(str).str.strip() != ""].copy()
@@ -618,7 +827,7 @@ def build_delay_metrics():
         lambda x: "Open" if "open" in x or "pending" in x else ("Closed" if "closed" in x or "delivered" in x or "received" in x else "Other")
     )
     employer_mask = delays_df["responsible_group"].eq("Employer / Client")
-    display_df = delays_df[[col for col in load_core_csv(DELAYS_CSV_PATH).columns if str(col).strip()]].copy()
+    display_df = delays_df[[col for col in delays_source_df.columns if str(col).strip()]].copy()
     for col in ["estimated_delay_days", "approved_eot_days"]:
         if col in display_df.columns:
             source_col = f"{col}_num"
@@ -633,7 +842,7 @@ def build_delay_metrics():
     return {
         "delays_df": delays_df,
         "display_delays_df": display_df,
-        "raw_delay_columns": [col for col in load_core_csv(DELAYS_CSV_PATH).columns if str(col).strip()],
+        "raw_delay_columns": [col for col in delays_source_df.columns if str(col).strip()],
         "total_delay_events": int(len(delays_df)),
         "total_delay_days": float(delays_df["estimated_delay_days_num"].sum()),
         "employer_delays": int(employer_mask.sum()),
@@ -644,10 +853,10 @@ def build_delay_metrics():
 
 
 def build_risk_metrics():
-    risks_df = load_core_csv(RISKS_CSV_PATH)
-    steel_df = load_core_csv(STEEL_DELAY_CSV_PATH)
-    rfi_df = load_core_csv(RFI_STATUS_CSV_PATH)
-    ifc_df = load_core_csv(IFC_CONFLICT_CSV_PATH)
+    risks_df = filter_active_project(load_core_csv(RISKS_CSV_PATH))
+    steel_df = filter_active_project(load_core_csv(STEEL_DELAY_CSV_PATH))
+    rfi_df = filter_active_project(load_core_csv(RFI_STATUS_CSV_PATH))
+    ifc_df = filter_active_project(load_core_csv(IFC_CONFLICT_CSV_PATH))
 
     if not steel_df.empty:
         steel_df = steel_df.loc[:, [col for col in steel_df.columns if str(col).strip()]]
@@ -695,8 +904,8 @@ def build_risk_metrics():
 
 
 def build_milestone_metrics():
-    milestones_df = load_core_csv(MILESTONES_CSV_PATH)
-    change_orders_df = load_core_csv(CHANGE_ORDERS_CSV_PATH)
+    milestones_df = filter_active_project(load_core_csv(MILESTONES_CSV_PATH))
+    change_orders_df = filter_active_project(load_core_csv(CHANGE_ORDERS_CSV_PATH))
     if not change_orders_df.empty:
         for col in ["claimed_amount", "approved_amount", "cost_impact", "time_impact_days"]:
             if col in change_orders_df.columns:
@@ -708,7 +917,7 @@ def build_milestone_metrics():
 
 
 def build_time_impact_metrics():
-    delays_df = load_core_csv(DELAYS_CSV_PATH)
+    delays_df = filter_active_project(load_core_csv(DELAYS_CSV_PATH))
     if delays_df.empty:
         return {"time_impact_df": delays_df}
 
@@ -729,7 +938,7 @@ def build_time_impact_metrics():
 
 
 def build_s_curve_metrics():
-    curve_df = load_core_csv(S_CURVE_CSV_PATH)
+    curve_df = filter_active_project(load_core_csv(S_CURVE_CSV_PATH))
     if curve_df.empty:
         return {"curve_df": pd.DataFrame()}
 
@@ -772,9 +981,19 @@ def parse_activity_date(value):
 
 
 def build_activity_metrics():
-    activities_df = load_core_csv(ACTIVITIES_CSV_PATH)
+    activities_df = filter_active_project(load_core_csv(ACTIVITIES_CSV_PATH))
     if activities_df.empty:
-        return {"activities_df": activities_df}
+        return {
+            "activities_df": activities_df,
+            "critical_df": pd.DataFrame(),
+            "deviated_df": pd.DataFrame(),
+            "rft_df": pd.DataFrame(),
+            "critical_count": 0,
+            "deviated_count": 0,
+            "rft_count": 0,
+            "avg_critical_variance": 0.0,
+            "avg_rft_variance": 0.0,
+        }
 
     activities_df = activities_df.loc[:, [col for col in activities_df.columns if str(col).strip()]]
     activities_df = activities_df[activities_df["activity_id"].astype(str).str.strip() != ""].copy()
@@ -817,9 +1036,9 @@ def build_activity_metrics():
 
 
 def build_wbs_metrics():
-    wbs_df = load_core_csv(WBS_CSV_PATH)
+    wbs_df = filter_active_project(load_core_csv(WBS_CSV_PATH))
     if wbs_df.empty:
-        return {"wbs_df": pd.DataFrame(), "con_wbs_df": pd.DataFrame(), "chart_rows": pd.DataFrame()}
+        return {"wbs_df": pd.DataFrame(), "con_wbs_df": pd.DataFrame(), "chart_rows": pd.DataFrame(), "code_col": None}
 
     wbs_df = wbs_df.loc[:, [col for col in wbs_df.columns if str(col).strip()]].copy()
     for col in ["schedule_%_complete", "performance_%_complete"]:
@@ -876,6 +1095,20 @@ def build_time_impact_engine(delay_metrics, risk_metrics, activity_metrics, cont
     time_impact_df["activity_id"] = time_impact_df["activity_id"].astype(str).str.strip()
     if not activity_lookup.empty:
         time_impact_df = time_impact_df.merge(activity_lookup, on="activity_id", how="left")
+        if "activity_name" not in time_impact_df.columns:
+            left_name = time_impact_df.get("activity_name_x", pd.Series([""] * len(time_impact_df), index=time_impact_df.index))
+            right_name = time_impact_df.get("activity_name_y", pd.Series([""] * len(time_impact_df), index=time_impact_df.index))
+            time_impact_df["activity_name"] = left_name.astype(str).where(left_name.astype(str).str.strip().ne(""), right_name)
+        for required_col, default in {
+            "planned_progress_num": 0.0,
+            "actual_progress_num": 0.0,
+            "progress_variance": 0.0,
+            "finish_slip_days": 0.0,
+            "total_float_days_num": 0.0,
+            "is_critical": "",
+        }.items():
+            if required_col not in time_impact_df.columns:
+                time_impact_df[required_col] = default
     else:
         time_impact_df["activity_name"] = ""
         time_impact_df["planned_progress_num"] = 0.0
@@ -1564,7 +1797,7 @@ PROJECT_HUB_SLIDE_NAMES = [
     "Delays",
     "Time Impact",
     "Risks",
-    "Delay TIA",
+    "Delay Analysis - Time Impact Analysis",
     "Contract & Claims Intelligence Center",
     "Output Studio",
     "Conference Call",
@@ -2036,7 +2269,8 @@ def build_linked_executive_dashboard_a3_summary_html(
     rootCauseDf: pd.DataFrame,
     mitigationDf: pd.DataFrame,
 ) -> str:
-    project_row = load_core_csv(PROJECTS_CSV_PATH).iloc[0] if not load_core_csv(PROJECTS_CSV_PATH).empty else pd.Series(dtype=object)
+    project_df = load_core_csv(PROJECTS_CSV_PATH)
+    project_row = active_project_row(project_df) if not project_df.empty else pd.Series(dtype=object)
     phase_df = _phase_progress_rows(activity_metrics, overview_metrics).copy()
     milestone_df = _build_executive_summary_milestone_rows(activity_metrics, milestone_metrics).copy()
     risk_df = _build_executive_risk_rows(delay_metrics, risk_metrics).copy()
@@ -2189,7 +2423,7 @@ def build_linked_executive_dashboard_a3_summary_html(
         <span class="c">A3 Landscape Summary | {_ppt_date(pd.Timestamp.today())}</span>
       </div>
       <h1>{html.escape(str(project_row.get("project_name", overview_metrics.get("project_name", "Project"))))}</h1>
-      <div class="sub">Single-page linked executive summary generated from the live platform CSV files. Structured for clean A3 landscape printing while preserving the premium dark dashboard identity.</div>
+      <div class="sub">Single-page linked executive summary generated from the live platform CSV files. Structured for clean A3 landscape printing while preserving the dark executive dashboard identity.</div>
       <div class="kpis">
         {metric_card("Contract Value", f"EGP {format_currency_html(float(overview_metrics.get('contract_value', 0.0)))}", "Original contract value")}
         {metric_card("Overall Progress", pct(overview_metrics.get("overall_progress")), "Actual progress")}
@@ -2473,7 +2707,7 @@ def build_presentation_export(metric_groups: list[tuple[str, dict[str, str]]], s
     title_box.text_frame.paragraphs[0].font.bold = True
     title_box.text_frame.paragraphs[0].font.color.rgb = RGBColor(23, 59, 99)
     subtitle_box = slide.shapes.add_textbox(Inches(6.05), Inches(0.58), Inches(5.8), Inches(0.18))
-    subtitle_box.text_frame.text = "Canva-style printable dashboard built from selected live program information"
+    subtitle_box.text_frame.text = "Modern printable dashboard built from selected live program information"
     subtitle_box.text_frame.paragraphs[0].font.size = Pt(8)
     subtitle_box.text_frame.paragraphs[0].font.color.rgb = RGBColor(77, 100, 125)
     top = Inches(1.08)
@@ -2649,151 +2883,166 @@ def _build_variance_rows(delay_metrics: dict, risk_metrics: dict, activities_df:
 
 
 def build_original_template_presentation(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> tuple[bytes, list[str]]:
-    if not PRESENTATION_TEMPLATE_PATH.exists():
-        return b"", ["Original presentation template file was not found."]
+    prs = Presentation()
+    prs.slide_width = Inches(16.54)
+    prs.slide_height = Inches(11.69)
 
-    prs = Presentation(str(PRESENTATION_TEMPLATE_PATH))
-    slide = prs.slides[0]
+    project_title = str(overview_metrics.get("project_name") or "Project")
+    report_date = pd.Timestamp.today().strftime("%d %b %Y")
     activities_df = activity_metrics.get("activities_df", pd.DataFrame()).copy()
     payments_df = contract_metrics.get("payments_df", pd.DataFrame()).copy()
-    curve_df = s_curve_metrics.get("curve_df", pd.DataFrame()).copy()
-    milestones_df = milestone_metrics.get("milestones_df", pd.DataFrame()).copy()
-    unresolved: list[str] = []
+    risks_df = risk_metrics.get("risks_df", pd.DataFrame()).copy()
+    phase_df = _phase_progress_rows(activity_metrics, overview_metrics)
+    spi = (float(evm_metrics.get("ev", 0.0)) / float(evm_metrics.get("pv", 1.0))) if float(evm_metrics.get("pv", 0.0)) else 0.0
 
-    if slide.shapes[5].has_table:
-        _fill_table_rows(slide.shapes[5].table, _build_risk_statement_rows(delay_metrics, risk_metrics, contract_metrics), start_row=1)
+    def add_title(slide, title: str, subtitle: str) -> None:
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = RGBColor(246, 249, 252)
+        band = slide.shapes.add_shape(1, Inches(0), Inches(0), Inches(16.54), Inches(0.92))
+        band.fill.solid()
+        band.fill.fore_color.rgb = RGBColor(11, 31, 51)
+        band.line.color.rgb = RGBColor(11, 31, 51)
+        t = slide.shapes.add_textbox(Inches(0.55), Inches(0.18), Inches(10.5), Inches(0.32))
+        t.text_frame.text = title
+        t.text_frame.paragraphs[0].font.size = Pt(22)
+        t.text_frame.paragraphs[0].font.bold = True
+        t.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
+        s = slide.shapes.add_textbox(Inches(0.55), Inches(0.53), Inches(12.5), Inches(0.22))
+        s.text_frame.text = subtitle
+        s.text_frame.paragraphs[0].font.size = Pt(10)
+        s.text_frame.paragraphs[0].font.color.rgb = RGBColor(205, 220, 235)
 
-    if slide.shapes[8].has_table:
-        table = slide.shapes[8].table
-        _set_table_cell(table, 1, 0, _ppt_date(overview_metrics.get("project_start")))
-        _set_table_cell(table, 1, 1, _ppt_date(overview_metrics.get("project_finish")))
-        forecast_finish = ""
-        if not milestones_df.empty:
-            finish_row = milestones_df[milestones_df["activity_name"].astype(str).str.contains("Project Finish Date", case=False, na=False)]
-            if not finish_row.empty:
-                forecast_finish = _ppt_date(finish_row.iloc[0].get("forecast_date"))
-        if not forecast_finish:
-            projects_df = load_core_csv(PROJECTS_CSV_PATH)
-            if not projects_df.empty:
-                forecast_finish = _ppt_date(projects_df.iloc[0].get("forecast_finish"))
-        _set_table_cell(table, 1, 2, forecast_finish)
+    def add_card(slide, left: float, top: float, width: float, title: str, value: str, note: str, accent: RGBColor = RGBColor(34, 118, 168)) -> None:
+        box = slide.shapes.add_shape(1, Inches(left), Inches(top), Inches(width), Inches(0.9))
+        box.fill.solid()
+        box.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        box.line.color.rgb = RGBColor(214, 225, 236)
+        strip = slide.shapes.add_shape(1, Inches(left), Inches(top), Inches(0.08), Inches(0.9))
+        strip.fill.solid()
+        strip.fill.fore_color.rgb = accent
+        strip.line.color.rgb = accent
+        tf = box.text_frame
+        tf.clear()
+        p = tf.paragraphs[0]
+        p.text = title
+        p.font.size = Pt(8)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(96, 111, 128)
+        p2 = tf.add_paragraph()
+        p2.text = value
+        p2.font.size = Pt(17)
+        p2.font.bold = True
+        p2.font.color.rgb = RGBColor(16, 43, 68)
+        p3 = tf.add_paragraph()
+        p3.text = note
+        p3.font.size = Pt(7)
+        p3.font.color.rgb = RGBColor(98, 112, 128)
 
-    if slide.shapes[15].has_table:
-        _set_table_cell(slide.shapes[15].table, 1, 0, _ppt_money(overview_metrics.get("contract_value")))
+    def add_table(slide, left: float, top: float, width: float, height: float, title: str, df: pd.DataFrame, max_rows: int = 8) -> None:
+        heading = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(0.25))
+        heading.text_frame.text = title
+        heading.text_frame.paragraphs[0].font.size = Pt(12)
+        heading.text_frame.paragraphs[0].font.bold = True
+        heading.text_frame.paragraphs[0].font.color.rgb = RGBColor(16, 43, 68)
+        view = df.head(max_rows).fillna("").astype(str) if not df.empty else pd.DataFrame({"Status": ["No records available"]})
+        rows = len(view) + 1
+        cols = len(view.columns)
+        shape = slide.shapes.add_table(rows, cols, Inches(left), Inches(top + 0.32), Inches(width), Inches(height)).table
+        for c_idx, col in enumerate(view.columns):
+            cell = shape.cell(0, c_idx)
+            cell.text = str(col)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = RGBColor(229, 238, 247)
+            cell.text_frame.paragraphs[0].font.size = Pt(7)
+            cell.text_frame.paragraphs[0].font.bold = True
+            cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(40, 63, 85)
+        for r_idx, (_, row) in enumerate(view.iterrows(), start=1):
+            for c_idx, col in enumerate(view.columns):
+                cell = shape.cell(r_idx, c_idx)
+                cell.text = str(row.get(col, ""))[:90]
+                cell.text_frame.paragraphs[0].font.size = Pt(6)
+                cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(45, 55, 72)
 
-    if slide.shapes[27].has_table:
-        _fill_table_rows(slide.shapes[27].table, _build_variance_rows(delay_metrics, risk_metrics, activities_df, overview_metrics), start_row=1)
-
-    if slide.shapes[28].has_table:
-        eng_sub = activities_df[activities_df["activity_id"].astype(str).str.startswith("E-SUB")].copy()
-        if not eng_sub.empty:
-            planned_pct = pd.to_numeric(eng_sub["planned_progress"].astype(str).str.replace("%", ""), errors="coerce").fillna(0)
-            actual_pct = pd.to_numeric(eng_sub["actual_progress"].astype(str).str.replace("%", ""), errors="coerce").fillna(0)
-            _set_table_cell(slide.shapes[28].table, 2, 1, str(len(eng_sub)))
-            _set_table_cell(slide.shapes[28].table, 2, 2, str(int((planned_pct >= 100).sum())))
-            _set_table_cell(slide.shapes[28].table, 2, 3, str(int((actual_pct >= 100).sum())))
-        unresolved.append("Template table 'Civil ? Shop Drawings' still needs your exact source mapping.")
-
-    if slide.shapes[30].has_table:
-        table = slide.shapes[30].table
-        if not curve_df.empty and overview_metrics.get("contract_value"):
-            latest = curve_df.iloc[-1]
-            bac = float(overview_metrics.get("contract_value") or 0)
-            current_planned = parse_numeric(latest.get("monthly_planned")) / bac * 100 if bac else 0
-            current_actual = parse_numeric(latest.get("monthly_actual")) / bac * 100 if bac else 0
-            total_planned = parse_numeric(latest.get("cumm_monthly_planned")) / bac * 100 if bac else 0
-            total_actual = parse_numeric(latest.get("cumm_monthly_actual")) / bac * 100 if bac else 0
-            previous_planned = total_planned - current_planned
-            previous_actual = total_actual - current_actual
-            for row_idx in [4, 5]:
-                _set_table_cell(table, row_idx, 1, "100.00%")
-                _set_table_cell(table, row_idx, 2, _ppt_pct(previous_planned))
-                _set_table_cell(table, row_idx, 3, _ppt_pct(previous_actual))
-                _set_table_cell(table, row_idx, 4, _ppt_pct(current_planned))
-                _set_table_cell(table, row_idx, 5, _ppt_pct(current_actual))
-                _set_table_cell(table, row_idx, 6, _ppt_pct(total_planned))
-                _set_table_cell(table, row_idx, 7, _ppt_pct(total_actual))
-                _set_table_cell(table, row_idx, 8, _ppt_pct(total_actual - total_planned))
-        unresolved.append("Template phase rows for Engineering and Procurement need your exact period-by-period source mapping if you want them updated beyond the current overall schedule link.")
-
-    if slide.shapes[31].has_table and not payments_df.empty:
-        table = slide.shapes[31].table
-        invoice_rows = []
-        payment_view = payments_df.sort_values("payment_id").head(len(table.rows) - 2)
-        for idx, (_, row) in enumerate(payment_view.iterrows(), start=1):
-            invoice_no = str(row.get("invoice_no", "")).rstrip(".0")
-            invoice_rows.append([str(idx), f"Invoice #{invoice_no}" if invoice_no else f"Invoice #{idx}", _ppt_date(row.get("invoice_date")), _ppt_money(row.get("certified_amount_num", row.get("certified_amount"))), str(row.get("payment_status", ""))])
-        _fill_table_rows(table, invoice_rows, start_row=2)
-
-    if slide.shapes[32].has_table and overview_metrics.get("contract_value"):
-        table = slide.shapes[32].table
-        submitted = float(contract_metrics.get("total_certified", 0))
-        approved = float(contract_metrics.get("total_certified", 0))
-        paid = float(contract_metrics.get("total_paid", 0))
-        contract_value = float(overview_metrics.get("contract_value") or 0)
-        values = [("Cumm Submitted", submitted), ("Cumm Approved", approved), ("Cumm Paid", paid)]
-        for row_idx, (label, amount) in enumerate(values):
-            _set_table_cell(table, row_idx, 0, label)
-            _set_table_cell(table, row_idx, 1, _ppt_money(amount))
-            _set_table_cell(table, row_idx, 2, _ppt_pct(amount / contract_value * 100 if contract_value else 0))
-
-    if slide.shapes[33].has_table and not activities_df.empty:
-        table = slide.shapes[33].table
-        phase_defs = [
-            ("Engineering", activities_df[_phase_filter(activities_df, ("E-",))]),
-            ("Procurement", activities_df[_phase_filter(activities_df, ("P-",))]),
-            ("Construction", activities_df[_phase_filter(activities_df, ("CON", "AB-"))]),
-            ("B-01", activities_df[activities_df["activity_id"].astype(str).str.contains("B01", case=False, na=False)]),
-            ("B-02", activities_df[activities_df["activity_id"].astype(str).str.contains("B02", case=False, na=False)]),
-            ("B-03", activities_df[activities_df["activity_id"].astype(str).str.contains("B03", case=False, na=False)]),
-            ("B-04", activities_df[activities_df["activity_id"].astype(str).str.contains("B04", case=False, na=False)]),
+    slide1 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_title(slide1, "Project Progress Control Report", f"{project_title} | A3 Landscape | {report_date}")
+    add_card(slide1, 0.55, 1.18, 2.45, "Overall Progress", pct(overview_metrics.get("overall_progress")), f"Planned {pct(overview_metrics.get('planned_progress'))}", RGBColor(22, 143, 139))
+    add_card(slide1, 3.15, 1.18, 2.45, "Contract Value", egp(overview_metrics.get("contract_value")), "Current project value", RGBColor(36, 95, 149))
+    add_card(slide1, 5.75, 1.18, 2.45, "SPI", f"{spi:.2f}" if spi else "N/A", "Schedule performance", RGBColor(201, 133, 25))
+    add_card(slide1, 8.35, 1.18, 2.45, "Critical Activities", str(int(activity_metrics.get("critical_count", 0))), "Current critical path", RGBColor(217, 84, 77))
+    add_card(slide1, 10.95, 1.18, 2.45, "Open Risks", str(int(risk_metrics.get("open_risks", 0))), "Active risk items", RGBColor(95, 111, 184))
+    add_card(slide1, 13.55, 1.18, 2.45, "Delay Events", str(int(delay_metrics.get("total_delay_events", 0))), f"{int(delay_metrics.get('total_delay_days', 0))} days", RGBColor(217, 84, 77))
+    add_table(slide1, 0.55, 2.45, 5.05, 2.35, "Engineering / Procurement / Construction Progress", phase_df, max_rows=5)
+    add_table(slide1, 5.85, 2.45, 4.8, 2.35, "Current Delay Register", delay_metrics.get("display_delays_df", pd.DataFrame()), max_rows=6)
+    add_table(slide1, 10.9, 2.45, 5.1, 2.35, "Risk And Issue Snapshot", risks_df, max_rows=6)
+    add_table(slide1, 0.55, 5.55, 7.55, 2.15, "Payment Status", payments_df, max_rows=6)
+    evm_df = pd.DataFrame(
+        [
+            {"Metric": "BAC", "Value": egp(evm_metrics.get("bac"))},
+            {"Metric": "PV", "Value": egp(evm_metrics.get("pv"))},
+            {"Metric": "EV", "Value": egp(evm_metrics.get("ev"))},
+            {"Metric": "SV", "Value": egp(evm_metrics.get("sv"))},
+            {"Metric": "CV", "Value": egp(evm_metrics.get("cv"))},
         ]
-        rows = []
-        for idx, (label, subset) in enumerate(phase_defs, start=1):
-            plan_date, forecast_date, variance = _max_finish_date(subset)
-            rows.append([str(idx), label, plan_date, forecast_date, variance])
-        _fill_table_rows(table, rows, start_row=2)
-
-    if slide.shapes[37].has_table:
-        table = slide.shapes[37].table
-        spi_value = (float(evm_metrics.get("ev", 0)) / float(evm_metrics.get("pv", 1))) if float(evm_metrics.get("pv", 0)) else 0
-        evm_rows = [
-            ["Budget @ Completion (BAC)", _ppt_money(evm_metrics.get("bac"), 0)],
-            ["Cumm. Planned Value (PV)", _ppt_money(evm_metrics.get("pv"))],
-            ["Cumm. Earned Value (EV)", _ppt_money(evm_metrics.get("ev"))],
-            ["Schedule Variance (SV)", _ppt_money(evm_metrics.get("sv"))],
-            ["Schedule Performance Index", f"{spi_value:.2f}"],
+    )
+    add_table(slide1, 8.35, 5.55, 3.35, 2.15, "Earned Value Readout", evm_df, max_rows=6)
+    action_df = pd.DataFrame(
+        [
+            {"Priority Action": "Recover critical work fronts", "Owner": "Construction / Planning", "Decision Need": "Approve recovery sequence"},
+            {"Priority Action": "Close delayed engineering/RFI items", "Owner": "Engineering", "Decision Need": "Confirm response dates"},
+            {"Priority Action": "Resolve payment exposure", "Owner": "Commercial", "Decision Need": "Release certified amounts"},
+            {"Priority Action": "Protect entitlement records", "Owner": "Planning / Contracts", "Decision Need": "Maintain notices and evidence"},
         ]
-        _fill_table_rows(table, evm_rows, start_row=0, clear_remaining=False)
+    )
+    add_table(slide1, 11.95, 5.55, 4.05, 2.15, "Management Decisions", action_df, max_rows=5)
 
-    if slide.shapes[39].has_table and not milestones_df.empty:
-        ground = milestones_df[milestones_df["activity_name"].astype(str).str.contains("Ground Works Finish Date", case=False, na=False)]
-        if not ground.empty:
-            row = ground.iloc[0]
-            _set_table_cell(slide.shapes[39].table, 1, 0, _ppt_date(row.get("planned_date")))
-            _set_table_cell(slide.shapes[39].table, 1, 1, _ppt_date(row.get("forecast_date")))
-
-    unresolved.extend([
-        "Template equipment table is preserved as-is because no dedicated live equipment source exists in the program data.",
-        "Template manpower table is preserved as-is because no dedicated live manpower source exists in the program data.",
-    ])
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    add_title(slide2, "Detailed Data Tables", f"{project_title} | A3 Landscape | {report_date}")
+    add_table(slide2, 0.55, 1.25, 7.7, 3.0, "Critical Activities", activity_metrics.get("critical_df", pd.DataFrame()), max_rows=9)
+    add_table(slide2, 8.55, 1.25, 7.45, 3.0, "Milestones", milestone_metrics.get("milestones_df", pd.DataFrame()), max_rows=9)
+    add_table(slide2, 0.55, 5.05, 7.7, 3.0, "S-Curve Data", s_curve_metrics.get("curve_df", pd.DataFrame()), max_rows=9)
+    add_table(slide2, 8.55, 5.05, 7.45, 3.0, "Contracts", contract_metrics.get("contracts_df", pd.DataFrame()), max_rows=9)
 
     stream = io.BytesIO()
     prs.save(stream)
     stream.seek(0)
-    return stream.getvalue(), unresolved
+    return stream.getvalue(), []
 
 
 def _phase_subset(activities_df: pd.DataFrame, phase: str) -> pd.DataFrame:
     if activities_df.empty:
         return pd.DataFrame()
-    ids = activities_df["activity_id"].astype(str).str.strip()
+    ids = activities_df.get("activity_id", pd.Series("", index=activities_df.index)).astype(str).str.strip()
+    ids_upper = ids.str.upper()
+    names = activities_df.get("activity_name", pd.Series("", index=activities_df.index)).astype(str)
+    wbs = activities_df.get("wbs_id", pd.Series("", index=activities_df.index)).astype(str)
+    combined = (ids + " " + names + " " + wbs).str.lower()
+    engineering_prefix = ids_upper.str.startswith(("E-", "E_SUB", "E-SUB", "E-APP"), na=False)
+    procurement_prefix = ids_upper.str.startswith(("P-",), na=False)
+    construction_prefix = ids_upper.str.startswith(("CON", "AB-"), na=False)
     if phase == "Engineering":
-        return activities_df[ids.str.startswith(("E-", "E-SUB", "E-APP"), na=False)].copy()
+        if engineering_prefix.any():
+            return activities_df[engineering_prefix].copy()
+        return activities_df[
+            ~procurement_prefix
+            & ~construction_prefix
+            & combined.str.contains("engineering|design|submittal|shop drawing|drawing|approval", na=False)
+        ].copy()
     if phase == "Procurement":
-        return activities_df[ids.str.startswith(("P-",), na=False)].copy()
+        if procurement_prefix.any():
+            return activities_df[procurement_prefix].copy()
+        return activities_df[
+            ~engineering_prefix
+            & ~construction_prefix
+            & combined.str.contains("procurement|purchase|material|supply|steel|delivery", na=False)
+        ].copy()
     if phase == "Construction":
-        return activities_df[ids.str.startswith(("CON", "AB-"), na=False)].copy()
+        if construction_prefix.any():
+            return activities_df[construction_prefix].copy()
+        return activities_df[
+            ~engineering_prefix
+            & ~procurement_prefix
+            & combined.str.contains("construction|civil|structural|concrete|rft|slab|column|beam|foundation|reinforcement", na=False)
+        ].copy()
     return activities_df.copy()
 
 
@@ -2803,7 +3052,8 @@ def _phase_progress_rows(activity_metrics: dict, overview_metrics: dict) -> pd.D
     for phase in ["Engineering", "Procurement", "Construction"]:
         subset = _phase_subset(activities_df, phase)
         if subset.empty:
-            planned = actual = 0.0
+            planned = float(overview_metrics.get("planned_progress", 0.0))
+            actual = float(overview_metrics.get("overall_progress", 0.0))
         else:
             planned = float(subset["planned_progress_num"].mean()) if "planned_progress_num" in subset.columns else 0.0
             actual = float(subset["actual_progress_num"].mean()) if "actual_progress_num" in subset.columns else 0.0
@@ -2925,7 +3175,7 @@ def _build_executive_summary_milestone_rows(activity_metrics: dict, milestone_me
             }
 
     if handover_row is None:
-        wbs_df = load_core_csv(WBS_CSV_PATH).copy()
+        wbs_df = filter_active_project(load_core_csv(WBS_CSV_PATH)).copy()
         if not wbs_df.empty:
             code_col = "WBS Code" if "WBS Code" in wbs_df.columns else ("wbs_code" if "wbs_code" in wbs_df.columns else None)
             name_col = "WBS Name" if "WBS Name" in wbs_df.columns else ("wbs_name" if "wbs_name" in wbs_df.columns else None)
@@ -3014,7 +3264,7 @@ def _build_executive_cause_rows(delay_metrics: dict, risk_metrics: dict) -> pd.D
 
 
 def _build_executive_resource_rows() -> pd.DataFrame:
-    rft_df = load_core_csv(APP_DIR / "data" / "import_templates" / "rft_qtys.csv")
+    rft_df = filter_active_project(load_core_csv(APP_DIR / "data" / "import_templates" / "rft_qtys.csv"))
     if rft_df.empty:
         return pd.DataFrame()
     rft_df["Budgeted Units_num"] = rft_df["Budgeted Units"].apply(parse_numeric) if "Budgeted Units" in rft_df.columns else 0.0
@@ -3039,7 +3289,8 @@ def build_linked_executive_dashboard_html(
     mitigationDf: pd.DataFrame,
     evmComments: dict,
 ) -> str:
-    project_row = load_core_csv(PROJECTS_CSV_PATH).iloc[0] if not load_core_csv(PROJECTS_CSV_PATH).empty else pd.Series(dtype=object)
+    project_df = load_core_csv(PROJECTS_CSV_PATH)
+    project_row = active_project_row(project_df) if not project_df.empty else pd.Series(dtype=object)
     phase_df = _phase_progress_rows(activity_metrics, overview_metrics)
     docs_df = _build_executive_doc_rows(activity_metrics)
     invoice_df = _build_executive_invoice_rows(contract_metrics)
@@ -3595,9 +3846,9 @@ def _metric_block(ws, cell_ref: str, title: str, value: str, note: str) -> None:
     ws.cell(row=row + 2, column=col, value=note).font = Font(size=9, color="344054")
 
 
-def _build_super_premium_report_frames(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> dict[str, pd.DataFrame]:
+def _build_detailed_progress_report_frames(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> dict[str, pd.DataFrame]:
     project_df = load_core_csv(PROJECTS_CSV_PATH)
-    project_row = project_df.iloc[0] if not project_df.empty else pd.Series(dtype=object)
+    project_row = active_project_row(project_df) if not project_df.empty else pd.Series(dtype=object)
     activities_df = activity_metrics.get("activities_df", pd.DataFrame()).copy()
     milestones_df = milestone_metrics.get("milestones_df", pd.DataFrame()).copy()
     payments_df = contract_metrics.get("payments_df", pd.DataFrame()).copy()
@@ -3614,7 +3865,7 @@ def _build_super_premium_report_frames(overview_metrics: dict, evm_metrics: dict
         "Data Date": _ppt_date(pd.Timestamp.today()),
         "Baseline Version": "Current Baseline",
         "Update Version": "Current Update",
-        "Prepared By": "Codex / Planning Team",
+        "Prepared By": "Planning Team",
         "Reviewed By": "Project Controls",
         "Approved By": "Management",
         "Issue Date": _ppt_date(pd.Timestamp.today()),
@@ -3947,9 +4198,9 @@ def _build_super_premium_report_frames(overview_metrics: dict, evm_metrics: dict
     }
 
 
-def build_super_premium_progress_report_package(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> tuple[bytes, str, list[str]]:
+def build_detailed_progress_report_package(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> tuple[bytes, str, list[str]]:
     require_openpyxl()
-    frames = _build_super_premium_report_frames(overview_metrics, evm_metrics, contract_metrics, delay_metrics, risk_metrics, milestone_metrics, activity_metrics, s_curve_metrics)
+    frames = _build_detailed_progress_report_frames(overview_metrics, evm_metrics, contract_metrics, delay_metrics, risk_metrics, milestone_metrics, activity_metrics, s_curve_metrics)
     wb = Workbook()
     default_ws = wb.active
     wb.remove(default_ws)
@@ -3991,7 +4242,7 @@ def build_super_premium_progress_report_package(overview_metrics: dict, evm_metr
     for sheet_name in ordered_sheets:
         ws = wb.create_sheet(title=sheet_name)
         if sheet_name == "01 POWER BI DASHBOARD":
-            _style_dashboard_sheet(ws, "Super Premium Construction Progress Report", "Monthly executive dashboard/control tower linked to the unified data model")
+            _style_dashboard_sheet(ws, "Detailed Progress Report", "Monthly executive dashboard/control tower linked to the unified data model")
             _metric_block(ws, "A5", "Overall Progress", pct(overview_metrics.get("overall_progress")), "Actual project progress")
             _metric_block(ws, "C5", "Planned Progress", pct(overview_metrics.get("planned_progress")), "Baseline planned progress")
             _metric_block(ws, "E5", "SPI", f"{evmData['SPI']:.2f}", "Schedule performance index")
@@ -4026,22 +4277,24 @@ def build_super_premium_progress_report_package(overview_metrics: dict, evm_metr
             _write_dataframe_table(ws, frame, f"tbl_{sheet_name.lower().replace(' ', '_').replace('&', 'and').replace('-', '_')}", start_row=1, start_col=1)
             ws.freeze_panes = "A2"
 
-    readme_text = """# Super Premium Construction Progress Report PowerBI Ready
+    readme_text = """# Detailed Progress Report PowerBI Ready
 
 ## Generated Files
-1. `Super_Premium_Construction_Progress_Report_PowerBI_Ready.xlsx`
-2. `README_Super_Premium_Construction_Progress_Report.md`
+1. `Detailed_Progress_Report_PowerBI_Ready.xlsx`
+2. `Detailed_Progress_Report.html`
+3. `Detailed_Progress_Report.docx`
+4. `Detailed_Progress_Report_PowerBI_Style.html`
 
 ## Update Workflow
 1. Refresh the platform CSV files in `data/import_templates`.
-2. Open the dashboard and unlock Output Studio.
-3. Choose `Super premium progress report`.
-4. Download the regenerated workbook and README.
+2. Open Output Studio.
+3. Choose `Detailed Progress report`.
+4. Download the regenerated workbook, HTML report, Word report, and Power BI-style HTML.
 
 ## Power BI Connection Steps
 1. Open Power BI Desktop.
 2. Get Data -> Excel Workbook.
-3. Select `Super_Premium_Construction_Progress_Report_PowerBI_Ready.xlsx`.
+3. Select `Detailed_Progress_Report_PowerBI_Ready.xlsx`.
 4. Import named Excel tables only.
 5. Build model relationships around:
    - Calendar
@@ -4074,6 +4327,117 @@ def build_super_premium_progress_report_package(overview_metrics: dict, evm_metr
     wb.save(stream)
     stream.seek(0)
     return stream.getvalue(), readme_text, assumptions
+
+
+def _detailed_progress_summary_rows(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, activity_metrics: dict) -> list[tuple[str, str, str]]:
+    spi = (float(evm_metrics.get("ev", 0.0)) / float(evm_metrics.get("pv", 1.0))) if float(evm_metrics.get("pv", 0.0)) else 0.0
+    certified = float(contract_metrics.get("total_certified", 0.0) or 0.0)
+    paid = float(contract_metrics.get("total_paid", 0.0) or 0.0)
+    return [
+        ("Overall Progress", pct(overview_metrics.get("overall_progress")), f"Planned {pct(overview_metrics.get('planned_progress'))}"),
+        ("SPI", f"{spi:.2f}" if spi else "N/A", "Schedule performance index"),
+        ("Critical Activities", f"{int(activity_metrics.get('critical_count', 0)):,}", "Current critical path pulse"),
+        ("Delay Events", f"{int(delay_metrics.get('total_delay_events', 0)):,}", f"{int(delay_metrics.get('total_delay_days', 0)):,} delay days"),
+        ("Open Risks", f"{int(risk_metrics.get('open_risks', 0)):,}", "Active risk register items"),
+        ("Commercial Gap", egp(max(certified - paid, 0.0)), "Certified less paid"),
+    ]
+
+
+def build_detailed_progress_report_html(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> str:
+    project_name = html.escape(str(overview_metrics.get("project_name", "Project")))
+    phase_df = _phase_progress_rows(activity_metrics, overview_metrics)
+    delay_df = delay_metrics.get("display_delays_df", pd.DataFrame()).head(12)
+    risk_df = risk_metrics.get("risks_df", pd.DataFrame()).head(12)
+    metric_html = "".join(
+        f"<div class='metric'><span>{html.escape(title)}</span><strong>{html.escape(value)}</strong><small>{html.escape(note)}</small></div>"
+        for title, value, note in _detailed_progress_summary_rows(overview_metrics, evm_metrics, contract_metrics, delay_metrics, risk_metrics, activity_metrics)
+    )
+
+    def table_html(df: pd.DataFrame) -> str:
+        if df.empty:
+            return "<div class='empty'>No records available.</div>"
+        return df.fillna("").to_html(index=False, escape=True, border=0, classes="data")
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detailed Progress Report</title>
+  <style>
+    body{{margin:0;background:#f5f7fb;color:#152238;font-family:Inter,Segoe UI,Arial,sans-serif}}
+    .page{{max-width:1320px;margin:0 auto;padding:28px}}
+    .hero{{background:linear-gradient(135deg,#071a2f,#123a5d);color:white;border-radius:8px;padding:28px;border:1px solid #163f62}}
+    h1{{margin:0;font-size:34px;letter-spacing:0}} .sub{{margin-top:10px;color:#bfd3e8}}
+    .grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}}
+    .metric,.panel{{background:white;border:1px solid #dce5ef;border-radius:8px;padding:18px;box-shadow:0 10px 28px rgba(16,35,61,.07)}}
+    .metric span{{display:block;font-size:12px;color:#65758b;text-transform:uppercase;font-weight:800}} .metric strong{{display:block;margin-top:10px;font-size:28px;color:#0f2f4e}} .metric small{{display:block;margin-top:6px;color:#718197}}
+    .section{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}} .wide{{grid-column:1/-1}}
+    h2{{margin:0 0 14px;font-size:20px;color:#0f2f4e}} table.data{{width:100%;border-collapse:collapse;font-size:13px}} table.data th,table.data td{{padding:10px;border-bottom:1px solid #e6edf5;text-align:left;vertical-align:top}} table.data th{{background:#f0f5fb;color:#46566c;text-transform:uppercase;font-size:11px}}
+    .empty{{color:#718197;padding:12px;background:#f6f9fc;border-radius:8px}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero"><h1>Detailed Progress Report</h1><div class="sub">{project_name} | Generated {html.escape(pd.Timestamp.today().strftime('%d %b %Y'))}</div></section>
+    <section class="grid">{metric_html}</section>
+    <section class="section">
+      <div class="panel wide"><h2>Engineering / Procurement / Construction Progress</h2>{table_html(phase_df)}</div>
+      <div class="panel"><h2>Delay Register Snapshot</h2>{table_html(delay_df)}</div>
+      <div class="panel"><h2>Risk Register Snapshot</h2>{table_html(risk_df)}</div>
+    </section>
+  </main>
+</body>
+</html>"""
+
+
+def build_detailed_progress_power_bi_style_html(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> str:
+    base_html = build_detailed_progress_report_html(overview_metrics, evm_metrics, contract_metrics, delay_metrics, risk_metrics, milestone_metrics, activity_metrics, s_curve_metrics)
+    return (
+        base_html
+        .replace("Detailed Progress Report</h1>", "Detailed Progress Report - Power BI Style</h1>")
+        .replace("#f5f7fb", "#07111f")
+        .replace("background:white", "background:#0f1b2d")
+        .replace("color:#152238", "color:#e5eef8")
+        .replace("color:#0f2f4e", "color:#e5eef8")
+    )
+
+
+def build_detailed_progress_report_docx_bytes(overview_metrics: dict, evm_metrics: dict, contract_metrics: dict, delay_metrics: dict, risk_metrics: dict, milestone_metrics: dict, activity_metrics: dict, s_curve_metrics: dict) -> bytes:
+    if not DOCX_AVAILABLE or Document is None:
+        return b""
+    doc = Document()
+    doc.add_heading("Detailed Progress Report", level=1)
+    doc.add_paragraph(str(overview_metrics.get("project_name", "Project")))
+    doc.add_paragraph(f"Generated: {pd.Timestamp.today().strftime('%d %b %Y')}")
+    doc.add_heading("Executive KPI Summary", level=2)
+    table = doc.add_table(rows=1, cols=3)
+    table.style = "Table Grid"
+    hdr = table.rows[0].cells
+    hdr[0].text = "Metric"
+    hdr[1].text = "Value"
+    hdr[2].text = "Note"
+    for title, value, note in _detailed_progress_summary_rows(overview_metrics, evm_metrics, contract_metrics, delay_metrics, risk_metrics, activity_metrics):
+        cells = table.add_row().cells
+        cells[0].text = title
+        cells[1].text = value
+        cells[2].text = note
+    doc.add_heading("Engineering / Procurement / Construction Progress", level=2)
+    phase_df = _phase_progress_rows(activity_metrics, overview_metrics)
+    progress_table = doc.add_table(rows=1, cols=4)
+    progress_table.style = "Table Grid"
+    for idx, col in enumerate(["Phase", "Planned %", "Actual %", "Variance %"]):
+        progress_table.rows[0].cells[idx].text = col
+    for _, row in phase_df.iterrows():
+        cells = progress_table.add_row().cells
+        cells[0].text = str(row.get("phase", ""))
+        cells[1].text = str(row.get("planned", ""))
+        cells[2].text = str(row.get("actual", ""))
+        cells[3].text = str(row.get("variance", ""))
+    stream = io.BytesIO()
+    doc.save(stream)
+    stream.seek(0)
+    return stream.getvalue()
 
 
 st.markdown(
@@ -4174,6 +4538,30 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+projects_for_selector_df = load_core_csv(PROJECTS_CSV_PATH)
+project_selector_options = project_filter_options(projects_for_selector_df)
+project_selector_labels = [option["label"] for option in project_selector_options]
+current_project_id = selected_project_id()
+current_project_index = next(
+    (
+        idx
+        for idx, option in enumerate(project_selector_options)
+        if option["project_id"] == current_project_id
+    ),
+    0,
+)
+project_selector_col, project_selector_spacer = st.columns([0.34, 0.66])
+with project_selector_col:
+    selected_project_label = st.selectbox(
+        "Dashboard project",
+        project_selector_labels,
+        index=current_project_index,
+        key="overall_dashboard_project_selector",
+        help="Choose a project from projects.csv. Data tables with project_id are filtered without changing dashboard layout.",
+    )
+selected_project_option = project_selector_options[project_selector_labels.index(selected_project_label)]
+st.session_state["active_project_id"] = selected_project_option["project_id"]
+
 project_data = get_project_control_summary(DEFAULT_DB_PATH)
 project = project_data.get("project") or {}
 activities = project_data.get("activities", [])
@@ -4190,7 +4578,7 @@ s_curve_metrics = build_s_curve_metrics()
 activity_metrics = build_activity_metrics()
 wbs_metrics = build_wbs_metrics()
 time_impact_engine = build_time_impact_engine(delay_metrics, risk_metrics, activity_metrics, contract_metrics)
-evmData = build_earned_value_analysis_data()
+evmData = build_earned_value_analysis_data(evm_metrics)
 ensure_evm_comment_state()
 evmComments = get_evm_comments()
 logo_b64 = image_as_base64(LOGO_PATH)
@@ -4214,8 +4602,8 @@ st.markdown(
 
 export_sources = {
     "Overview Metrics": df_for_export(metrics_frame("Overview", {
-        "Project Start Date": overview_metrics.get("project_start").strftime("%d-%b-%Y") if overview_metrics.get("project_start") is not None else "N/A",
-        "Project Finish Date": overview_metrics.get("project_finish").strftime("%d-%b-%Y") if overview_metrics.get("project_finish") is not None else "N/A",
+        "Project Start Date": format_project_date(overview_metrics.get("project_start")),
+        "Project Finish Date": format_project_date(overview_metrics.get("project_finish")),
         "Project Duration [Days]": int(overview_metrics.get("duration_days", 0)),
         "Duration Elapsed": pct(overview_metrics.get("duration_elapsed_pct")),
         "Remaining Duration": pct(overview_metrics.get("remaining_duration_pct")),
@@ -4247,8 +4635,6 @@ export_sources = {
     "S-Curve": df_for_export(s_curve_metrics["curve_df"]) if "curve_df" in s_curve_metrics and not s_curve_metrics["curve_df"].empty else pd.DataFrame(),
 }
 
-STEEL_TIA_DIR = APP_DIR / "steel_delay_tia_templates"
-BL_FIXED_DIR = APP_DIR / "BL fixed"
 DELAY_TIA_UPLOAD_CACHE_DIR = APP_DIR / ".streamlit" / "delay_tia_upload_cache"
 STEEL_DELAY_DURATION_COLUMNS = [
     "Delayed duration in days due to steel un avilability in site",
@@ -4258,6 +4644,7 @@ STEEL_DELAY_DURATION_COLUMNS = [
 
 
 def steel_tia_load_csv_or_empty(path: Path) -> pd.DataFrame:
+    path = project_scoped_file(path)
     if not path.exists():
         return pd.DataFrame()
     try:
@@ -4266,10 +4653,135 @@ def steel_tia_load_csv_or_empty(path: Path) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def steel_tia_load_first_csv_or_empty(paths: list[Path]) -> pd.DataFrame:
+    for path in paths:
+        frame = steel_tia_load_csv_or_empty(path)
+        if not frame.empty:
+            return frame
+    return pd.DataFrame()
+
+
+def build_steel_delay_template_inventory_df() -> pd.DataFrame:
+    rows = []
+    inventory_dir = project_scoped_file(STEEL_TIA_DIR / "01-project_metadata_template.csv").parent
+    for path in sorted(inventory_dir.glob("*")):
+        if path.suffix.lower() == ".csv":
+            frame = steel_tia_load_csv_or_empty(path)
+            rows.append(
+                {
+                    "File": path.name,
+                    "Type": "CSV",
+                    "Rows": int(len(frame)),
+                    "Columns": int(len(frame.columns)),
+                    "Recognized Use": steel_tia_template_use_label(path.name),
+                    "Column List": ", ".join(str(col) for col in frame.columns),
+                }
+            )
+        elif path.suffix.lower() == ".md":
+            rows.append(
+                {
+                    "File": path.name,
+                    "Type": "Documentation",
+                    "Rows": 0,
+                    "Columns": 0,
+                    "Recognized Use": "Folder guidance / upload instructions.",
+                    "Column List": "",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def steel_tia_template_use_label(file_name: str) -> str:
+    mapping = {
+        "01-project_metadata_template.csv": "Project metadata, baseline/update identity, data date, parties, and report context.",
+        "02- master_activity_steel_analysis.csv": "Activity-level steel requirement, shortage, delayed duration, and affected activity source.",
+        "03- employer_steel_supply_at_site.csv": "Employer ROYA supply timing used for steel availability and stock-out calculation.",
+        "04- p6_activity_export.csv": "Current schedule, baseline dates, float, criticality, longest path, and progress context.",
+        "05- relationship_file.csv": "Predecessor/successor logic for causation and fragnet insertion.",
+        "06- contract_library.csv": "Entitlement, notice, time-bar, money impact, and schedule-impact support.",
+        "07- ifc_conflict.csv": "IFC/design conflict support delay stream.",
+        "08- payments.csv": "Payment/cashflow support delay stream.",
+        "09- rfi_status.csv": "RFI status support delay stream.",
+        "10- contractor_steel_supplied_at_site.csv": "Contractor steel visibility and mitigation evidence only; excluded from employer-steel entitlement calculation.",
+        "11-concurrency_matrix_template.updated.csv": "Concurrency framework for overlap windows, critical path checks, and compensability separation.",
+        "01- master_activity_steel_analysis.csv": "Legacy master activity steel analysis file.",
+        "02- employer_steel_supply.csv": "Legacy employer steel supply file.",
+        "03- employer_steel_supply.csv": "Legacy employer ROYA supply timing used for steel availability and stock-out calculation.",
+        "03- p6_activity_export.csv": "Legacy P6 activity export file.",
+        "04- relationship_file.csv": "Legacy relationship file.",
+        "05- contract_library.csv": "Legacy contract library file.",
+        "06- ifc_conflict.csv": "Legacy IFC/design conflict support delay stream.",
+        "07- payments.csv": "Legacy payment/cashflow support delay stream.",
+        "08- rfi_status.csv": "Legacy RFI status support delay stream.",
+        "09- samco_steel_supplied_at_site.csv": "Legacy SAMCO site steel visibility only; excluded from employer-steel delay calculation.",
+        "10- samco_steel_supplied_at_site.csv": "Legacy SAMCO site steel visibility only; excluded from employer-steel delay calculation.",
+        "RFI Delay.csv": "Detailed RFI delay register used for RFI support and concurrency review.",
+    }
+    return mapping.get(file_name, "Recognized folder file; inspect columns before analysis.")
+
+
+def delay_tia_template_candidate_paths(key: str, label: str = "") -> list[Path]:
+    current = {
+        "metadata": ["01-project_metadata_template.csv"],
+        "master": ["02- master_activity_steel_analysis.csv", "02-master_activity_steel_analysis.csv", "01- master_activity_steel_analysis.csv", "01- master_activity_steel_analysis.csv"],
+        "employer": ["03- employer_steel_supply_at_site.csv", "03- employer_steel_supply.csv", "02- employer_steel_supply.csv"],
+        "p6": ["04- p6_activity_export.csv", "03- p6_activity_export.csv"],
+        "relationship": ["05- relationship_file.csv", "04- relationship_file.csv"],
+        "contract": ["06- contract_library.csv", "05- contract_library.csv"],
+        "ifc": ["07- ifc_conflict.csv", "06- ifc_conflict.csv"],
+        "payments": ["08- payments.csv", "07- payments.csv"],
+        "rfi": ["09- rfi_status.csv", "08- rfi_status.csv"],
+        "samco": ["10- contractor_steel_supplied_at_site.csv", "10- samco_steel_supplied_at_site.csv", "09- samco_steel_supplied_at_site.csv"],
+        "concurrency": ["11-concurrency_matrix_template.updated.csv", "11-concurrency_matrix_template.csv", "07-concurrency_matrix_template.csv"],
+    }
+    names = list(current.get(key, []))
+    if label and label not in names:
+        names.insert(0, label)
+    return [STEEL_TIA_DIR / name for name in names]
+
+
+def load_delay_tia_template_fallback(key: str, label: str = "") -> tuple[str | None, pd.DataFrame]:
+    for path in delay_tia_template_candidate_paths(key, label):
+        frame = steel_tia_load_csv_or_empty(path)
+        if not frame.empty:
+            return path.name, filter_active_project(frame)
+    return None, pd.DataFrame()
+
+
 def steel_tia_qty_sum(series: pd.Series | None) -> float:
     if series is None:
         return 0.0
     return float(pd.to_numeric(series, errors="coerce").fillna(0).sum())
+
+
+def numeric_sum_from_columns(df: pd.DataFrame, candidates: list[str]) -> float:
+    if df is None or df.empty:
+        return 0.0
+    normalized_lookup = {
+        re.sub(r"[^a-z0-9]+", "", str(col).lower()): col
+        for col in df.columns
+    }
+    for candidate in candidates:
+        normalized = re.sub(r"[^a-z0-9]+", "", candidate.lower())
+        col = normalized_lookup.get(normalized)
+        if col is not None:
+            return float(pd.to_numeric(df[col], errors="coerce").fillna(0).sum())
+    return 0.0
+
+
+def numeric_series_from_columns(df: pd.DataFrame, candidates: list[str], default: float = 0.0) -> pd.Series:
+    if df is None or df.empty:
+        return pd.Series(dtype="float64")
+    normalized_lookup = {
+        re.sub(r"[^a-z0-9]+", "", str(col).lower()): col
+        for col in df.columns
+    }
+    for candidate in candidates:
+        normalized = re.sub(r"[^a-z0-9]+", "", candidate.lower())
+        col = normalized_lookup.get(normalized)
+        if col is not None:
+            return pd.to_numeric(df[col], errors="coerce").fillna(default)
+    return pd.Series([default] * len(df), index=df.index, dtype="float64")
 
 
 def steel_tia_date_label(value) -> str:
@@ -4414,19 +4926,21 @@ def build_bl_critical_path_comparison(bl_df: pd.DataFrame, activity_metrics: dic
 
 
 def build_delay_tia_context() -> dict:
-    master_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "01- master_activity_steel_analysis.csv")
-    employer_raw_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "02- employer_steel_supply.csv")
-    p6_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "03- p6_activity_export.csv")
-    relationship_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "04- relationship_file.csv")
-    contract_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "05- contract_library.csv")
-    ifc_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "06- ifc_conflict.csv")
-    payments_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "07- payments.csv")
-    rfi_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "08- rfi_status.csv")
-    bl_critical_path_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "09- bl_critical_path.csv")
-    samco_df = steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "10- samco_steel_supplied_at_site.csv")
-    delay_events_df = steel_tia_load_csv_or_empty(DELAYS_CSV_PATH)
+    _, metadata_df = load_delay_tia_template_fallback("metadata")
+    _, master_df = load_delay_tia_template_fallback("master")
+    _, employer_raw_df = load_delay_tia_template_fallback("employer")
+    _, p6_df = load_delay_tia_template_fallback("p6")
+    _, relationship_df = load_delay_tia_template_fallback("relationship")
+    _, contract_df = load_delay_tia_template_fallback("contract")
+    _, ifc_df = load_delay_tia_template_fallback("ifc")
+    _, payments_df = load_delay_tia_template_fallback("payments")
+    _, rfi_df = load_delay_tia_template_fallback("rfi")
+    _, concurrency_matrix_df = load_delay_tia_template_fallback("concurrency")
+    bl_critical_path_df = filter_active_project(steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "09- bl_critical_path.csv"))
+    _, samco_df = load_delay_tia_template_fallback("samco")
+    delay_events_df = filter_active_project(steel_tia_load_csv_or_empty(DELAYS_CSV_PATH))
 
-    return build_delay_tia_context_from_frames(
+    context = build_delay_tia_context_from_frames(
         master_df=master_df,
         employer_raw_df=employer_raw_df,
         p6_df=p6_df,
@@ -4439,6 +4953,9 @@ def build_delay_tia_context() -> dict:
         samco_df=samco_df,
         delay_events_df=delay_events_df,
     )
+    context["project_metadata_df"] = metadata_df
+    context["concurrency_matrix_df"] = concurrency_matrix_df
+    return context
 
 
 def steel_tia_read_uploaded_file(uploaded_file) -> pd.DataFrame:
@@ -4501,11 +5018,176 @@ def clear_persisted_delay_tia_upload(cache_key: str) -> None:
 
 def load_bl_fixed_context() -> dict[str, pd.DataFrame]:
     return {
-        "schedule_df": steel_tia_load_csv_or_empty(BL_FIXED_DIR / "BL Schedule.csv"),
-        "float_df": steel_tia_load_csv_or_empty(BL_FIXED_DIR / "BL float bath.csv"),
-        "longest_df": steel_tia_load_csv_or_empty(BL_FIXED_DIR / "Bl Longest bath.csv"),
-        "critical_df": steel_tia_load_csv_or_empty(BL_FIXED_DIR / "BL critical path.csv"),
+        "schedule_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "BL Schedule.csv")),
+        "float_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "BL float bath.csv")),
+        "longest_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "Bl Longest bath.csv")),
+        "critical_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "BL critical path.csv")),
+        "mep_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "MEP Activities.csv")),
+        "mep_schedule_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "MEP Schedule.csv")),
+        "mep_civil_logic_df": filter_active_project(steel_tia_load_csv_or_empty(BL_FIXED_DIR / "MEP Civil Logic.csv")),
     }
+
+
+def build_mep_activities_kpis(mep_df: pd.DataFrame) -> dict[str, int | float]:
+    if mep_df is None or mep_df.empty:
+        return {
+            "activity_count": 0,
+            "building_count": 0,
+            "total_duration_days": 0.0,
+            "interface_count": 0,
+        }
+    duration = pd.to_numeric(mep_df.get("Duration Days"), errors="coerce").fillna(0)
+    return {
+        "activity_count": int(len(mep_df)),
+        "building_count": int(mep_df.get("Building / Zone", pd.Series(dtype=object)).astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
+        "total_duration_days": float(duration.sum()),
+        "interface_count": int(mep_df.get("Interface Type", pd.Series(dtype=object)).astype(str).str.strip().replace("", pd.NA).dropna().nunique()),
+    }
+
+
+def build_mep_related_search_terms(mep_df: pd.DataFrame) -> list[str]:
+    if mep_df is None or mep_df.empty:
+        return []
+    text_columns = [
+        col
+        for col in [
+            "MEP Activity",
+            "Material / System",
+            "Interface Type",
+            "Civil / Structural Dependency",
+            "Scope / Debate Treatment",
+            "Delay Analysis Use",
+        ]
+        if col in mep_df.columns
+    ]
+    if not text_columns:
+        return []
+    stop_words = {
+        "and",
+        "are",
+        "for",
+        "from",
+        "into",
+        "not",
+        "only",
+        "the",
+        "this",
+        "that",
+        "with",
+        "work",
+        "works",
+        "activity",
+        "activities",
+        "analysis",
+        "delay",
+        "civil",
+        "structural",
+    }
+    term_counts: dict[str, int] = {}
+    for value in mep_df[text_columns].fillna("").astype(str).agg(" ".join, axis=1):
+        cleaned = re.sub(r"[^A-Za-z0-9#+/ -]+", " ", value.lower())
+        tokens = [token.strip(" -/") for token in re.split(r"[\s,/;:()]+", cleaned) if len(token.strip(" -/")) >= 3]
+        for token in tokens:
+            if token not in stop_words and not token.isdigit():
+                term_counts[token] = term_counts.get(token, 0) + 1
+        for phrase in re.findall(r"[a-z0-9#+]+(?:\s+[a-z0-9#+]+){1,3}", cleaned):
+            phrase = phrase.strip()
+            words = phrase.split()
+            if len(phrase) >= 8 and not all(word in stop_words for word in words):
+                term_counts[phrase] = term_counts.get(phrase, 0) + 1
+    return [term for term, _ in sorted(term_counts.items(), key=lambda item: (-item[1], item[0]))[:40]]
+
+
+def build_mep_letter_conclusion(row: pd.Series) -> str:
+    parts = []
+    for col in ["Main Purpose", "Key Requests", "Affected Activities", "Required Actions", "Delay Risk", "EOT Potential"]:
+        value = str(row.get(col, "")).strip()
+        if value and value.lower() not in {"nan", "none", "not applicable", "n/a"}:
+            parts.append(value)
+    if not parts:
+        subject = str(row.get("Subject", "")).strip()
+        parts.append(subject or "Related correspondence requires manual review against the MEP interface register.")
+    conclusion = " | ".join(dict.fromkeys(parts))
+    return textwrap.shorten(conclusion, width=260, placeholder="...")
+
+
+def build_mep_related_letters_df(mep_df: pd.DataFrame) -> pd.DataFrame:
+    output_columns = ["Direction", "Letter No.", "Date", "Conclusion", "Delay Risk", "EOT Potential", "Claim Strength", "Match Score"]
+    sheets = load_letters_workbook()
+    if not sheets:
+        return pd.DataFrame(columns=output_columns)
+
+    search_terms = build_mep_related_search_terms(mep_df)
+    if not search_terms:
+        return pd.DataFrame(columns=output_columns)
+
+    rows = []
+    for sheet_name, direction in [("From SAMCO to ACE", "SAMCO to ACE"), ("From ACE to SAMCO", "ACE to SAMCO")]:
+        frame = sheets.get(sheet_name, pd.DataFrame())
+        if frame.empty:
+            continue
+        for _, row in frame.iterrows():
+            haystack = " ".join(str(row.get(col, "")) for col in frame.columns).lower()
+            match_score = sum(1 for term in search_terms if term in haystack)
+            if match_score <= 0:
+                continue
+            letter_no = str(row.get("Ref No", "")).strip()
+            if not letter_no:
+                continue
+            rows.append(
+                {
+                    "Direction": direction,
+                    "Letter No.": letter_no,
+                    "Date": str(row.get("Date", "")).strip(),
+                    "Conclusion": build_mep_letter_conclusion(row),
+                    "Delay Risk": str(row.get("Delay Risk", "")).strip(),
+                    "EOT Potential": str(row.get("EOT Potential", "")).strip(),
+                    "Claim Strength": str(row.get("Claim Strength", "")).strip(),
+                    "Match Score": match_score,
+                }
+            )
+    if not rows:
+        return pd.DataFrame(columns=output_columns)
+
+    letters_df = pd.DataFrame(rows).drop_duplicates(subset=["Letter No.", "Conclusion"]).reset_index(drop=True)
+    return letters_df.sort_values(["Match Score", "Date", "Letter No."], ascending=[False, True, True]).head(15).reset_index(drop=True)
+
+
+def build_mep_schedule_export_xlsx(
+    mep_activities_df: pd.DataFrame,
+    mep_schedule_df: pd.DataFrame,
+    mep_civil_logic_df: pd.DataFrame,
+    related_mep_letters_df: pd.DataFrame,
+) -> bytes:
+    if not OPENPYXL_AVAILABLE:
+        return b""
+    wb = Workbook()
+    default_sheet = wb.active
+    wb.remove(default_sheet)
+
+    def add_sheet(name: str, df: pd.DataFrame) -> None:
+        ws = wb.create_sheet(title=name[:31])
+        data = df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame()
+        if data.empty:
+            data = pd.DataFrame([{"Status": "No records available"}])
+        for row in dataframe_to_rows(data, index=False, header=True):
+            ws.append(row)
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="1F4E78")
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        for column_cells in ws.columns:
+            max_len = max(len(str(cell.value or "")) for cell in column_cells)
+            ws.column_dimensions[column_cells[0].column_letter].width = min(max(max_len + 2, 12), 55)
+        ws.freeze_panes = "A2"
+
+    add_sheet("MEP Activities", mep_activities_df)
+    add_sheet("MEP Schedule", mep_schedule_df)
+    add_sheet("Civil Logic", mep_civil_logic_df)
+    add_sheet("Letter Conclusions", related_mep_letters_df)
+    output = io.BytesIO()
+    wb.save(output)
+    return output.getvalue()
 
 
 def parse_delay_days_from_text(value) -> object:
@@ -4535,12 +5217,13 @@ def extract_submission_reply_dates(value) -> tuple[pd.Timestamp, pd.Timestamp]:
 
 def load_delay_tia_local_support_files() -> dict[str, pd.DataFrame]:
     return {
-        "rfi_detailed_df": steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "RFI Delay.csv"),
-        "ifc_local_df": steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "06- ifc_conflict.csv"),
+        "rfi_detailed_df": steel_tia_load_first_csv_or_empty(
+            [
+                STEEL_TIA_DIR / "09- rfi_status.csv",
+            ]
+        ),
+        "ifc_local_df": steel_tia_load_first_csv_or_empty([STEEL_TIA_DIR / "07- ifc_conflict.csv", STEEL_TIA_DIR / "06- ifc_conflict.csv"]),
     }
-
-
-DELAY_TIA_IMPROVEMENT_DIR = APP_DIR / "Delay tia improvement files"
 
 
 def delay_tia_question_read_csv(path: Path) -> pd.DataFrame:
@@ -4554,11 +5237,9 @@ def delay_tia_question_read_csv(path: Path) -> pd.DataFrame:
 
 def load_delay_tia_question_frames() -> dict[str, pd.DataFrame]:
     frames: dict[str, pd.DataFrame] = {}
-    for folder in [DELAY_TIA_IMPROVEMENT_DIR, STEEL_TIA_DIR]:
-        if not folder.exists():
-            continue
-        for path in sorted(folder.glob("*.csv")):
-            key = f"{folder.name}/{path.name}"
+    if STEEL_TIA_DIR.exists():
+        for path in sorted(STEEL_TIA_DIR.glob("*.csv")):
+            key = f"{STEEL_TIA_DIR.name}/{path.name}"
             frames[key] = delay_tia_question_read_csv(path)
     return frames
 
@@ -4578,29 +5259,78 @@ def build_delay_tia_question_column_inventory(frames: dict[str, pd.DataFrame]) -
 
 
 def delay_tia_question_number(df: pd.DataFrame, column_name: str) -> pd.Series:
-    if df.empty or column_name not in df.columns:
+    if df.empty:
         return pd.Series(dtype="float64")
+    if column_name not in df.columns:
+        normalized_target = re.sub(r"[^a-z0-9]+", "", str(column_name).lower())
+        matched_column = next(
+            (
+                col
+                for col in df.columns
+                if re.sub(r"[^a-z0-9]+", "", str(col).lower()) == normalized_target
+            ),
+            None,
+        )
+        if matched_column is None:
+            return pd.Series(dtype="float64")
+        column_name = matched_column
     return pd.to_numeric(df[column_name], errors="coerce").dropna()
 
 
+def delay_tia_question_first_number(df: pd.DataFrame, column_names: list[str]) -> pd.Series:
+    for column_name in column_names:
+        series = delay_tia_question_number(df, column_name)
+        if not series.empty:
+            return series
+    return pd.Series(dtype="float64")
+
+
+def delay_tia_frames_get_first(frames: dict[str, pd.DataFrame], keys: list[str]) -> pd.DataFrame:
+    for key in keys:
+        frame = frames.get(key, pd.DataFrame())
+        if isinstance(frame, pd.DataFrame) and not frame.empty:
+            return frame
+    return pd.DataFrame()
+
+
 def build_delay_tia_question_kpis(frames: dict[str, pd.DataFrame]) -> dict[str, float | int]:
-    claimed_df = frames.get("Delay tia improvement files/05-claimed_delay_register_template.csv", pd.DataFrame())
-    fragnet_df = frames.get("Delay tia improvement files/04-fragnet_logic_register_template.csv", pd.DataFrame())
-    concurrency_df = frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame())
-    rfi_claim_df = frames.get("Delay tia improvement files/18-rfi_delay_claim6_normalized.csv", pd.DataFrame())
-    events_df = frames.get("Delay tia improvement files/02-delay_event_register_template.csv", pd.DataFrame())
-    activity_df = frames.get("Delay tia improvement files/03-activity_impact_register_template.csv", pd.DataFrame())
-    evidence_df = frames.get("Delay tia improvement files/08-evidence_register_template.csv", pd.DataFrame())
-    p6_df = frames.get("steel_delay_tia_templates/03- p6_activity_export.csv", pd.DataFrame())
-    employer_df = frames.get("steel_delay_tia_templates/02- employer_steel_supply.csv", pd.DataFrame())
-    samco_df = frames.get("steel_delay_tia_templates/09- samco_steel_supplied_at_site.csv", pd.DataFrame())
+    concurrency_df = delay_tia_frames_get_first(
+        frames,
+        [
+            "steel_delay_tia_templates/11-concurrency_matrix_template.updated.csv",
+            "steel_delay_tia_templates/11-concurrency_matrix_template.csv",
+        ],
+    )
+    claimed_df = pd.DataFrame()
+    fragnet_df = concurrency_df.copy()
+    rfi_claim_df = frames.get("steel_delay_tia_templates/09- rfi_status.csv", pd.DataFrame())
+    events_df = frames.get("steel_delay_tia_templates/07- ifc_conflict.csv", pd.DataFrame())
+    activity_df = delay_tia_frames_get_first(frames, ["steel_delay_tia_templates/02- master_activity_steel_analysis.csv", "steel_delay_tia_templates/04- p6_activity_export.csv"])
+    evidence_df = frames.get("steel_delay_tia_templates/06- contract_library.csv", pd.DataFrame())
+    p6_df = delay_tia_frames_get_first(frames, ["steel_delay_tia_templates/04- p6_activity_export.csv", "steel_delay_tia_templates/03- p6_activity_export.csv"])
+    employer_df = delay_tia_frames_get_first(
+        frames,
+        [
+            "steel_delay_tia_templates/03- employer_steel_supply_at_site.csv",
+            "steel_delay_tia_templates/03- employer_steel_supply.csv",
+            "steel_delay_tia_templates/02- employer_steel_supply.csv",
+        ],
+    )
+    samco_df = delay_tia_frames_get_first(
+        frames,
+        [
+            "steel_delay_tia_templates/10- contractor_steel_supplied_at_site.csv",
+            "steel_delay_tia_templates/10- samco_steel_supplied_at_site.csv",
+            "steel_delay_tia_templates/09- samco_steel_supplied_at_site.csv",
+        ],
+    )
 
     claimed_days = delay_tia_question_number(claimed_df, "Claimed Delay Duration (days)")
     fragnet_days = delay_tia_question_number(fragnet_df, "Claimed Delay Duration")
-    concurrency_days = delay_tia_question_number(concurrency_df, "Concurrent Delay Days")
+    concurrency_days = delay_tia_question_first_number(concurrency_df, ["Concurrent Delay Days", "Concurrent delay"])
     rfi_days = delay_tia_question_number(rfi_claim_df, "Delay Beyond 10 Days")
     employer_qty = delay_tia_question_number(employer_df, "Available units at site received by client")
-    samco_qty = delay_tia_question_number(samco_df, "Steel available at site")
+    samco_qty = delay_tia_question_first_number(samco_df, ["Steel available at site", "Total Quantity", "Delivered Qty"])
 
     max_claimed = int(claimed_days.max()) if not claimed_days.empty else 0
     max_fragnet = int(fragnet_days.max()) if not fragnet_days.empty else 0
@@ -4657,18 +5387,20 @@ def answer_delay_tia_question(question: str, frames: dict[str, pd.DataFrame]) ->
     if any(word in q for word in ["column", "schema", "field", "inspect"]):
         tables.append(("Inspected column inventory", build_delay_tia_question_column_inventory(frames)))
         return (
-            "I inspected the available CSV columns before answering. The inventory table lists every loaded Delay TIA improvement and steel template dataset, row count, column count, and column list.",
+            "I inspected the available CSV columns before answering. The inventory table lists every loaded Delay Analysis - Time Impact Analysis template dataset, row count, column count, and column list.",
             tables,
             kpis,
         )
 
     if any(word in q for word in ["final", "submit", "submission", "total", "days", "delay"]):
-        claimed_df = frames.get("Delay tia improvement files/05-claimed_delay_register_template.csv", pd.DataFrame())
-        fragnet_df = frames.get("Delay tia improvement files/04-fragnet_logic_register_template.csv", pd.DataFrame())
-        concurrency_df = frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame())
+        concurrency_df = delay_tia_frames_get_first(
+            frames,
+            [
+                "steel_delay_tia_templates/11-concurrency_matrix_template.updated.csv",
+                "steel_delay_tia_templates/11-concurrency_matrix_template.csv",
+            ],
+        )
         for title, df in [
-            ("Claimed delay register", claimed_df),
-            ("Fragnet logic register", fragnet_df),
             ("Concurrency review", concurrency_df),
         ]:
             if not df.empty:
@@ -4683,7 +5415,7 @@ def answer_delay_tia_question(question: str, frames: dict[str, pd.DataFrame]) ->
         return answer, tables, kpis
 
     if any(word in q for word in ["rfi", "reply", "consultant"]):
-        for key in ["Delay tia improvement files/18-rfi_delay_claim6_normalized.csv", "steel_delay_tia_templates/RFI Delay.csv", "steel_delay_tia_templates/08- rfi_status.csv"]:
+        for key in ["steel_delay_tia_templates/09- rfi_status.csv"]:
             df = frames.get(key, pd.DataFrame())
             if not df.empty:
                 tables.append((key, df))
@@ -4695,7 +5427,13 @@ def answer_delay_tia_question(question: str, frames: dict[str, pd.DataFrame]) ->
         )
 
     if any(word in q for word in ["concurrent", "concurrency", "overlap"]):
-        concurrency_df = frames.get("Delay tia improvement files/07-concurrency_matrix_template.csv", pd.DataFrame())
+        concurrency_df = delay_tia_frames_get_first(
+            frames,
+            [
+                "steel_delay_tia_templates/11-concurrency_matrix_template.updated.csv",
+                "steel_delay_tia_templates/11-concurrency_matrix_template.csv",
+            ],
+        )
         if not concurrency_df.empty:
             tables.append(("Concurrency matrix", concurrency_df))
         return (
@@ -4706,7 +5444,7 @@ def answer_delay_tia_question(question: str, frames: dict[str, pd.DataFrame]) ->
         )
 
     if any(word in q for word in ["evidence", "proof", "notice", "letter"]):
-        for key in ["Delay tia improvement files/08-evidence_register_template.csv", "Delay tia improvement files/02-delay_event_register_template.csv"]:
+        for key in ["steel_delay_tia_templates/06- contract_library.csv", "steel_delay_tia_templates/09- rfi_status.csv", "steel_delay_tia_templates/07- ifc_conflict.csv"]:
             df = frames.get(key, pd.DataFrame())
             if not df.empty:
                 tables.append((key, df))
@@ -4718,7 +5456,7 @@ def answer_delay_tia_question(question: str, frames: dict[str, pd.DataFrame]) ->
         )
 
     if any(word in q for word in ["critical", "longest", "float", "activity", "path"]):
-        for key in ["Delay tia improvement files/03-activity_impact_register_template.csv", "steel_delay_tia_templates/03- p6_activity_export.csv"]:
+        for key in ["steel_delay_tia_templates/04- p6_activity_export.csv", "steel_delay_tia_templates/11-concurrency_matrix_template.updated.csv"]:
             df = frames.get(key, pd.DataFrame())
             if not df.empty:
                 tables.append((key, df.head(80)))
@@ -4908,7 +5646,7 @@ def build_delay_tia_concurrent_delay_review_df(
                     "Delay Start": parse_mixed_date(row.get("Start")),
                     "Delay Finish": parse_mixed_date(row.get("Finish")),
                     "Delayed Days": abs(pd.to_numeric(row.get(delay_col), errors="coerce")),
-                    "Basis": f"Fallback from 01- master_activity_steel_analysis.csv column `{delay_col}` because no fragnet recommendation row was available for this activity.",
+                    "Basis": f"Fallback from 02- master_activity_steel_analysis.csv column `{delay_col}` because no fragnet recommendation row was available for this activity.",
                     "Current Total Float": path_status.get("Current Total Float", pd.NA),
                     "Current Critical": path_status.get("Current Critical", "No"),
                     "Current Longest Path": path_status.get("Current Longest Path", "No"),
@@ -4949,8 +5687,38 @@ def build_delay_tia_concurrent_delay_review_df(
             )
 
     if not ifc_df.empty:
+        current_ifc_rows_added = 0
+        if {"Activity ID", "Delayed days"}.issubset(set(ifc_df.columns)):
+            for idx, row in ifc_df.iterrows():
+                activity_id = delay_tia_docx_text(row.get("Activity ID", ""))
+                delay_days = abs(pd.to_numeric(row.get("Delayed days"), errors="coerce"))
+                if not activity_id or pd.isna(delay_days) or delay_days <= 0:
+                    continue
+                path_status = path_lookup.get(activity_id, {})
+                rows.append(
+                    {
+                        "Delay Stream": "IFC",
+                        "Delay Ref": f"IFC-{idx + 1:03d}",
+                        "Delay Type": "IFC design conflict / approved drawing dependency",
+                        "Activity ID": activity_id,
+                        "Activity Name": delay_tia_docx_text(row.get("Activity Name", ""), path_status.get("Activity Name", "")),
+                        "WBS": path_status.get("WBS", ""),
+                        "Delay Start": parse_mixed_date(delay_tia_first_existing(row, ["Re-Start", "Start"])),
+                        "Delay Finish": parse_mixed_date(delay_tia_first_existing(row, ["Finish.1", "Finish"])),
+                        "Delayed Days": delay_days,
+                        "Basis": "07- ifc_conflict.csv current template using Activity ID, Re-Start/Finish.1, and Delayed days.",
+                        "Current Total Float": path_status.get("Current Total Float", pd.NA),
+                        "Current Critical": path_status.get("Current Critical", "No"),
+                        "Current Longest Path": path_status.get("Current Longest Path", "No"),
+                        "BL Float Path": path_status.get("BL Float Path", "No"),
+                        "BL Longest Path": path_status.get("BL Longest Path", "No"),
+                        "BL Critical Path": path_status.get("BL Critical Path", "No"),
+                    }
+                )
+                current_ifc_rows_added += 1
+
         revision_row = ifc_df[ifc_df.astype(str).apply(lambda s: s.str.contains("SD-REV-001", case=False, na=False)).any(axis=1)].head(1)
-        if not revision_row.empty:
+        if current_ifc_rows_added == 0 and not revision_row.empty:
             revision_row = revision_row.iloc[0]
             delay_days = abs(pd.to_numeric(revision_row.get("Var"), errors="coerce"))
             if pd.isna(delay_days):
@@ -4974,7 +5742,7 @@ def build_delay_tia_concurrent_delay_review_df(
                     "Delay Start": delay_start,
                     "Delay Finish": delay_finish,
                     "Delayed Days": delay_days,
-                    "Basis": "06- ifc_conflict.csv `Var = -37` and the 24-Mar-26 to 30-Apr-26 consolidated revision cycle, applied to B01 foundation as instructed.",
+                    "Basis": "07- ifc_conflict.csv `Var = -37` and the 24-Mar-26 to 30-Apr-26 consolidated revision cycle, applied to B01 foundation as instructed.",
                     "Current Total Float": path_status.get("Current Total Float", pd.NA),
                     "Current Critical": path_status.get("Current Critical", "No"),
                     "Current Longest Path": path_status.get("Current Longest Path", "No"),
@@ -5021,9 +5789,14 @@ def build_delay_tia_concurrent_delay_review_df(
 
 
 def delay_tia_first_existing(row: pd.Series, names: list[str], default: Any = "") -> Any:
+    normalized_lookup = {
+        re.sub(r"[^a-z0-9]+", "", str(column).lower()): column
+        for column in row.index
+    }
     for name in names:
-        if name in row.index:
-            value = row.get(name)
+        column_name = name if name in row.index else normalized_lookup.get(re.sub(r"[^a-z0-9]+", "", str(name).lower()))
+        if column_name in row.index:
+            value = row.get(column_name)
             if pd.notna(value) and str(value).strip() != "":
                 return value
     return default
@@ -5142,6 +5915,59 @@ def build_delay_tia_improvement_concurrent_rows_df(
                     "BL Float Path": path_status.get("BL Float Path", "No"),
                     "BL Longest Path": path_status.get("BL Longest Path", "No"),
                     "BL Critical Path": path_status.get("BL Critical Path", "No"),
+                }
+            )
+
+    concurrency_matrix_df = improvement_frames.get("concurrency_matrix", pd.DataFrame()).copy()
+    if not concurrency_matrix_df.empty:
+        for idx, row in concurrency_matrix_df.iterrows():
+            activity_id = delay_tia_docx_text(delay_tia_first_existing(row, ["Activity ID", "Linked Activity ID"]))
+            if not activity_id:
+                continue
+            event_id = delay_tia_docx_text(delay_tia_first_existing(row, ["Primary Event ID", "Delay Event ID", "Event ID"]), f"CONC-{idx + 1:03d}")
+            concurrent_days = pd.to_numeric(
+                delay_tia_first_existing(
+                    row,
+                    [
+                        "Concurrent delay",
+                        "Concurrent Delay Days",
+                        "Delayed duration after overlap",
+                        "Delayed duration",
+                        "Delayed duration in days due to steel un avilability in site",
+                    ],
+                    0,
+                ),
+                errors="coerce",
+            )
+            if pd.isna(concurrent_days) or abs(concurrent_days) <= 0:
+                continue
+            path_status = path_lookup.get(activity_id, {})
+            overlap_start = parse_mixed_date(delay_tia_first_existing(row, ["Overlap Start", "Start", "BL Start"]))
+            overlap_finish = parse_mixed_date(delay_tia_first_existing(row, ["Overlap Finish", "Finish", "BL Finish"]))
+            rows.append(
+                {
+                    "Delay Stream": "Improvement Concurrency",
+                    "Delay Ref": f"{event_id}-{activity_id}-{idx + 1}",
+                    "Delay Type": event_id,
+                    "Activity ID": activity_id,
+                    "Activity Name": delay_tia_docx_text(delay_tia_first_existing(row, ["Activity Name", "Linked Activity Name"]), path_status.get("Activity Name", "")),
+                    "WBS": delay_tia_docx_text(path_status.get("WBS", "")),
+                    "Delay Start": overlap_start,
+                    "Delay Finish": overlap_finish,
+                    "Delayed Days": abs(concurrent_days),
+                    "Basis": (
+                        "Uploaded 07-concurrency_matrix_template.csv: "
+                        f"overlap {delay_tia_docx_text(overlap_start)} to {delay_tia_docx_text(overlap_finish)}; "
+                        f"BL Critical={delay_tia_docx_text(delay_tia_first_existing(row, ['BL Critical Path'], path_status.get('BL Critical Path', 'No')), 'No')}; "
+                        f"Current Critical={delay_tia_docx_text(delay_tia_first_existing(row, ['Current Critical Path'], path_status.get('Current Critical', 'No')), 'No')}; "
+                        f"after overlap={delay_tia_docx_number(delay_tia_first_existing(row, ['Delayed duration after overlap'], ''), '')}."
+                    ),
+                    "Current Total Float": path_status.get("Current Total Float", pd.NA),
+                    "Current Critical": delay_tia_docx_text(delay_tia_first_existing(row, ["Current Critical Path"], path_status.get("Current Critical", "No")), "No"),
+                    "Current Longest Path": path_status.get("Current Longest Path", "No"),
+                    "BL Float Path": path_status.get("BL Float Path", "No"),
+                    "BL Longest Path": path_status.get("BL Longest Path", "No"),
+                    "BL Critical Path": delay_tia_docx_text(delay_tia_first_existing(row, ["BL Critical Path"], path_status.get("BL Critical Path", "No")), "No"),
                 }
             )
 
@@ -5426,10 +6252,10 @@ def build_delay_tia_activity_selection_explanation_df(context: dict, analysis: d
             f"Client supply gap {delay_tia_docx_number(row.get('Client Supply vs Actual Gap', pd.NA), 'NOT RECORDED')}",
         ])
         evidence = delay_tia_join_nonempty([
-            "01- master_activity_steel_analysis.csv",
-            "02- employer_steel_supply.csv",
-            "03- p6_activity_export.csv",
-            "04- relationship_file.csv",
+            "02- master_activity_steel_analysis.csv",
+            "03- employer_steel_supply_at_site.csv",
+            "04- p6_activity_export.csv",
+            "05- relationship_file.csv",
         ])
         rows.append(
             {
@@ -5875,7 +6701,7 @@ def build_delay_tia_director_p6_controls_df(context: dict, analysis: dict) -> pd
     data_date = pd.Timestamp.today().normalize()
     return pd.DataFrame(
         [
-            {"Control Item": "Schedule file name", "Recorded Value": "03- p6_activity_export.csv", "Why It Must Be Shown": "Primary activity export used for Delay TIA context."},
+            {"Control Item": "Schedule file name", "Recorded Value": "04- p6_activity_export.csv", "Why It Must Be Shown": "Primary activity export used for Delay TIA context."},
             {"Control Item": "Data date", "Recorded Value": data_date, "Why It Must Be Shown": "Must match the reporting cut-off for the TIA run."},
             {"Control Item": "Schedule options", "Recorded Value": "Derived from uploaded activity export only", "Why It Must Be Shown": "Clarifies that no hidden P6 recalculation options were imported."},
             {"Control Item": "Longest path / critical path basis", "Recorded Value": "Critical flag plus near-critical float threshold = 10 days", "Why It Must Be Shown": "Defines how TIA criticality was classified."},
@@ -5905,7 +6731,7 @@ def build_delay_tia_director_metadata(context: dict, analysis: dict) -> dict:
             f"{delay_tia_docx_text(context.get('employer_first_date', pd.NaT))} to "
             f"{delay_tia_docx_text(context.get('employer_last_date', pd.NaT))}"
         ),
-        "prepared_by": "Codex Delay TIA",
+        "prepared_by": "Planning Department",
         "checked_by": "Pending",
         "approved_by": "Pending",
     }
@@ -5913,7 +6739,12 @@ def build_delay_tia_director_metadata(context: dict, analysis: dict) -> dict:
 
 def build_delay_tia_director_kpis(context: dict, analysis: dict) -> dict:
     delay_events_df = build_delay_tia_director_delay_events_df(context, analysis)
-    total_days = int(pd.to_numeric(delay_events_df.get("Working Days"), errors="coerce").fillna(0).sum()) if not delay_events_df.empty else 0
+    total_days = int(
+        numeric_series_from_columns(
+            delay_events_df,
+            ["Working Days", "Claimed Delay Duration (days)", "Delayed duration after overlap", "Delayed duration", "estimated_delay_days"],
+        ).sum()
+    ) if not delay_events_df.empty else 0
     valid_days = int(
         pd.to_numeric(
             delay_events_df.loc[delay_events_df["Claim Decision"] == "Valid for TIA", "Working Days"],
@@ -6138,6 +6969,9 @@ def delay_tia_add_number_of_delayed_days_column(df: pd.DataFrame, default: Any =
         "Days",
         "Finish Delta (days)",
         "Concurrent Delay Days",
+        "Concurrent delay",
+        "Delayed duration after overlap",
+        "Delayed duration",
     ]
     value = pd.Series([default] * len(working), index=working.index, dtype=object)
     for col in candidate_cols:
@@ -6398,7 +7232,7 @@ def build_delay_tia_director_pack_context(
         "accepted_baseline_programme": overrides.get("accepted_baseline_programme", metadata.get("accepted_baseline_programme", "")),
         "impacted_update_programme": overrides.get("impacted_update_programme", metadata.get("impacted_update", "")),
         "calendar_basis": overrides.get("calendar_basis", metadata.get("calendar_basis", "")),
-        "schedule_file_name": overrides.get("schedule_file_name", control_lookup.get("schedule file name", "03- p6_activity_export.csv")),
+        "schedule_file_name": overrides.get("schedule_file_name", control_lookup.get("schedule file name", "04- p6_activity_export.csv")),
         "schedule_options": overrides.get("schedule_options", control_lookup.get("schedule options", "Derived from uploaded activity export only")),
         "critical_path_basis": overrides.get("critical_path_basis", control_lookup.get("longest path / critical path basis", metadata.get("criticality_rule", ""))),
         "retained_logic_setting": overrides.get("retained_logic_setting", control_lookup.get("retained logic / progress override", "Not recorded in uploaded files")),
@@ -6408,7 +7242,7 @@ def build_delay_tia_director_pack_context(
         "open_ends": overrides.get("open_ends", control_lookup.get("open ends", "Not explicitly recorded")),
         "negative_float": overrides.get("negative_float", control_lookup.get("negative float", "Derived from current candidate / fragnet outputs only")),
         "preserve_original_charts_images": bool(overrides.get("preserve_original_charts_images", True)),
-        "generated_by": overrides.get("generated_by", "Codex Delay TIA"),
+        "generated_by": overrides.get("generated_by", "Planning Department"),
         "generation_notes": overrides.get("generation_notes", ""),
         "db_path": CONTRACT_CLAIMS_DB_PATH,
         "kpis": kpis,
@@ -6621,13 +7455,69 @@ bl_critical_path_summary = {
 }
 
 
+hidden_slide_selectors = []
+for hidden_slide_name in ("Delays", "Time Impact"):
+    if hidden_slide_name in PROJECT_HUB_SLIDE_NAMES:
+        hidden_slide_selectors.append(
+            f'div[data-baseweb="tab-list"] > button:nth-of-type({PROJECT_HUB_SLIDE_NAMES.index(hidden_slide_name) + 1})'
+        )
+if hidden_slide_selectors:
+    st.markdown(
+        "<style>"
+        + ",".join(hidden_slide_selectors)
+        + "{display:none!important;}"
+        + "</style>",
+        unsafe_allow_html=True,
+    )
+
+st.markdown(
+    """
+    <style>
+    #MainMenu, footer, header {visibility:hidden!important;}
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"],
+    [data-testid="stStatusWidget"],
+    [data-testid="stDeployButton"],
+    [data-testid="stHeaderActionElements"],
+    .stAppDeployButton,
+    .st-emotion-cache-1dp5vir,
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    div[class^="viewerBadge_"],
+    div[class*=" viewerBadge_"],
+    a[class^="viewerBadge_"],
+    a[class*=" viewerBadge_"],
+    div[class*="ViewerBadge"],
+    a[class*="ViewerBadge"],
+    div[class*="stDeployButton"],
+    button[class*="stDeployButton"],
+    a[href*="streamlit.io/cloud"],
+    a[href*="github.com"][target="_blank"],
+    div:has(a[href*="streamlit.io/cloud"]),
+    div:has(a[href*="share.streamlit.io"]),
+    div[style*="position: fixed"][style*="bottom"][style*="right"],
+    button[style*="position: fixed"][style*="bottom"][style*="right"] {
+        display:none!important;
+        visibility:hidden!important;
+        opacity:0!important;
+        pointer-events:none!important;
+    }
+    body > div:last-child:not([data-testid="stAppViewContainer"]) {
+        display:none!important;
+    }
+    div[data-testid="stAppViewContainer"] {padding-bottom:0!important;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 tabs = st.tabs(PROJECT_HUB_SLIDE_NAMES)
 
 with tabs[0]:
     st.markdown("<div class='section-header'><h3>Project Overview</h3></div>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Project Start Date", overview_metrics.get("project_start").strftime("%d-%b-%Y") if overview_metrics.get("project_start") is not None else "N/A")
-    c2.metric("Project Finish Date", overview_metrics.get("project_finish").strftime("%d-%b-%Y") if overview_metrics.get("project_finish") is not None else "N/A")
+    c1.metric("Project Start Date", format_project_date(overview_metrics.get("project_start")))
+    c2.metric("Project Finish Date", format_project_date(overview_metrics.get("project_finish")))
     c3.metric("Project Duration [Days]", int(overview_metrics.get("duration_days", 0)))
     c4.metric("Duration Elapsed", pct(overview_metrics.get("duration_elapsed_pct")))
     c5.metric("Remaining Duration", pct(overview_metrics.get("remaining_duration_pct")))
@@ -6885,7 +7775,7 @@ with tabs[5]:
     cols[1].metric("Cost Variance", egp(evm_metrics.get("cv")))
     cols[2].metric("EAC", egp(evm_metrics.get("eac")))
     cols[3].metric("TCPI", f"{evm_metrics.get('tcpi'):.3f}" if evm_metrics.get("tcpi") is not None else "N/A")
-    evm_table = load_core_csv(EVM_CSV_PATH)
+    evm_table = filter_active_project(load_core_csv(EVM_CSV_PATH))
     if not evm_table.empty:
         st.dataframe(evm_table, use_container_width=True, hide_index=True)
 
@@ -7155,7 +8045,7 @@ def render_contract_clause_matching_engine():
 with tabs[7]:
     st.markdown("<div class='section-header'><h3>Letters Intelligence, Alerts Link & Issue Engine</h3></div>", unsafe_allow_html=True)
     if not letters:
-        st.warning("Letters workbook was not found in Downloads.")
+        st.warning("Letters workbook was not found. Add it under data/letters or data/import_templates.")
     else:
         samco = letters.get("From SAMCO to ACE", pd.DataFrame())
         ace = letters.get("From ACE to SAMCO", pd.DataFrame())
@@ -7276,24 +8166,11 @@ with tabs[11]:
     tia_tabs = st.tabs(
         [
             "Uploads",
-            "Executive Dashboard",
-            "IFC Delay Input",
-            "Payment Delay Input",
-            "RFI Delay Input",
-            "Steel supplied AT SITE",
-            "01 Master Activity Steel Analysis",
-            "Stock-Out Detection",
-            "Affected Activity Finder",
-            "TIA Fragnet Recommendation",
-            "Contractual Delay Assessment",
-            "Predicted Notice Register",
-            "Improvement Files Used",
-            "Concurrent Delay Review",
-            "Final Delayed Activities",
-            "Final Submission Delay Position",
+            "Tables & Conclusion",
+            "MEP Activities",
+            "AI - TIA",
             "question",
             "Download Reports",
-            "AI - TIA",
         ]
     )
 
@@ -7309,105 +8186,110 @@ with tabs[11]:
 
         delay_tia_file_specs = [
             {
+                "key": "metadata",
+                "label": "01-project_metadata_template.csv",
+                "required": True,
+                "fields_used": "Project name, baseline, impacted update, data date, claim position, parties, and report metadata",
+                "tia_use": "Project metadata and report context used to label and explain Delay TIA outputs.",
+            },
+            {
                 "key": "master",
-                "label": "01- master_activity_steel_analysis.csv",
+                "label": "02- master_activity_steel_analysis.csv",
                 "required": True,
                 "fields_used": "Activity ID, Activity Name, BL Start, BL Finish, Start, Finish / Actual Finish, Budgeted Units, Actual Units, Remaining Units, Units % Complete, Available units at site received by client, Available units supplied by client vs Actual units of activities, Reason for Delay, Responsibility, Drive Activity Dates, Allocation Date",
                 "tia_use": "Primary activity-level shortage and readiness evidence. This is the core steel requirement and activity impact file.",
             },
             {
                 "key": "employer",
-                "label": "02- employer_steel_supply.csv",
+                "label": "03- employer_steel_supply_at_site.csv",
                 "required": True,
                 "fields_used": "Delivery date column, delivered quantity column, steel reference / type if available",
                 "tia_use": "Employer ROYA supply timing only. Used to build usable delivery dates and the steel balance curve.",
             },
             {
                 "key": "p6",
-                "label": "03- p6_activity_export.csv",
+                "label": "04- p6_activity_export.csv",
                 "required": True,
                 "fields_used": "Activity ID, Activity Name, WBS, Baseline Start / Finish, Start, Finish, Actual Start / Finish, Remaining Duration, Total Float, Critical, Longest Path, Predecessors, Successors, Remaining Units, Budgeted Units, Physical % Complete",
                 "tia_use": "Schedule context, criticality, float, readiness, and impacted successor logic.",
             },
             {
                 "key": "relationship",
-                "label": "04- relationship_file.csv",
+                "label": "05- relationship_file.csv",
                 "required": True,
                 "fields_used": "Activity ID, Activity Name, Predecessors, Predecessor Details, Successors",
                 "tia_use": "Dependency chain and fragnet insertion position.",
             },
             {
                 "key": "contract",
-                "label": "05- contract_library.csv",
+                "label": "06- contract_library.csv",
                 "required": True,
                 "fields_used": "Clause / Topic, Location, Plain English Meaning, Research the Lines, Who Holds Leverage, Notice / Time Bar, Money Impact, Schedule Impact, Practical Action / Evidence",
                 "tia_use": "Contract support, notice / time-bar review, responsibility and entitlement assessment.",
             },
             {
                 "key": "ifc",
-                "label": "06- ifc_conflict.csv",
+                "label": "07- ifc_conflict.csv",
                 "required": True,
-                "fields_used": "IFC issue date, package / area, affected activity reference, status / closure date if available",
-                "tia_use": "Support delay stream for IFC-driven events outside the steel balance path.",
+                "fields_used": "Activity ID, Activity Name, Original Duration, Start, Finish, Approved structural slab shop drawings, Re-Start, Finish.1, Delayed days, Note",
+                "tia_use": "Support delay stream for IFC-driven events outside the steel balance path using activity-level delayed days.",
             },
             {
                 "key": "payments",
-                "label": "07- payments.csv",
+                "label": "08- payments.csv",
                 "required": True,
-                "fields_used": "Invoice / certificate dates, certified amount, paid amount, lag / outstanding status",
+                "fields_used": "payment, contract, project, invoice no, invoice date, certified amount, paid amount, payment status, delayed duration(Days)",
                 "tia_use": "Support delay stream for payment-driven events outside the steel balance path.",
             },
             {
                 "key": "rfi",
-                "label": "08- rfi_status.csv",
+                "label": "09- rfi_status.csv",
                 "required": True,
-                "fields_used": "RFI issue date, due date, response date, affected package / activity, open / closed status",
+                "fields_used": "RFI, Activity ID, Activity Name, Submittion date, Reply, Delay beyond 10d, Note",
                 "tia_use": "Support delay stream for RFI-driven events outside the steel balance path.",
             },
             {
                 "key": "samco",
-                "label": "10- samco_steel_supplied_at_site.csv",
+                "label": "10- contractor_steel_supplied_at_site.csv",
                 "required": True,
                 "fields_used": "Coding No., Supplier, Total Quantity, Date of delivery",
-                "tia_use": "Display-only site visibility for contractor steel. Explicitly excluded from all delay calculations.",
+                "tia_use": "Contractor mitigation / alternative steel visibility. Explicitly excluded from employer delay entitlement calculations.",
+            },
+            {
+                "key": "concurrency",
+                "label": "11-concurrency_matrix_template.updated.csv",
+                "required": True,
+                "fields_used": "Overlap Start, Overlap Finish, BL Critical Path, Current Critical Path, Total Float, Longest Path, first affected flag, predecessor/successor logic, fragment dates, concurrent delay",
+                "tia_use": "Concurrency framework used to separate schedule entitlement from compensability and to avoid double counting.",
             },
         ]
 
-        st.markdown("#### Required Delay TIA Uploads")
-        st.caption("The Delay TIA engine now relies on uploaded files only. If any required file is missing, the analysis tabs are blocked.")
+        st.markdown("#### Required Delay TIA Source Files")
+        st.caption(
+            "The Delay TIA engine reads directly from `steel_delay_tia_templates`. "
+            "Update the CSV files in that folder, then run `RUN_LIVE_EXCEL_SYNC.bat` to keep GitHub and Streamlit Cloud aligned."
+        )
+        steel_template_inventory_df = build_steel_delay_template_inventory_df()
+        if not steel_template_inventory_df.empty:
+            st.markdown("#### Recognized steel_delay_tia_templates Folder")
+            st.caption("All files currently recognized from the local steel delay template folder. These are inspected before Delay TIA analysis and mapped to their practical use.")
+            st.dataframe(
+                steel_template_inventory_df,
+                use_container_width=True,
+                hide_index=True,
+                height=dataframe_height(steel_template_inventory_df, max_height=420),
+            )
 
-        upload_columns = st.columns(3)
-        uploaded_delay_tia_files = {}
         effective_delay_tia_files = {}
-        for index, spec in enumerate(delay_tia_file_specs):
-            with upload_columns[index % 3]:
-                nonce_key = f"delay_tia_upload_nonce_{spec['key']}"
-                if nonce_key not in st.session_state:
-                    st.session_state[nonce_key] = 0
-                uploaded_delay_tia_files[spec["key"]] = st.file_uploader(
-                    spec["label"],
-                    type=["csv", "xlsx", "xls"],
-                    key=f"delay_tia_upload_{spec['key']}_{st.session_state[nonce_key]}",
-                    help=spec["tia_use"],
-                )
-                if uploaded_delay_tia_files[spec["key"]] is not None:
-                    file_name, frame = persist_delay_tia_upload(uploaded_delay_tia_files[spec["key"]], spec["key"])
-                    effective_delay_tia_files[spec["key"]] = {"name": file_name, "source": "Uploaded", "frame": frame}
-                else:
-                    persisted_name, persisted_frame = load_persisted_delay_tia_upload(spec["key"])
-                    if persisted_name:
-                        effective_delay_tia_files[spec["key"]] = {"name": persisted_name, "source": "Persisted", "frame": persisted_frame}
-                        st.caption(f"Saved upload: {persisted_name}")
-                    else:
-                        effective_delay_tia_files[spec["key"]] = {"name": "", "source": "Missing", "frame": pd.DataFrame()}
-                if effective_delay_tia_files[spec["key"]]["source"] != "Missing":
-                    if st.button("Cancel", key=f"delay_tia_cancel_{spec['key']}"):
-                        clear_persisted_delay_tia_upload(spec["key"])
-                        st.session_state[nonce_key] += 1
-                        st.rerun()
+        for spec in delay_tia_file_specs:
+            template_name, template_frame = load_delay_tia_template_fallback(spec["key"], spec["label"])
+            if template_name:
+                effective_delay_tia_files[spec["key"]] = {"name": template_name, "source": "Folder", "frame": template_frame}
+            else:
+                effective_delay_tia_files[spec["key"]] = {"name": "", "source": "Missing", "frame": pd.DataFrame()}
 
         uploaded_delay_tia_frames = {
-            spec["key"]: effective_delay_tia_files[spec["key"]]["frame"]
+            spec["key"]: filter_active_project(effective_delay_tia_files[spec["key"]]["frame"])
             for spec in delay_tia_file_specs
         }
         missing_required_delay_tia_files = [
@@ -7422,8 +8304,8 @@ with tabs[11]:
                 {
                     "File": spec["label"],
                     "Required": "Yes" if spec["required"] else "Optional",
-                    "Upload Status": effective_delay_tia_files[spec["key"]]["source"] if effective_delay_tia_files[spec["key"]]["source"] != "Missing" else ("Missing" if spec["required"] else "Not uploaded"),
-                    "Saved File Name": effective_delay_tia_files[spec["key"]]["name"],
+                    "Source Status": effective_delay_tia_files[spec["key"]]["source"] if effective_delay_tia_files[spec["key"]]["source"] != "Missing" else ("Missing" if spec["required"] else "Not available"),
+                    "Recognized File Name": effective_delay_tia_files[spec["key"]]["name"],
                     "Rows": int(len(uploaded_delay_tia_frames[spec["key"]])),
                     "Fields used by TIA": spec["fields_used"],
                     "How the program uses it": spec["tia_use"],
@@ -7432,124 +8314,23 @@ with tabs[11]:
             ]
         )
         st.dataframe(upload_status_df, use_container_width=True, hide_index=True)
-
-        delay_tia_improvement_file_specs = [
-            {
-                "key": "delay_event_register",
-                "label": "02-delay_event_register_template.csv",
-                "fields_used": "Event ID, Event Type, Impact Start Date, Recovery Date, Working Delay Days, Linked Activity ID, Linked Activity Name",
-                "tia_use": "Optional improvement evidence. Adds non-steel/RFI/IFC/payment event rows into concurrency and final-delay support logic.",
-            },
-            {
-                "key": "activity_impact_register",
-                "label": "03-activity_impact_register_template.csv",
-                "fields_used": "Event ID, Activity ID, Activity Name, Claimed Delay Duration, criticality fields",
-                "tia_use": "Optional affected-activity proof for reports and reviewer traceability.",
-            },
-            {
-                "key": "fragnet_logic_register",
-                "label": "04-fragnet_logic_register_template.csv",
-                "fields_used": "Delay Event ID, Fragnet ID, Fragnet Insert Before, Successor Activity ID, Fragment Start, Fragment Finish, Fragment Duration, Claimed Delay Duration",
-                "tia_use": "Optional modelled fragnet logic. When uploaded, the duration becomes a modelled improvement TIA stream in the final calculation.",
-            },
-            {
-                "key": "claimed_delay_register",
-                "label": "05-claimed_delay_register_template.csv",
-                "fields_used": "Event ID, Activity ID, Activity Name, Claimed Delay Duration",
-                "tia_use": "Optional claimed-duration register used to support the modelled improvement delay-days position.",
-            },
-            {
-                "key": "causation_matrix",
-                "label": "06-causation_matrix_template.csv",
-                "fields_used": "Event ID, Activity ID, Primary Cause, Causal Path Proven, Employer Risk, Contractor Risk, Conclusion",
-                "tia_use": "Optional causation support for reports and Director Pack evidence basis.",
-            },
-            {
-                "key": "concurrency_matrix",
-                "label": "07-concurrency_matrix_template.csv",
-                "fields_used": "Primary Event ID, Concurrent Event ID, Activity ID, Overlap Start, Overlap Finish, Concurrent Delay Days, Reviewer Position",
-                "tia_use": "Optional concurrency support for final event treatment and reviewer position.",
-            },
-            {
-                "key": "evidence_register",
-                "label": "08-evidence_register_template.csv",
-                "fields_used": "Evidence Ref, Event ID, Activity ID, Document Type, Source File, Document Date, Description, Linked RFI Ref",
-                "tia_use": "Optional evidence register for report support and evidence traceability.",
-            },
-            {
-                "key": "primavera_fragnet_import",
-                "label": "09-primavera_fragnet_import_template.csv",
-                "fields_used": "Activity ID, Activity Name, Start, Finish, successors/predecessors, Delay Event ID, Claimed Delay Duration",
-                "tia_use": "Optional Primavera-ready fragnet rows. Supports modelled improvement TIA days and export traceability.",
-            },
-            {
-                "key": "rfi_claim6_normalized",
-                "label": "18-rfi_delay_claim6_normalized.csv",
-                "fields_used": "RFI Ref, Activity ID, Activity Name, Submission Date, Reply Date, Delay Beyond 10 Days",
-                "tia_use": "Optional RFI delay detail converted into RFI Delay logic. Activity ID and Activity Name are treated as affected activities.",
-            },
-            {
-                "key": "rfi_delay_detailed",
-                "label": "RFI Delay.csv",
-                "fields_used": "Ref No, Date (Submission | Reply | Delay beyond 10d), Activity ID, Activity Name",
-                "tia_use": "Optional detailed RFI delay register used directly in concurrent-delay and final-delay support logic.",
-            },
-        ]
-
-        st.markdown("#### Optional Improvement Files for TIA Calculation")
-        st.caption(
-            "Upload useful files from `Delay tia improvement files` here. These do not replace the required upload set. "
-            "They enrich concurrency, evidence, fragnet logic, and final delayed-days calculation. SAMCO remains display-only. "
-            "Uploaded improvement files stay saved after refresh and are removed only when you press that file's Cancel button."
+        st.markdown(
+            "<div class='panel-note'><b>GitHub / Streamlit alignment</b><br>"
+            "For local work, keep `RUN_LIVE_EXCEL_SYNC.bat` running. It watches `steel_delay_tia_templates`, `BL fixed`, "
+            "`data`, and template folders; after a CSV/XLSX change it syncs the project to GitHub so Streamlit Cloud runs the same files.</div>",
+            unsafe_allow_html=True,
         )
-        improvement_upload_columns = st.columns(2)
-        effective_improvement_files = {}
-        for index, spec in enumerate(delay_tia_improvement_file_specs):
-            with improvement_upload_columns[index % 2]:
-                nonce_key = f"delay_tia_improvement_upload_nonce_{spec['key']}"
-                if nonce_key not in st.session_state:
-                    st.session_state[nonce_key] = 0
-                uploaded_file = st.file_uploader(
-                    spec["label"],
-                    type=["csv", "xlsx", "xls"],
-                    key=f"delay_tia_improvement_upload_{spec['key']}_{st.session_state[nonce_key]}",
-                    help=spec["tia_use"],
-                )
-                cache_key = f"improvement_{spec['key']}"
-                if uploaded_file is not None:
-                    file_name, frame = persist_delay_tia_upload(uploaded_file, cache_key)
-                    effective_improvement_files[spec["key"]] = {"name": file_name, "source": "Uploaded", "frame": frame}
-                else:
-                    persisted_name, persisted_frame = load_persisted_delay_tia_upload(cache_key)
-                    if persisted_name:
-                        effective_improvement_files[spec["key"]] = {"name": persisted_name, "source": "Persisted", "frame": persisted_frame}
-                        st.caption(f"Saved upload: {persisted_name}")
-                    else:
-                        effective_improvement_files[spec["key"]] = {"name": "", "source": "Not uploaded", "frame": pd.DataFrame()}
-                if effective_improvement_files[spec["key"]]["source"] != "Not uploaded":
-                    if st.button("Cancel", key=f"delay_tia_improvement_cancel_{spec['key']}"):
-                        clear_persisted_delay_tia_upload(cache_key)
-                        st.session_state[nonce_key] += 1
-                        st.rerun()
 
-        uploaded_improvement_frames = {
-            spec["key"]: effective_improvement_files[spec["key"]]["frame"]
-            for spec in delay_tia_improvement_file_specs
-        }
+        uploaded_improvement_frames = {}
         improvement_status_df = pd.DataFrame(
             [
                 {
-                    "File": spec["label"],
-                    "Upload Status": effective_improvement_files[spec["key"]]["source"],
-                    "Saved File Name": effective_improvement_files[spec["key"]]["name"],
-                    "Rows": int(len(uploaded_improvement_frames[spec["key"]])),
-                    "Fields used": spec["fields_used"],
-                    "How it improves TIA": spec["tia_use"],
+                    "Status": "Disabled",
+                    "Rule": "Delay Analysis - Time Impact Analysis now accepts only the 11 required upload/template files.",
+                    "Reason": "Optional improvement-file uploads were removed to keep the calculation controlled, auditable, and aligned with the approved template set.",
                 }
-                for spec in delay_tia_improvement_file_specs
             ]
         )
-        st.dataframe(improvement_status_df, use_container_width=True, hide_index=True)
 
         st.markdown("#### Include / Exclude Supposed Delay Streams")
         st.caption("These controls apply to IFC, RFI, Payments, and SAMCO site steel visibility. Excluding a stream removes it from Delay TIA support views and report outputs. SAMCO remains excluded from steel delay calculations in all cases.")
@@ -7628,6 +8409,8 @@ with tabs[11]:
                 samco_df=included_samco_df,
                 delay_events_df=pd.DataFrame(),
             )
+            active_delay_tia_context["project_metadata_df"] = uploaded_delay_tia_frames.get("metadata", pd.DataFrame())
+            active_delay_tia_context["concurrency_matrix_df"] = uploaded_delay_tia_frames.get("concurrency", pd.DataFrame())
             active_delay_tia_analysis = active_delay_tia_context["analysis"]
             active_concurrent_delay_review_df = build_delay_tia_concurrent_delay_review_df(
                 master_df=uploaded_delay_tia_frames["master"],
@@ -7637,6 +8420,17 @@ with tabs[11]:
                 rfi_detailed_df=combined_rfi_detailed_df if include_rfi_delay else pd.DataFrame(),
                 bl_fixed_context=bl_fixed_context,
             )
+            template_concurrent_df = build_delay_tia_improvement_concurrent_rows_df(
+                {"concurrency_matrix": uploaded_delay_tia_frames.get("concurrency", pd.DataFrame())},
+                uploaded_delay_tia_frames["p6"],
+                bl_fixed_context,
+            )
+            if not template_concurrent_df.empty:
+                active_concurrent_delay_review_df = pd.concat(
+                    [active_concurrent_delay_review_df, template_concurrent_df],
+                    ignore_index=True,
+                    sort=False,
+                )
             improvement_concurrent_df = build_delay_tia_improvement_concurrent_rows_df(
                 uploaded_improvement_frames,
                 uploaded_delay_tia_frames["p6"],
@@ -7663,7 +8457,7 @@ with tabs[11]:
             active_delay_tia_analysis = {}
             active_concurrent_delay_review_df = pd.DataFrame()
             st.error(
-                "Delay TIA analysis is blocked. Upload all required files first: "
+                "Delay TIA analysis is blocked. Add the required files to `steel_delay_tia_templates` first: "
                 + ", ".join(missing_required_delay_tia_files)
             )
 
@@ -7683,10 +8477,234 @@ with tabs[11]:
             }
 
     with tia_tabs[1]:
+        st.markdown("#### Source Tables & Calculated Conclusion")
+        st.caption("This slide reads the 11 Delay Analysis - Time Impact Analysis files from `steel_delay_tia_templates`, inspects their columns, and shows the calculated conclusion from the active TIA logic.")
+        if not delay_tia_ready:
+            st.warning("Tables and conclusion are blocked until all 11 required files are available.")
+            st.dataframe(upload_status_df, use_container_width=True, hide_index=True)
+        else:
+            inventory_rows = []
+            for spec in delay_tia_file_specs:
+                frame = uploaded_delay_tia_frames.get(spec["key"], pd.DataFrame())
+                inventory_rows.append(
+                    {
+                        "File": spec["label"],
+                        "Source": effective_delay_tia_files[spec["key"]]["source"],
+                        "Rows": int(len(frame)),
+                        "Columns": int(len(frame.columns)),
+                        "Column List": ", ".join(str(col) for col in frame.columns),
+                        "TIA Use": spec["tia_use"],
+                    }
+                )
+            inventory_df = pd.DataFrame(inventory_rows)
+            st.markdown("##### Folder File Inventory")
+            st.dataframe(inventory_df, use_container_width=True, hide_index=True, height=dataframe_height(inventory_df, max_height=420))
+
+            kpis_tia = active_delay_tia_analysis.get("kpis", {})
+            conclusion_df = pd.DataFrame(
+                [
+                    {"Conclusion Item": "Selected Method", "Conclusion": "Hybrid retrospective TIA/UIA using employer steel supply, P6 activity context, relationships, support events, and concurrency checks."},
+                    {"Conclusion Item": "Potential EOT Days", "Conclusion": f"{int(kpis_tia.get('Potential EOT Days', kpis_tia.get('Recommended Submission Days', 0)) or 0)} days, indicative until P6 recalculation is verified."},
+                    {"Conclusion Item": "Strong TIA Candidates", "Conclusion": str(int(kpis_tia.get("Number of Strong TIA Candidates", 0) or 0))},
+                    {"Conclusion Item": "First Stock-Out Date", "Conclusion": steel_tia_date_label(kpis_tia.get("First Stock-Out Date"))},
+                    {"Conclusion Item": "Concurrency Position", "Conclusion": f"{int(kpis_tia.get('Concurrent Risk Events', 0) or 0)} concurrent risk events identified; compensation must be separated from EOT entitlement."},
+                    {"Conclusion Item": "Calculation Rule", "Conclusion": "Employer ROYA steel drives steel delay calculations. Contractor/SAMCO steel is mitigation visibility only unless independently supported by entitlement evidence."},
+                ]
+            )
+            st.markdown("##### Calculated Conclusion")
+            st.dataframe(conclusion_df, use_container_width=True, hide_index=True, height=dataframe_height(conclusion_df, max_height=320))
+
+            table_options = {
+                "Executive Summary": active_delay_tia_analysis.get("executive_summary_df", pd.DataFrame()),
+                "Activity Delay Mapping": active_delay_tia_analysis.get("activity_delay_mapping_df", pd.DataFrame()),
+                "Fragnet Register": active_delay_tia_analysis.get("fragnet_df", pd.DataFrame()),
+                "Concurrency Assessment": active_concurrent_delay_review_df,
+                "Entitlement Decision Matrix": active_delay_tia_analysis.get("entitlement_decision_df", pd.DataFrame()),
+            }
+            selected_table_name = st.selectbox("Calculated table", list(table_options.keys()), key="delay_tia_tables_conclusion_table")
+            selected_table_df = table_options[selected_table_name]
+            if isinstance(selected_table_df, pd.DataFrame) and not selected_table_df.empty:
+                st.dataframe(selected_table_df, use_container_width=True, hide_index=True, height=dataframe_height(selected_table_df, max_height=620))
+            else:
+                st.info(f"No rows are available for {selected_table_name}.")
+
+    with tia_tabs[2]:
+        st.markdown("#### MEP Activities")
+        st.caption(
+            "This slide reads `BL fixed/MEP Activities.csv`, which was built from the attached MEP activity workbook. "
+            "The records are treated as MEP first-fix / embedded-interface constraints that were outside the original steel-only delay scope."
+        )
+        mep_activities_df = bl_fixed_context.get("mep_df", pd.DataFrame()).copy()
+        mep_schedule_df = bl_fixed_context.get("mep_schedule_df", pd.DataFrame()).copy()
+        mep_civil_logic_df = bl_fixed_context.get("mep_civil_logic_df", pd.DataFrame()).copy()
+        related_mep_letters_df = build_mep_related_letters_df(mep_activities_df)
+
+        if mep_activities_df.empty:
+            st.warning("No MEP activity records were found in `BL fixed/MEP Activities.csv`.")
+        else:
+            mep_kpis = build_mep_activities_kpis(mep_activities_df)
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("MEP Activities", int(mep_kpis["activity_count"]))
+            c2.metric("Buildings / Zones", int(mep_kpis["building_count"]))
+            c3.metric("Indicative Duration Days", f"{float(mep_kpis['total_duration_days']):.0f}")
+            c4.metric("Interface Types", int(mep_kpis["interface_count"]))
+
+            st.markdown(
+                """
+                **Delay-analysis treatment**
+
+                These items are not reinforcement steel demand records. They are treated as a separate MEP coordination stream
+                because the source register identifies activities that must be inserted into related civil workfronts.
+
+                The program derives the schedule position from the baseline schedule, current P6 export, relationship file,
+                and MEP activity register:
+
+                - engineering and procurement rows reuse matched baseline activities, logic, and durations,
+                - construction rows use the MEP register duration and the related current civil activity dates,
+                - civil finish impact is calculated as the related civil finish plus the inserted MEP duration,
+                - TIA use remains conditional on proven workfront, event date, and critical-path effect.
+                """
+            )
+
+            st.markdown("##### MEP Activity Register")
+            mep_view_cols = [
+                col
+                for col in [
+                    "MEP Activity ID",
+                    "Building / Zone",
+                    "MEP Activity",
+                    "Material / System",
+                    "Duration Days",
+                    "Interface Type",
+                    "Civil / Structural Dependency",
+                    "Scope / Debate Treatment",
+                    "Delay Analysis Use",
+                ]
+                if col in mep_activities_df.columns
+            ]
+            st.dataframe(
+                mep_activities_df[mep_view_cols] if mep_view_cols else mep_activities_df,
+                use_container_width=True,
+                hide_index=True,
+                height=dataframe_height(mep_activities_df, max_height=560),
+            )
+
+            if "Building / Zone" in mep_activities_df.columns:
+                mep_by_building_df = (
+                    mep_activities_df.groupby("Building / Zone", dropna=False)
+                    .agg(
+                        Activities=("MEP Activity", "count"),
+                        Duration_Days=("Duration Days", lambda values: pd.to_numeric(values, errors="coerce").fillna(0).sum()),
+                    )
+                    .reset_index()
+                    .rename(columns={"Building / Zone": "Building / Zone", "Duration_Days": "Indicative Duration Days"})
+                )
+                st.markdown("##### Building / Zone Summary")
+                st.dataframe(mep_by_building_df, use_container_width=True, hide_index=True)
+
+        st.markdown("##### MEP Schedule Insertions")
+        st.caption("Engineering and procurement are matched from the baseline schedule. Construction is built from the MEP activity register and positioned against the related current civil activity dates.")
+        if mep_schedule_df.empty:
+            st.info("No derived MEP schedule rows were found in `BL fixed/MEP Schedule.csv`.")
+        else:
+            schedule_view_cols = [
+                col
+                for col in [
+                    "MEP Activity ID",
+                    "MEP Schedule Activity ID",
+                    "Phase",
+                    "Building / Zone",
+                    "Activity Name",
+                    "Original Duration",
+                    "Start",
+                    "Finish",
+                    "Predecessor Activity ID(s)",
+                    "Predecessor Relationship Details",
+                    "Successor Activity ID(s)",
+                    "Successor Relationship Details",
+                    "Related Civil Activity ID",
+                    "Related Civil Activity Name",
+                    "Related Civil Start",
+                    "Related Civil Finish",
+                    "Civil Finish After MEP Insertion",
+                    "Source Schedule Activity ID",
+                    "Match Score",
+                    "Date Basis",
+                    "Insertion Note",
+                ]
+                if col in mep_schedule_df.columns
+            ]
+            st.dataframe(
+                mep_schedule_df[schedule_view_cols] if schedule_view_cols else mep_schedule_df,
+                use_container_width=True,
+                hide_index=True,
+                height=dataframe_height(mep_schedule_df, max_height=620),
+            )
+
+        st.markdown("##### Civil Predecessor / Successor Logic")
+        st.caption("This table shows the civil predecessor and successor activities that govern each MEP insertion point.")
+        if mep_civil_logic_df.empty:
+            st.info("No derived civil predecessor/successor rows were found in `BL fixed/MEP Civil Logic.csv`.")
+        else:
+            logic_view_cols = [
+                col
+                for col in [
+                    "MEP Activity ID",
+                    "Building / Zone",
+                    "MEP Activity",
+                    "Related Civil Activity ID",
+                    "Related Civil Activity Name",
+                    "Predecessor Activity ID(s)",
+                    "Predecessor Details",
+                    "Successor Activity ID(s)",
+                    "Civil Original Duration",
+                    "MEP Inserted Duration Days",
+                    "Civil Duration After MEP Insertion",
+                    "Relationship Basis",
+                ]
+                if col in mep_civil_logic_df.columns
+            ]
+            st.dataframe(
+                mep_civil_logic_df[logic_view_cols] if logic_view_cols else mep_civil_logic_df,
+                use_container_width=True,
+                hide_index=True,
+                height=dataframe_height(mep_civil_logic_df, max_height=560),
+            )
+
+        st.markdown("##### Related Letter Intelligence References")
+        st.caption("Related correspondence is pulled from the Letters Intelligence workbook and ranked using terms derived from the active MEP activity register. The visible column is the conclusion, not the letter subject.")
+        if related_mep_letters_df.empty:
+            st.info("No related MEP correspondence references were found in the current letters workbook.")
+        else:
+            st.dataframe(
+                related_mep_letters_df,
+                use_container_width=True,
+                hide_index=True,
+                height=dataframe_height(related_mep_letters_df, max_height=520),
+            )
+        mep_export_bytes = build_mep_schedule_export_xlsx(
+            mep_activities_df,
+            mep_schedule_df,
+            mep_civil_logic_df,
+            related_mep_letters_df,
+        )
+        if mep_export_bytes:
+            st.download_button(
+                "Download MEP Schedule Pack (.xlsx)",
+                data=mep_export_bytes,
+                file_name="MEP_schedule_pack.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_mep_schedule_pack_xlsx",
+                use_container_width=True,
+            )
+        elif not OPENPYXL_AVAILABLE:
+            st.warning("Excel export is unavailable because openpyxl is not installed.")
+
+    with tia_tabs[3]:
         st.markdown("#### Executive Dashboard / TIA Methodology / Dependency Schema / File Priority / BL Critical Path Comparison")
         st.caption("This combined Delay TIA slide consolidates the former first five analysis slides into one review surface.")
         if not delay_tia_ready:
-            st.warning("Executive Delay TIA outputs are blocked until all required uploads are provided.")
+            st.warning("Executive Delay TIA outputs are blocked until all required folder files are available.")
         else:
             kpis_tia = active_delay_tia_analysis.get("kpis", {})
             c1, c2, c3, c4 = st.columns(4)
@@ -7713,9 +8731,9 @@ with tabs[11]:
             if not executive_summary_df.empty:
                 st.dataframe(executive_summary_df, use_container_width=True, hide_index=True)
             else:
-                st.info("No Delay TIA executive summary is available from the uploaded files.")
+                st.info("No Delay TIA executive summary is available from the folder source files.")
 
-    with tia_tabs[1]:
+    with tia_tabs[3]:
         st.markdown("#### Time Impact Analysis Methodology")
         st.markdown(
             """
@@ -7803,13 +8821,13 @@ with tabs[11]:
             """
         )
 
-    with tia_tabs[1]:
+    with tia_tabs[3]:
         st.markdown("#### Steel Delay Analysis Dependency Schema")
         st.markdown(
             """
             **Flow**
 
-            `Uploaded Delay TIA Files`
+            `steel_delay_tia_templates Source Files`
 
             -> `Delay TIA Loader`
 
@@ -7832,17 +8850,21 @@ with tabs[11]:
         dependency_df = upload_status_df[["File", "Required", "Fields used by TIA", "How the program uses it"]].copy()
         st.dataframe(dependency_df, use_container_width=True, hide_index=True)
 
-    with tia_tabs[1]:
+    with tia_tabs[3]:
         st.markdown("#### Active File Priority Order")
         priority_df = pd.DataFrame(
             [
-                {"Priority": 1, "File / Source": "01- master_activity_steel_analysis.csv", "Why it matters": "Primary activity-level shortage and requirement proof"},
-                {"Priority": 2, "File / Source": "02- employer_steel_supply.csv", "Why it matters": "Employer ROYA supply timing used in all steel delay calculations"},
-                {"Priority": 3, "File / Source": "03- p6_activity_export.csv", "Why it matters": "Readiness, float, criticality, and schedule context"},
-                {"Priority": 4, "File / Source": "04- relationship_file.csv", "Why it matters": "Sequence impact and fragnet positioning"},
-                {"Priority": 5, "File / Source": "05- contract_library.csv", "Why it matters": "Contract support, notice, time bar, money and schedule impact"},
-                {"Priority": 6, "File / Source": "06- ifc_conflict.csv / 07- payments.csv / 08- rfi_status.csv", "Why it matters": "Support delay analyzers for non-steel event families"},
-                {"Priority": 7, "File / Source": "Letters workbook", "Why it matters": "Thread logic and correspondence linkage"},
+                {"Priority": 1, "File / Source": "01-project_metadata_template.csv", "Why it matters": "Sets project identity, data date, baseline/update context, parties, and report metadata."},
+                {"Priority": 2, "File / Source": "02- master_activity_steel_analysis.csv", "Why it matters": "Primary activity-level RFT demand, steel availability gap, delayed duration, responsibility, and readiness proof."},
+                {"Priority": 3, "File / Source": "03- employer_steel_supply_at_site.csv", "Why it matters": "Employer-only steel delivery timeline used for stock-out, usable supply, and recovery windows."},
+                {"Priority": 4, "File / Source": "04- p6_activity_export.csv", "Why it matters": "Schedule dates, float, criticality, longest path, progress, and impacted activity context."},
+                {"Priority": 5, "File / Source": "05- relationship_file.csv", "Why it matters": "Predecessor/successor logic, relationship type, lag, causal chain, and fragnet insertion position."},
+                {"Priority": 6, "File / Source": "06- contract_library.csv", "Why it matters": "Entitlement, notice/time-bar, money/schedule impact, leverage, and required evidence."},
+                {"Priority": 7, "File / Source": "07- ifc_conflict.csv / 09- rfi_status.csv", "Why it matters": "Design, approval, RFI, and mechanical coordination event streams linked to affected activities."},
+                {"Priority": 8, "File / Source": "08- payments.csv", "Why it matters": "Commercial support stream; schedule-driving only when progress/resource linkage is proven."},
+                {"Priority": 9, "File / Source": "10- contractor_steel_supplied_at_site.csv", "Why it matters": "Contractor mitigation/alternative supply visibility only; not employer entitlement proof by itself."},
+                {"Priority": 10, "File / Source": "11-concurrency_matrix_template.updated.csv", "Why it matters": "Overlap, BL/current critical path, float, and concurrent delay checks to separate EOT from compensation."},
+                {"Priority": 11, "File / Source": "Letters workbook", "Why it matters": "Notice, correspondence, and issue-thread evidence linkage."},
             ]
         )
         st.dataframe(priority_df, use_container_width=True, hide_index=True)
@@ -7850,9 +8872,10 @@ with tabs[11]:
         st.markdown("#### Data Structure Rule")
         st.markdown(
             """
-            - `01- master_activity_steel_analysis.csv` is the **primary master activity steel file**
-            - `02- employer_steel_supply.csv` stays a **delivery event file**
-            - `04- relationship_file.csv` stays a **logic-link file**
+            - `02- master_activity_steel_analysis.csv` is the **primary master activity steel file**
+            - `03- employer_steel_supply_at_site.csv` stays an **Employer delivery event file**
+            - `05- relationship_file.csv` stays a **logic-link file**
+            - `11-concurrency_matrix_template.updated.csv` stays a **concurrency and compensability test file**
 
             These files are intentionally not merged into one operational input because they are different grains:
 
@@ -7864,7 +8887,7 @@ with tabs[11]:
             """
         )
 
-    with tia_tabs[1]:
+    with tia_tabs[3]:
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("BL Critical Path Rows", active_bl_critical_path_summary["bl_count"])
         c2.metric("Current Critical Path Rows", active_bl_critical_path_summary["current_count"])
@@ -7931,338 +8954,14 @@ with tabs[11]:
         else:
             st.info("No comparison rows are available between the uploaded BL critical path file and the Activities critical path analysis.")
 
-    with tia_tabs[2]:
-        if not include_ifc_delay:
-            st.warning("IFC supposed delay is excluded from the current Delay TIA run.")
-        else:
-            ifc_df = uploaded_delay_tia_frames["ifc"]
-            if not ifc_df.empty:
-                c1, c2 = st.columns(2)
-                c1.metric("IFC Records", len(ifc_df))
-                c2.metric("IFC Columns", len(ifc_df.columns))
-                st.dataframe(ifc_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No IFC delay input file is available.")
-
-    with tia_tabs[3]:
-        if not include_payments_delay:
-            st.warning("Payments supposed delay is excluded from the current Delay TIA run.")
-        else:
-            payments_df = uploaded_delay_tia_frames["payments"]
-            if not payments_df.empty:
-                paid_total = pd.to_numeric(payments_df.get("paid_amount"), errors="coerce").fillna(0).sum()
-                certified_total = pd.to_numeric(payments_df.get("certified_amount"), errors="coerce").fillna(0).sum()
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Payment Records", len(payments_df))
-                c2.metric("Certified Total", egp(certified_total))
-                c3.metric("Paid Total", egp(paid_total))
-                st.dataframe(payments_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No payment delay input file is available.")
-
     with tia_tabs[4]:
-        if not include_rfi_delay:
-            st.warning("RFI supposed delay is excluded from the current Delay TIA run.")
-        else:
-            rfi_df = uploaded_delay_tia_frames["rfi"]
-            if not rfi_df.empty:
-                c1, c2 = st.columns(2)
-                c1.metric("RFI Records", len(rfi_df))
-                c2.metric("RFI Columns", len(rfi_df.columns))
-                st.dataframe(rfi_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No RFI delay input file is available.")
-
-    with tia_tabs[5]:
-        if not include_samco_delay:
-            st.warning("SAMCO supposed delay / visibility stream is excluded from the current Delay TIA run.")
-        else:
-            samco_df = uploaded_delay_tia_frames["samco"]
-            samco_display_df = steel_tia_prepare_employer_supply_df(samco_df) if not samco_df.empty else pd.DataFrame()
-            c1, c2, c3 = st.columns(3)
-            c1.metric("SAMCO Delivery Rows", int(len(samco_display_df)))
-            c2.metric("SAMCO Total Qty", f"{steel_tia_qty_sum(samco_display_df.get('Delivered Qty') if not samco_display_df.empty else None):,.3f}")
-            c3.metric("Last SAMCO Delivery", steel_tia_date_label(samco_display_df.get("Date").iloc[-1] if not samco_display_df.empty else pd.NaT))
-            if not samco_display_df.empty:
-                st.dataframe(samco_display_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No SAMCO site steel supply file is available.")
-
-    with tia_tabs[6]:
-        master_df = uploaded_delay_tia_frames["master"]
-        if not master_df.empty:
-            st.dataframe(master_df, use_container_width=True, hide_index=True)
-        else:
-            st.info("The master activity steel analysis file is empty or missing.")
-
-    with tia_tabs[7]:
-        if not delay_tia_ready:
-            st.warning("Stock-out analysis is blocked until all required Delay TIA files are uploaded.")
-        else:
-            stock_out_df = active_delay_tia_analysis.get("stock_out_df", pd.DataFrame())
-            if not stock_out_df.empty:
-                st.dataframe(stock_out_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No stock-out events were identified from the uploaded employer-only steel supply data.")
-
-    with tia_tabs[8]:
-        if not delay_tia_ready:
-            st.warning("Affected activity analysis is blocked until all required Delay TIA files are uploaded.")
-        else:
-            candidates_df = active_delay_tia_analysis.get("candidates_df", pd.DataFrame())
-            if not candidates_df.empty:
-                st.dataframe(candidates_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No affected activity candidates were identified from the uploaded employer-only steel supply data.")
-
-    with tia_tabs[9]:
-        if not delay_tia_ready:
-            st.warning("TIA fragnet recommendation is blocked until all required Delay TIA files are uploaded.")
-        else:
-            fragnet_df = active_delay_tia_analysis.get("fragnet_df", pd.DataFrame())
-            if not fragnet_df.empty:
-                st.dataframe(fragnet_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No fragnet recommendation was identified from the uploaded employer-only steel supply data.")
-
-    with tia_tabs[10]:
-        if not delay_tia_ready:
-            st.warning("Contractual delay assessment is blocked until all required Delay TIA files are uploaded.")
-        else:
-            assessment_df = active_delay_tia_analysis.get("assessment_df", pd.DataFrame())
-            if not assessment_df.empty:
-                st.dataframe(assessment_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No contractual delay assessment was identified from the uploaded employer-only steel supply data.")
-
-    with tia_tabs[11]:
-        st.markdown("#### Predicted Notice Register")
-        if not letters:
-            st.warning("Letters workbook is not available, so notice prediction cannot run.")
-        else:
-            predicted_notice_df = build_predicted_notice_register_df(
-                letters,
-                uploaded_delay_tia_frames["p6"] if "p6" in uploaded_delay_tia_frames else pd.DataFrame(),
-            )
-            if predicted_notice_df.empty:
-                st.info("No notice rows could be predicted from the current letters workbook.")
-            else:
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Predicted Notices", int(len(predicted_notice_df)))
-                c2.metric("Predicted With Activity ID", int(predicted_notice_df["Predicted Activity ID"].astype(str).str.strip().ne("").sum()))
-                c3.metric("High Confidence Predictions", int(predicted_notice_df["Prediction Confidence"].eq("High").sum()))
-                st.caption("Review the predicted rows below. You can edit any value, add rows manually, and mark each row as Approved or Not Approved.")
-                reviewed_notice_df = st.data_editor(
-                    predicted_notice_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    num_rows="dynamic",
-                    key="delay_tia_notice_register_editor",
-                    column_config={
-                        "Approval Status": st.column_config.SelectboxColumn(
-                            "Approval Status",
-                            options=["Pending", "Approved", "Not Approved"],
-                            required=True,
-                        ),
-                        "Prediction Confidence": st.column_config.SelectboxColumn(
-                            "Prediction Confidence",
-                            options=["High", "Medium", "Low"],
-                        ),
-                    },
-                )
-                summary_notice_df = pd.DataFrame(
-                    [
-                        {"Status": "Approved", "Rows": int(reviewed_notice_df["Approval Status"].eq("Approved").sum())},
-                        {"Status": "Not Approved", "Rows": int(reviewed_notice_df["Approval Status"].eq("Not Approved").sum())},
-                        {"Status": "Pending", "Rows": int(reviewed_notice_df["Approval Status"].eq("Pending").sum())},
-                    ]
-                )
-                st.dataframe(summary_notice_df, use_container_width=True, hide_index=True)
-                st.download_button(
-                    "Download Reviewed Notice Register (.csv)",
-                    data=reviewed_notice_df.to_csv(index=False).encode("utf-8"),
-                    file_name="predicted_notice_register_reviewed.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
-
-    with tia_tabs[12]:
-        st.markdown("#### Improvement Files Used in TIA")
-        st.caption("These are optional registers uploaded from `Delay tia improvement files`. When provided, they enrich event evidence, concurrency, fragnet logic, and the conservative final delayed-days calculation.")
-        if not delay_tia_ready:
-            st.warning("Improvement file review is blocked until all required Delay TIA files are uploaded.")
-        else:
-            st.dataframe(active_delay_tia_context.get("improvement_upload_status_df", pd.DataFrame()), use_container_width=True, hide_index=True)
-            improvement_modelled_days = calculate_delay_tia_improvement_modelled_days(active_delay_tia_context)
-            improvement_concurrent_df = active_delay_tia_context.get("improvement_concurrent_delay_review_df", pd.DataFrame())
-            improvement_rfi_detailed_df = active_delay_tia_context.get("improvement_rfi_detailed_df", pd.DataFrame())
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Modelled Improvement Days", improvement_modelled_days)
-            c2.metric("Improvement Concurrent Rows", int(len(improvement_concurrent_df)))
-            c3.metric("Improvement RFI Detail Rows", int(len(improvement_rfi_detailed_df)))
-            if not improvement_concurrent_df.empty:
-                st.markdown("##### Improvement rows added to concurrent review")
-                st.dataframe(improvement_concurrent_df, use_container_width=True, hide_index=True)
-            if not improvement_rfi_detailed_df.empty:
-                st.markdown("##### Improvement RFI detailed rows used")
-                st.dataframe(improvement_rfi_detailed_df, use_container_width=True, hide_index=True)
-            st.info(
-                "Calculation rule: uploaded improvement fragnets / claimed-delay registers are treated as an additional modelled TIA stream. "
-                "The final recommended total uses conservative max/net logic, not raw addition across overlapping streams."
-            )
-
-    with tia_tabs[13]:
-        st.markdown("#### Concurrent Delay Review")
-        st.caption("This slide combines steel delay days from the master activity file, detailed RFI delay days from `RFI Delay.csv`, and the IFC revision-cycle delay from `06- ifc_conflict.csv`, then links each row to current float, criticality, and longest-path status.")
-        if not delay_tia_ready:
-            st.warning("Concurrent delay review is blocked until all required Delay TIA files are uploaded.")
-        else:
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Steel Delay Rows", int((active_concurrent_delay_review_df["Delay Stream"] == "Steel").sum()) if not active_concurrent_delay_review_df.empty else 0)
-            c2.metric("RFI Delay Rows", int((active_concurrent_delay_review_df["Delay Stream"] == "RFI").sum()) if not active_concurrent_delay_review_df.empty else 0)
-            c3.metric("IFC Delay Rows", int((active_concurrent_delay_review_df["Delay Stream"] == "IFC").sum()) if not active_concurrent_delay_review_df.empty else 0)
-            c4.metric("Concurrent Rows", int((active_concurrent_delay_review_df.get("Concurrent?") == "Yes").sum()) if not active_concurrent_delay_review_df.empty else 0)
-
-            st.markdown("##### Auto-loaded concurrent sources")
-            concurrent_source_status_df = pd.DataFrame(
-                [
-                    {
-                        "Source": "RFI Delay.csv",
-                        "Rows": int(len(delay_tia_local_support["rfi_detailed_df"])),
-                        "Use": "Detailed RFI delayed days and direct activity linkage",
-                    },
-                    {
-                        "Source": "06- ifc_conflict.csv",
-                        "Rows": int(len(delay_tia_local_support["ifc_local_df"])),
-                        "Use": "IFC / design revision cycle and the -37 delayed days IFC record",
-                    },
-                    {
-                        "Source": "01- master_activity_steel_analysis.csv",
-                        "Rows": int(len(uploaded_delay_tia_frames["master"])),
-                        "Use": "Recorded steel delayed duration per activity",
-                    },
-                ]
-            )
-            st.dataframe(concurrent_source_status_df, use_container_width=True, hide_index=True)
-
-            if not active_concurrent_delay_review_df.empty:
-                display_cols = [
-                    "Delay Stream",
-                    "Delay Ref",
-                    "Delay Type",
-                    "Activity ID",
-                    "Activity Name",
-                    "WBS",
-                    "Delay Start",
-                    "Delay Finish",
-                    "Delayed Days",
-                    "Current Total Float",
-                    "Current Critical",
-                    "Current Longest Path",
-                    "BL Float Path",
-                    "BL Longest Path",
-                    "BL Critical Path",
-                    "Concurrent?",
-                    "Concurrent With",
-                    "Basis",
-                    "Path Summary",
-                ]
-                st.dataframe(
-                    active_concurrent_delay_review_df[[col for col in display_cols if col in active_concurrent_delay_review_df.columns]],
-                    use_container_width=True,
-                    hide_index=True,
-                    height=dataframe_height(active_concurrent_delay_review_df, max_height=620),
-                )
-                stream_summary_df = (
-                    active_concurrent_delay_review_df.groupby("Delay Stream", dropna=False)
-                    .agg(
-                        Delay_Rows=("Delay Ref", "count"),
-                        Total_Delayed_Days=("Delayed Days", lambda s: pd.to_numeric(s, errors="coerce").fillna(0).sum()),
-                        Concurrent_Rows=("Concurrent?", lambda s: int((s == "Yes").sum())),
-                    )
-                    .reset_index()
-                    .rename(columns={"Delay_Rows": "Delay Rows", "Total_Delayed_Days": "Total Delayed Days", "Concurrent_Rows": "Concurrent Rows"})
-                )
-                st.markdown("##### Stream Summary")
-                st.dataframe(stream_summary_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No concurrent delay rows were built from the currently loaded steel, RFI, and IFC sources.")
-
-    with tia_tabs[14]:
-        st.markdown("#### Final Delayed Activities")
-        st.caption("This table lists each delayed activity, its number of delayed days, and whether it was on the BL critical path and/or the updated critical/longest path.")
-        if not delay_tia_ready:
-            st.warning("Final delayed activities are blocked until all required Delay TIA files are uploaded.")
-        else:
-            final_delayed_activities_df = build_delay_tia_final_delayed_activities_df(active_delay_tia_context, active_delay_tia_analysis)
-            if not final_delayed_activities_df.empty:
-                display_final_activities_df = delay_tia_add_number_of_delayed_days_column(final_delayed_activities_df)
-                total_row = display_final_activities_df.loc[
-                    display_final_activities_df["Delay Ref"].astype(str).eq("Recommended total delayed days to submit")
-                ]
-                recommended_days = 0
-                if not total_row.empty:
-                    recommended_days = int(pd.to_numeric(total_row["Number of Delayed Days"], errors="coerce").fillna(0).iloc[0])
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Recommended Total Delayed Days", recommended_days)
-                c2.metric("Delayed Activity Rows", int((display_final_activities_df["Delay Stream"] != "TOTAL").sum()))
-                c3.metric(
-                    "Updated Critical / LP Rows",
-                    int(
-                        (
-                            display_final_activities_df["Updated Critical Path"].astype(str).str.lower().eq("yes")
-                            | display_final_activities_df["Updated Longest Path"].astype(str).str.lower().eq("yes")
-                        ).sum()
-                    ),
-                )
-                st.dataframe(display_final_activities_df, use_container_width=True, hide_index=True, height=dataframe_height(display_final_activities_df, max_height=680))
-                st.info(f"Final total delayed days to submit: {recommended_days} days.")
-            else:
-                st.info("No delayed activities were generated from the current Delay TIA run.")
-
-    with tia_tabs[15]:
-        st.markdown("#### Final Submission Delay Position")
-        st.caption("This slide gives the conservative total delay days recommended for formal submission under the current TIA model. It avoids double counting across overlapping streams and distinguishes between claimable TIA days and support-only concurrency evidence.")
-        if not delay_tia_ready:
-            st.warning("Final submission delay position is blocked until all required Delay TIA files are uploaded.")
-        else:
-            final_submission_df = build_delay_tia_final_submission_summary_df(active_delay_tia_context, active_delay_tia_analysis)
-            final_submission_breakdown_df = build_delay_tia_final_submission_event_breakdown_df(active_delay_tia_context, active_delay_tia_analysis)
-            recommended_submission_days = 0
-            if not final_submission_df.empty:
-                recommended_row = final_submission_df.loc[
-                    final_submission_df["Submission Position"] == "Recommended total delayed days to submit",
-                    "Days",
-                ]
-                if not recommended_row.empty:
-                    recommended_submission_days = int(pd.to_numeric(recommended_row, errors="coerce").fillna(0).iloc[0])
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Recommended Submission Days", recommended_submission_days)
-            c2.metric(
-                "Gross Loaded Event Days",
-                int(pd.to_numeric(final_submission_df.loc[final_submission_df["Submission Position"] == "Gross detected delayed days across all loaded events", "Days"], errors="coerce").fillna(0).iloc[0]) if not final_submission_df.empty else 0,
-            )
-            c3.metric(
-                "Gross TIA Steel Days",
-                int(pd.to_numeric(final_submission_df.loc[final_submission_df["Submission Position"] == "Gross TIA-modelled steel delay days", "Days"], errors="coerce").fillna(0).iloc[0]) if not final_submission_df.empty else 0,
-            )
-            st.dataframe(final_submission_df, use_container_width=True, hide_index=True)
-            if not final_submission_breakdown_df.empty:
-                st.markdown("##### Event-stream treatment")
-                st.dataframe(final_submission_breakdown_df, use_container_width=True, hide_index=True)
-            st.info(
-                f"Submission position: under the current TIA model, the recommended total delayed days to submit is {recommended_submission_days} days. "
-                "Steel fragnet-modelled days are included in the submitted total. RFI / IFC rows remain visible as support or concurrency evidence unless they are separately fragnet-modelled into the CPM network."
-            )
-
-    with tia_tabs[16]:
         st.markdown("#### question")
-        st.caption("Ask any Delay TIA question. The slide inspects loaded columns first, then answers from the improvement files and steel delay templates.")
+        st.caption("Ask any Delay Analysis - Time Impact Analysis question. The slide inspects loaded columns first, then answers from the 11 steel delay template files.")
         question_frames = load_delay_tia_question_frames()
         question_inventory_df = build_delay_tia_question_column_inventory(question_frames)
 
         if question_inventory_df.empty:
-            st.warning("No Delay TIA question datasets were found in the improvement/template folders.")
+            st.warning("No Delay Analysis - Time Impact Analysis question datasets were found in the steel delay template folder.")
         else:
             default_question = "What is the conservative final delay days to submit and why?"
             question_text = st.text_area(
@@ -8296,9 +8995,9 @@ with tabs[11]:
                     st.markdown(f"##### {table_title}")
                     st.dataframe(table_df, use_container_width=True, hide_index=True, height=dataframe_height(table_df, max_height=520))
 
-    with tia_tabs[17]:
+    with tia_tabs[5]:
         if not delay_tia_ready:
-            st.warning("Delay TIA report outputs are blocked until all required Delay TIA files are uploaded.")
+            st.warning("Delay TIA report outputs are blocked until all required Delay TIA files exist in `steel_delay_tia_templates`.")
         else:
             delay_report_df = build_delay_tia_delay_report_df(active_delay_tia_context, active_delay_tia_analysis)
             primavera_fragnet_df = build_delay_tia_primavera_fragnet_df(active_delay_tia_context, active_delay_tia_analysis)
@@ -8573,41 +9272,32 @@ with tabs[11]:
 
 with tabs[13]:
     st.markdown("<div class='section-header'><h3>Output Studio</h3></div>", unsafe_allow_html=True)
-    output_password = st.text_input("Enter password to unlock Output Studio", type="password", key="output_studio_password")
-    output_unlocked = output_password == "AhmedLabib"
-
-    if not output_unlocked:
-        st.markdown(
-            "<div class='panel-note'><b>Output Studio Locked</b><br>This section is password-protected. Enter the correct password to enable export, print, and smart chart tools.</div>",
-            unsafe_allow_html=True,
-        )
-        st.info("Output Studio is locked.")
-    else:
-        st.success("Output Studio unlocked.")
-        st.markdown("<div class='panel-note'><b>Two Different Output Paths</b><br>The original presentation stays original for printing only. The Canva-style path stays flexible, so you can select any subject, any row, even one line from one source and combine it with another line from another source, then print or export it with smart charts.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='panel-note'><b>Output Studio Ready</b><br>Exports are available directly from this slide. Select a governed output path and download the required format.</div>", unsafe_allow_html=True)
+    if True:
+        st.markdown("<div class='panel-note'><b>Governed Output Paths</b><br>The original presentation stays original for printing only. Linked dashboards and detailed progress reports are generated from the live platform data with modern digital styling.</div>", unsafe_allow_html=True)
         output_governance_df = pd.DataFrame(
             [
                 {
-                    "Premium Output Layer": "Critical alerts",
+                    "Output Layer": "Critical alerts",
                     "Management Use": "Expose high-impact risk, delay, commercial, and interface issues before export.",
                     "Owner": "Project Controls / Commercial",
                     "Required Action": "Select the report path that turns the alert into an executive decision pack.",
                 },
                 {
-                    "Premium Output Layer": "Digital dashboard",
-                    "Management Use": "Convert live program data into a Canva-style visual surface for review meetings.",
+                    "Output Layer": "Digital dashboard",
+                    "Management Use": "Convert live program data into a modern digital visual surface for review meetings.",
                     "Owner": "Planning Department",
                     "Required Action": "Refresh source data, confirm KPI story, then export HTML / PPTX / XLSX.",
                 },
                 {
-                    "Premium Output Layer": "Governed report",
+                    "Output Layer": "Governed report",
                     "Management Use": "Keep every exported report traceable to source tables, assumptions, and validation checks.",
                     "Owner": "Report Controller",
                     "Required Action": "Check unresolved mappings, assumptions, and validation rows before issue.",
                 },
             ]
         )
-        st.markdown("#### Premium Output Governance")
+        st.markdown("#### Output Governance")
         st.dataframe(output_governance_df, use_container_width=True, hide_index=True, height=dataframe_height(output_governance_df, max_height=260))
 
         output_mode = st.radio(
@@ -8616,16 +9306,15 @@ with tabs[13]:
                 "The Big - Dashboard",
                 "Original presentation print-only",
                 "Linked executive dashboard",
-                "Super premium progress report",
-                "Canva-style flexible dashboard",
+                "Detailed Progress report",
             ],
             horizontal=True,
         )
 
         metric_group_options = {
             "Overview Metrics": {
-                "Project Start Date": overview_metrics.get("project_start").strftime("%d-%b-%Y") if overview_metrics.get("project_start") is not None else "N/A",
-                "Project Finish Date": overview_metrics.get("project_finish").strftime("%d-%b-%Y") if overview_metrics.get("project_finish") is not None else "N/A",
+                "Project Start Date": format_project_date(overview_metrics.get("project_start")),
+                "Project Finish Date": format_project_date(overview_metrics.get("project_finish")),
                 "Project Duration [Days]": str(int(overview_metrics.get("duration_days", 0))),
                 "Duration Elapsed": pct(overview_metrics.get("duration_elapsed_pct")),
                 "Remaining Duration": pct(overview_metrics.get("remaining_duration_pct")),
@@ -8648,7 +9337,7 @@ with tabs[13]:
         if output_mode == "The Big - Dashboard":
             st.markdown(
                 "<div class='panel-note'><b>The Big - Dashboard</b><br>"
-                "Premium HTML management decision dashboard built for executive decisions: progress position, commercial exposure, delay risk, critical-path pressure, and decision actions.</div>",
+                "Modern HTML management decision dashboard built for executive decisions: progress position, commercial exposure, delay risk, critical-path pressure, and decision actions.</div>",
                 unsafe_allow_html=True,
             )
             the_big_dashboard_html = build_the_big_decision_dashboard_html(
@@ -8709,10 +9398,35 @@ with tabs[13]:
                 )
         elif output_mode == "Linked executive dashboard":
             st.markdown("<div class='panel-note'><b>Linked Executive Dashboard</b><br>This path generates the dark executive dashboard style from your reference, fully linked to the platform CSV files so it refreshes whenever the program data changes.</div>", unsafe_allow_html=True)
-            rootCauseDf = build_evm_root_cause_rows(delay_metrics, risk_metrics, contract_metrics)
+            linked_selected_project_id = selected_project_id()
+            linked_generation_project_id = linked_selected_project_id
+            if linked_selected_project_id and not project_has_core_output_data(linked_selected_project_id):
+                linked_generation_project_id = first_project_with_core_output_data(projects_for_selector_df)
+                fallback_label = linked_generation_project_id or "All projects"
+                st.warning(
+                    f"The selected project '{linked_selected_project_id}' is a setup slot with no linked output data yet. "
+                    f"The linked executive dashboard export is using '{fallback_label}' so the report is not empty."
+                )
+
+            previous_active_project_id = st.session_state.get("active_project_id", "")
+            st.session_state["active_project_id"] = linked_generation_project_id
+            try:
+                linked_overview_metrics = build_overview_metrics()
+                linked_evm_metrics = build_evm_metrics()
+                linked_contract_metrics = build_contract_metrics()
+                linked_delay_metrics = build_delay_metrics()
+                linked_risk_metrics = build_risk_metrics()
+                linked_milestone_metrics = build_milestone_metrics()
+                linked_s_curve_metrics = build_s_curve_metrics()
+                linked_activity_metrics = build_activity_metrics()
+                linked_evmData = build_earned_value_analysis_data(linked_evm_metrics)
+                rootCauseDf = build_evm_root_cause_rows(linked_delay_metrics, linked_risk_metrics, linked_contract_metrics)
+                linked_project_title = linked_overview_metrics.get("project_name") or project.get("project_name", "Project")
+            finally:
+                st.session_state["active_project_id"] = previous_active_project_id
+
             mitigationDf = build_evm_mitigation_rows()
             evmComments = get_evm_comments()
-            linked_project_title = overview_metrics.get("project_name") or project.get("project_name", "Project")
             linked_report_date = pd.Timestamp.today().strftime("%d %b %Y")
             if "linked_exec_evm_comment_quantitativePerformance" not in st.session_state:
                 st.session_state["linked_exec_evm_comment_quantitativePerformance"] = evmComments.get("quantitativePerformance", "")
@@ -8766,56 +9480,56 @@ with tabs[13]:
 
             evmComments = get_evm_comments()
             executive_html = build_linked_executive_dashboard_html(
-                overview_metrics,
-                evm_metrics,
-                contract_metrics,
-                delay_metrics,
-                risk_metrics,
-                milestone_metrics,
-                activity_metrics,
-                evmData,
+                linked_overview_metrics,
+                linked_evm_metrics,
+                linked_contract_metrics,
+                linked_delay_metrics,
+                linked_risk_metrics,
+                linked_milestone_metrics,
+                linked_activity_metrics,
+                linked_evmData,
                 rootCauseDf,
                 mitigationDf,
                 evmComments,
             )
-            evm_html = printEVMHtml(linked_project_title, linked_report_date, evmData, rootCauseDf, mitigationDf, evmComments)
-            evm_ppt = exportEVMToPowerPoint(linked_project_title, linked_report_date, evmData, rootCauseDf, mitigationDf, evmComments)
+            evm_html = printEVMHtml(linked_project_title, linked_report_date, linked_evmData, rootCauseDf, mitigationDf, evmComments)
+            evm_ppt = exportEVMToPowerPoint(linked_project_title, linked_report_date, linked_evmData, rootCauseDf, mitigationDf, evmComments)
             linked_dashboard_ppt = export_linked_executive_dashboard_to_powerpoint(
-                overview_metrics,
-                evm_metrics,
-                contract_metrics,
-                delay_metrics,
-                risk_metrics,
-                milestone_metrics,
-                activity_metrics,
-                evmData,
+                linked_overview_metrics,
+                linked_evm_metrics,
+                linked_contract_metrics,
+                linked_delay_metrics,
+                linked_risk_metrics,
+                linked_milestone_metrics,
+                linked_activity_metrics,
+                linked_evmData,
                 rootCauseDf,
                 mitigationDf,
                 evmComments,
             )
             linked_dashboard_a3_summary_ppt = export_linked_executive_dashboard_a3_summary_ppt(
-                overview_metrics,
-                evm_metrics,
-                contract_metrics,
-                delay_metrics,
-                risk_metrics,
-                milestone_metrics,
-                activity_metrics,
-                s_curve_metrics,
-                evmData,
+                linked_overview_metrics,
+                linked_evm_metrics,
+                linked_contract_metrics,
+                linked_delay_metrics,
+                linked_risk_metrics,
+                linked_milestone_metrics,
+                linked_activity_metrics,
+                linked_s_curve_metrics,
+                linked_evmData,
                 rootCauseDf,
                 mitigationDf,
             )
             linked_dashboard_a3_summary_html = build_linked_executive_dashboard_a3_summary_html(
-                overview_metrics,
-                evm_metrics,
-                contract_metrics,
-                delay_metrics,
-                risk_metrics,
-                milestone_metrics,
-                activity_metrics,
-                s_curve_metrics,
-                evmData,
+                linked_overview_metrics,
+                linked_evm_metrics,
+                linked_contract_metrics,
+                linked_delay_metrics,
+                linked_risk_metrics,
+                linked_milestone_metrics,
+                linked_activity_metrics,
+                linked_s_curve_metrics,
+                linked_evmData,
                 rootCauseDf,
                 mitigationDf,
             )
@@ -8868,24 +9582,13 @@ with tabs[13]:
             )
             with st.expander("Preview summarized A3 linked executive dashboard", expanded=False):
                 st.components.v1.html(linked_dashboard_a3_summary_html, height=1600, scrolling=True)
-        elif output_mode == "Super premium progress report":
-            st.markdown("<div class='panel-note'><b>Super Premium Interactive Progress Report</b><br>This path applies the `Codex_Prompt_Super_Premium_Interactive_Progress_Report.md` specification to generate a Power BI-ready workbook package from the live platform CSV files.</div>", unsafe_allow_html=True)
-            prompt_spec_text = read_text_file(SUPER_PREMIUM_PROMPT_PATH)
+        elif output_mode == "Detailed Progress report":
+            st.markdown("<div class='panel-note'><b>Detailed Progress Report</b><br>This path generates a modern digital progress pack from the live platform CSV files: Excel workbook, HTML report, Word report, and Power BI-style dashboard HTML.</div>", unsafe_allow_html=True)
             if not OPENPYXL_AVAILABLE:
                 st.error("`openpyxl` is not installed in the current environment, so the workbook export is temporarily unavailable.")
                 st.code("pip install openpyxl", language="powershell")
-                if prompt_spec_text:
-                    with st.expander("Applied Codex Prompt Specification"):
-                        st.markdown(prompt_spec_text)
-                    st.download_button(
-                        "Download Applied Prompt (.md)",
-                        data=prompt_spec_text.encode("utf-8"),
-                        file_name="Codex_Prompt_Super_Premium_Interactive_Progress_Report.md",
-                        mime="text/markdown",
-                        use_container_width=True,
-                    )
                 st.stop()
-            workbook_bytes, report_readme, report_assumptions = build_super_premium_progress_report_package(
+            workbook_bytes, report_readme, report_assumptions = build_detailed_progress_report_package(
                 overview_metrics,
                 evm_metrics,
                 contract_metrics,
@@ -8924,15 +9627,12 @@ with tabs[13]:
             ]
             st.markdown("#### Generated Tabs")
             st.dataframe(pd.DataFrame({"Sheet Name": generated_tabs}), use_container_width=True, hide_index=True, height=dataframe_height(pd.DataFrame({"Sheet Name": generated_tabs}), max_height=760))
-            if prompt_spec_text:
-                with st.expander("Applied Codex Prompt Specification"):
-                    st.markdown(prompt_spec_text)
             st.markdown("#### Power BI Connection Steps")
             st.markdown(
                 """
                 1. Open Power BI Desktop.
                 2. Get Data -> Excel Workbook.
-                3. Select `Super_Premium_Construction_Progress_Report_PowerBI_Ready.xlsx`.
+                3. Select `Detailed_Progress_Report_PowerBI_Ready.xlsx`.
                 4. Import the named Excel Tables.
                 5. Build relationships using the `24 Power BI Model` sheet.
                 """
@@ -8954,120 +9654,67 @@ with tabs[13]:
                 }
             )
             st.dataframe(validation_checks, use_container_width=True, hide_index=True, height=dataframe_height(validation_checks, max_height=260))
-            c1, c2 = st.columns(2)
+            detailed_html = build_detailed_progress_report_html(
+                overview_metrics,
+                evm_metrics,
+                contract_metrics,
+                delay_metrics,
+                risk_metrics,
+                milestone_metrics,
+                activity_metrics,
+                s_curve_metrics,
+            )
+            detailed_docx = build_detailed_progress_report_docx_bytes(
+                overview_metrics,
+                evm_metrics,
+                contract_metrics,
+                delay_metrics,
+                risk_metrics,
+                milestone_metrics,
+                activity_metrics,
+                s_curve_metrics,
+            )
+            power_bi_style_html = build_detailed_progress_power_bi_style_html(
+                overview_metrics,
+                evm_metrics,
+                contract_metrics,
+                delay_metrics,
+                risk_metrics,
+                milestone_metrics,
+                activity_metrics,
+                s_curve_metrics,
+            )
+            c1, c2, c3, c4 = st.columns(4)
             c1.download_button(
-                "Download Super Premium Workbook (.xlsx)",
+                "Download Detailed Progress Report (.xlsx)",
                 data=workbook_bytes,
-                file_name="Super_Premium_Construction_Progress_Report_PowerBI_Ready.xlsx",
+                file_name="Detailed_Progress_Report_PowerBI_Ready.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
             c2.download_button(
-                "Download Report README (.md)",
-                data=report_readme.encode("utf-8"),
-                file_name="README_Super_Premium_Construction_Progress_Report.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
-            if prompt_spec_text:
-                st.download_button(
-                    "Download Applied Prompt (.md)",
-                    data=prompt_spec_text.encode("utf-8"),
-                    file_name="Codex_Prompt_Super_Premium_Interactive_Progress_Report.md",
-                    mime="text/markdown",
-                    use_container_width=True,
-                )
-        else:
-            st.markdown("<div class='panel-note'><b>Canva-Style Flexible Builder</b><br>Select any information from the program down to a single row, combine rows from different sources, add smart charts, and export a printable dashboard pack or flexible presentation output.</div>", unsafe_allow_html=True)
-
-            selected_metric_groups = st.multiselect("Metric groups for export", list(metric_group_options.keys()), default=["Overview Metrics", "EVM Metrics"])
-
-            line_sources = st.multiselect(
-                "Choose one or more detailed sources",
-                list(export_sources.keys()),
-                default=["Overview Metrics", "Delays"],
-            )
-
-            combined_tables = []
-            selected_frames = []
-            for source_name in line_sources:
-                source_df = export_sources[source_name]
-                st.markdown(f"#### {source_name}")
-                if source_df.empty:
-                    st.info(f"{source_name} is empty.")
-                    continue
-                row_options = source_df["Row"].tolist() if "Row" in source_df.columns else list(range(1, len(source_df) + 1))
-                default_rows = row_options[: min(3, len(row_options))]
-                selected_rows = st.multiselect(
-                    f"Select rows from {source_name}",
-                    row_options,
-                    default=default_rows,
-                    key=f"rows_{source_name}",
-                )
-                if "Row" in source_df.columns:
-                    selected_df = source_df[source_df["Row"].isin(selected_rows)].copy()
-                else:
-                    selected_df = source_df.iloc[: min(len(default_rows), len(source_df))].copy()
-                selected_df.insert(0, "Source", source_name)
-                selected_frames.append(selected_df)
-                combined_tables.append((source_name, selected_df))
-                st.dataframe(selected_df, use_container_width=True, hide_index=True, height=dataframe_height(selected_df, max_height=320))
-
-            combined_selection_df = pd.concat(selected_frames, ignore_index=True) if selected_frames else pd.DataFrame()
-            if not combined_selection_df.empty:
-                st.markdown("#### Combined Selection")
-                st.dataframe(combined_selection_df, use_container_width=True, hide_index=True, height=dataframe_height(combined_selection_df, max_height=420))
-
-            st.markdown("#### Smart Chart Builder")
-            chart_source = st.selectbox("Chart source", list(export_sources.keys()), index=0, key="chart_source")
-            chart_df = export_sources[chart_source]
-            if not chart_df.empty:
-                chart_cols = [c for c in chart_df.columns if c != "Row"]
-                chart_type = st.selectbox("Chart type", ["Bar", "Line", "Pie"], key="chart_type")
-                chart_x = st.selectbox("X / Category", chart_cols, key="chart_x")
-                numeric_cols = [c for c in chart_cols if pd.to_numeric(chart_df[c], errors="coerce").notna().any()]
-                chart_y = st.selectbox("Y / Value", numeric_cols if numeric_cols else chart_cols, key="chart_y")
-                preview_df = chart_df.copy()
-                if chart_y in preview_df.columns:
-                    preview_df[chart_y] = pd.to_numeric(preview_df[chart_y], errors="coerce").fillna(0)
-                if chart_type == "Bar":
-                    smart_fig = px.bar(preview_df, x=chart_x, y=chart_y, title=f"{chart_source} - {chart_y} by {chart_x}")
-                elif chart_type == "Line":
-                    smart_fig = px.line(preview_df, x=chart_x, y=chart_y, markers=True, title=f"{chart_source} - {chart_y} by {chart_x}")
-                else:
-                    smart_fig = px.pie(preview_df, names=chart_x, values=chart_y, title=f"{chart_source} - {chart_y} share")
-                st.plotly_chart(style_plotly(smart_fig, 420), use_container_width=True)
-            else:
-                st.info("Choose a source with data to build a smart chart.")
-
-            export_metric_groups = [(name, metric_group_options[name]) for name in selected_metric_groups]
-            printable_html = build_export_html("Project Intelligence Dashboard Export", export_metric_groups, combined_tables)
-            pptx_bytes = build_presentation_export(export_metric_groups, "Combined Selected Data", combined_selection_df if not combined_selection_df.empty else pd.DataFrame())
-
-            c1, c2, c3 = st.columns(3)
-            c1.download_button(
-                "Download Printable Dashboard Pack (.html)",
-                data=printable_html.encode("utf-8"),
-                file_name="project_intelligence_dashboard_export.html",
+                "Download Detailed Progress Report (.html)",
+                data=detailed_html.encode("utf-8"),
+                file_name="Detailed_Progress_Report.html",
                 mime="text/html",
                 use_container_width=True,
             )
-            c2.download_button(
-                "Download Flexible Presentation (.pptx)",
-                data=pptx_bytes,
-                file_name="project_intelligence_flexible_dashboard_export.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                use_container_width=True,
-            )
             c3.download_button(
-                "Download Combined Selection (.csv)",
-                data=combined_selection_df.to_csv(index=False).encode("utf-8") if not combined_selection_df.empty else b"",
-                file_name="project_intelligence_combined_selection.csv",
-                mime="text/csv",
+                "Download Detailed Progress Report (.docx)",
+                data=detailed_docx,
+                file_name="Detailed_Progress_Report.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True,
-                disabled=combined_selection_df.empty,
             )
-            st.caption("This flexible path is the one for mixed subjects, one-line selections, and new smart digital charts.")
+            c4.download_button(
+                "Download Power BI Style Dashboard (.html)",
+                data=power_bi_style_html.encode("utf-8"),
+                file_name="Detailed_Progress_Report_PowerBI_Style.html",
+                mime="text/html",
+                use_container_width=True,
+            )
+            with st.expander("README / Power BI governance notes", expanded=False):
+                st.markdown(report_readme)
 
 with tabs[12]:
     render_claims_header(
@@ -9651,7 +10298,7 @@ with tabs[14]:
     conference_topic = call_col3.selectbox(
         "Current Slide / Topic",
         [name for name in PROJECT_HUB_SLIDE_NAMES if name != "Conference Call"],
-        index=11 if "Delay TIA" in PROJECT_HUB_SLIDE_NAMES else 0,
+        index=11 if "Delay Analysis - Time Impact Analysis" in PROJECT_HUB_SLIDE_NAMES else 0,
         key="conference_current_topic",
     )
 
@@ -9711,164 +10358,6 @@ with tabs[14]:
         scrolling=False,
     )
 
-with tia_tabs[18]:
-    st.markdown("<div class='section-header'><h3>AI - TIA</h3></div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div class='panel-note'><b>Submission-facing TIA slide</b><br>"
-        "This slide keeps the original <b>Delay TIA</b> module unchanged and gives a dedicated management-facing surface for the time impact analysis position, concurrent review, and export pack.</div>",
-        unsafe_allow_html=True,
-    )
-
-    if 'delay_tia_ready' not in locals() or not delay_tia_ready:
-        st.warning("AI - TIA is blocked until all required Delay TIA files are uploaded in the original Delay TIA slide.")
-    else:
-        alias_kpis = active_delay_tia_analysis.get("kpis", {})
-        alias_final_submission_df = build_delay_tia_final_submission_summary_df(active_delay_tia_context, active_delay_tia_analysis)
-        alias_final_submission_breakdown_df = build_delay_tia_final_submission_event_breakdown_df(active_delay_tia_context, active_delay_tia_analysis)
-        alias_forensic_schedule_df = build_delay_tia_forensic_schedule_output_df(
-            active_delay_tia_context,
-            active_delay_tia_analysis,
-            active_concurrent_delay_review_df,
-            active_bl_critical_path_summary,
-        )
-        alias_delay_report_df = build_delay_tia_delay_report_df(active_delay_tia_context, active_delay_tia_analysis)
-        alias_primavera_fragnet_df = build_delay_tia_primavera_fragnet_df(active_delay_tia_context, active_delay_tia_analysis)
-        alias_detailed_report_html = build_delay_tia_detailed_report_html(active_delay_tia_context, active_delay_tia_analysis)
-        alias_excel_report_bytes = build_delay_tia_excel_report_bytes(active_delay_tia_context, active_delay_tia_analysis)
-        alias_recommended_submission_days = 0
-        if not alias_final_submission_df.empty:
-            alias_submission_row = alias_final_submission_df.loc[
-                alias_final_submission_df["Submission Position"] == "Recommended total delayed days to submit",
-                "Days",
-            ]
-            if not alias_submission_row.empty:
-                alias_recommended_submission_days = int(pd.to_numeric(alias_submission_row, errors="coerce").fillna(0).iloc[0])
-
-        a1, a2, a3, a4 = st.columns(4)
-        a1.metric("Recommended Submission Days", alias_recommended_submission_days)
-        a2.metric("Strong TIA Candidates", int(alias_kpis.get("Number of Strong TIA Candidates", 0)))
-        a3.metric("Employer Risk Events", int(alias_kpis.get("Employer Risk Events", 0)))
-        a4.metric("Concurrent Risk Events", int(alias_kpis.get("Concurrent Risk Events", 0)))
-
-        st.markdown("#### Final Submission Delay Position")
-        st.dataframe(alias_final_submission_df, use_container_width=True, hide_index=True)
-
-        if not alias_final_submission_breakdown_df.empty:
-            st.markdown("#### Delay Stream Treatment")
-            st.dataframe(alias_final_submission_breakdown_df, use_container_width=True, hide_index=True)
-
-        st.markdown("#### Concurrent Delay Review")
-        if not active_concurrent_delay_review_df.empty:
-            alias_display_cols = [
-                "Delay Stream",
-                "Delay Ref",
-                "Delay Type",
-                "Activity ID",
-                "Activity Name",
-                "Delay Start",
-                "Delay Finish",
-                "Delayed Days",
-                "Current Total Float",
-                "Current Critical",
-                "Current Longest Path",
-                "Concurrent?",
-                "Concurrent With",
-                "Path Summary",
-            ]
-            st.dataframe(
-                active_concurrent_delay_review_df[[col for col in alias_display_cols if col in active_concurrent_delay_review_df.columns]],
-                use_container_width=True,
-                hide_index=True,
-                height=dataframe_height(active_concurrent_delay_review_df, max_height=520),
-            )
-        else:
-            st.info("No concurrent delay rows are currently available.")
-
-        st.markdown("#### Delay Report Summary")
-        st.dataframe(alias_delay_report_df, use_container_width=True, hide_index=True)
-
-        st.markdown("#### Full Forensic Schedule Analysis Output")
-        st.dataframe(alias_forensic_schedule_df, use_container_width=True, hide_index=True)
-
-        st.markdown("#### Export Pack")
-        alias_docx_error = st.session_state.get("tia_director_pack_error", "")
-        alias_last_generated_report = fetch_last_generated_report(CONTRACT_CLAIMS_DB_PATH, REPORT_TYPE_TIA_DIRECTOR_PACK)
-        alias_generated_docx_path = resolve_existing_output_path(st.session_state.get("tia_director_pack_generated_path"))
-        if alias_generated_docx_path is None and alias_last_generated_report:
-            alias_generated_docx_path = resolve_existing_output_path(alias_last_generated_report.get("file_path"))
-        alias_director_docx_bytes = alias_generated_docx_path.read_bytes() if alias_generated_docx_path else b""
-        if not alias_director_docx_bytes and TIA_DIRECTOR_WORD_TEMPLATE_PATH.exists():
-            try:
-                alias_director_docx_bytes = build_delay_tia_director_docx_report_bytes(active_delay_tia_context, active_delay_tia_analysis)
-                alias_generated_docx_path = resolve_existing_output_path(st.session_state.get("tia_director_pack_generated_path"))
-            except Exception as exc:
-                alias_docx_error = str(exc)
-
-        report_col1, report_col2 = st.columns(2)
-        report_col1.download_button(
-            "Download Final Submission Delay Position (.csv)",
-            data=alias_final_submission_df.to_csv(index=False).encode("utf-8") if not alias_final_submission_df.empty else b"",
-            file_name="final_submission_delay_position.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=alias_final_submission_df.empty,
-            key="delay_analysis_time_impact_download_final_submission_csv",
-        )
-        report_col2.download_button(
-            "Download Full Forensic Schedule Analysis (.csv)",
-            data=alias_forensic_schedule_df.to_csv(index=False).encode("utf-8") if not alias_forensic_schedule_df.empty else b"",
-            file_name="full_forensic_schedule_analysis.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=alias_forensic_schedule_df.empty,
-            key="delay_analysis_time_impact_download_forensic_schedule_csv",
-        )
-
-        e1, e2, e3, e4, e5 = st.columns(5)
-        e1.download_button(
-            "Download Delay Report (.xlsx)",
-            data=alias_excel_report_bytes,
-            file_name="delay_tia_output_pack.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            key="delay_analysis_time_impact_download_xlsx",
-        )
-        e2.download_button(
-            "Download Detailed TIA Report (.html)",
-            data=alias_detailed_report_html.encode("utf-8"),
-            file_name="delay_tia_detailed_report.html",
-            mime="text/html",
-            use_container_width=True,
-            key="delay_analysis_time_impact_download_html",
-        )
-        e3.download_button(
-            "Download Primavera Fragnet Sheet (.csv)",
-            data=alias_primavera_fragnet_df.to_csv(index=False).encode("utf-8") if not alias_primavera_fragnet_df.empty else b"",
-            file_name="primavera_fragnet_sheet.csv",
-            mime="text/csv",
-            use_container_width=True,
-            disabled=alias_primavera_fragnet_df.empty,
-            key="delay_analysis_time_impact_download_fragnet_csv",
-        )
-        e4.download_button(
-            "Download Delay Report Summary (.csv)",
-            data=alias_delay_report_df.to_csv(index=False).encode("utf-8"),
-            file_name="delay_tia_delay_report.csv",
-            mime="text/csv",
-            use_container_width=True,
-            key="delay_analysis_time_impact_download_summary_csv",
-        )
-        e5.download_button(
-            "Download Time Impact Analysis Report | Director Pack (.docx)",
-            data=alias_director_docx_bytes,
-            file_name=alias_generated_docx_path.name if alias_generated_docx_path else "TIA_Director_Level_Word_Report_Final.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            use_container_width=True,
-            disabled=not bool(alias_director_docx_bytes),
-            key="delay_analysis_time_impact_download_director_docx",
-        )
-        if alias_docx_error:
-            st.warning(f"Director-level DOCX report could not be generated: {alias_docx_error}")
-
 st.divider()
 st.markdown("<p style='text-align:center;color:#667085;font-size:12px;'>Construction Project Control Platform | Designed and Developed By Eng. Ahmed Labib © Planning Department</p>", unsafe_allow_html=True)
+
