@@ -1,50 +1,34 @@
-﻿# Python cache
+﻿# Python
+.venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.pytest_cache/
-
-# Virtual environments
-.venv/
-venv/
-env/
 
 # Secrets
 .env
 .env.local
 .streamlit/secrets.toml
 
-# Local databases
-*.db
-*.sqlite
-*.sqlite3
-construction_system*.db
-*.backup*.db
-
-# Backups
-*.bak
-backover-return-*/
-*.backup*/
-
-# Logs
+# Logs / runtime
 *.log
 *.err
-*.out
-*.err.log
-*.out.log
-
-# Generated/local output
+logs/
+outputs/
 generated_outputs/
-tmp_letters_ocr/
-PROJECT_DIAGNOSTIC_OUTPUT.txt
-NO_GIT_PROJECT_DIAGNOSTIC.txt
+.streamlit/delay_tia_upload_cache/
 
-# Large local files
-*.vsix
+# Node / frontend
+node_modules/
+dist/
+build/
 
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
+# OS
 Thumbs.db
+.DS_Store
+
+# Archives / large temp
+*.zip
+*.rar
+*.7z

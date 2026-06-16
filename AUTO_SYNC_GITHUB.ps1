@@ -1,4 +1,4 @@
-﻿cd "C:\Users\pc\OneDrive\Documents\Project Intelligence Hub"
+﻿Set-Location "C:\Users\pc\OneDrive\Documents\Project Intelligence Hub"
 
 git add .
 

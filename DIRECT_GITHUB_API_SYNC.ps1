@@ -77,7 +77,7 @@ function ConvertTo-GitHubPathUri($RelativePath) {
     }) -join "/"
 }
 
-function Should-Exclude($File, $RelativePath) {
+function Exclude($File, $RelativePath) {
     $parts = $RelativePath -split "/"
 
     foreach ($dir in $ExcludeDirs) {
@@ -148,10 +148,10 @@ function Test-GitHubRepoAccess {
     }
 }
 
-function Upload-Or-Update-File($File, $RelativePath) {
+function Sync-GitHubFile($File, $RelativePath) {
     $apiPath = ConvertTo-GitHubPathUri $RelativePath
     $url = "https://api.github.com/repos/$Owner/$Repo/contents/$apiPath"
-
+s
     $existingSha = $null
 
     try {

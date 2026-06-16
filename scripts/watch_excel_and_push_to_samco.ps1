@@ -38,7 +38,7 @@ function Test-SyncCandidate([string]$Path) {
     return $extensions -contains ([System.IO.Path]::GetExtension($Path).ToLowerInvariant())
 }
 
-$watchers = foreach ($watchRoot in $watchRoots) {
+$watcher = foreach ($watchRoot in $watchRoots) {
     $watcher = New-Object System.IO.FileSystemWatcher
     $watcher.Path = $watchRoot
     $watcher.IncludeSubdirectories = $true
