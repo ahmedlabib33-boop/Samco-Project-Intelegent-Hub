@@ -113,6 +113,7 @@ from src.construction_system.contract_matcher import (
     search_clauses,
 )
 from src.construction_system.database import DEFAULT_DB_PATH
+from src.construction_system.letters_auto_ingest import folder_fingerprint, merge_inbox_letters
 from src.construction_system.steel_delay_tia import (
     CANONICAL_STEEL_FIELDS,
     STEEL_ALIASES,
@@ -126,6 +127,7 @@ from src.construction_system.steel_delay_tia import (
 
 APP_DIR = Path(__file__).parent
 LOGO_PATH = APP_DIR / "assets" / "logo.png"
+LETTERS_GLOBAL_DIR = APP_DIR / "data" / "letters"
 LETTERS_CANDIDATE_PATHS = [
     APP_DIR / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked_updated.xlsx",
     APP_DIR / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked (Final).xlsx",
@@ -1167,23 +1169,73 @@ def build_time_impact_engine(delay_metrics, risk_metrics, activity_metrics, cont
     }
 
 
+def letters_intelligence_root(project_id: str | None = None) -> Path:
+    project_id = selected_project_id() if project_id is None else str(project_id or "").strip()
+    if project_id:
+        return DATA_PROJECTS_DIR / project_id / "letters_intelligence"
+    return LETTERS_GLOBAL_DIR
+
+
+def letters_inbox_dir(project_id: str | None = None) -> Path:
+    return letters_intelligence_root(project_id) / "inbox"
+
+
+def letters_workbook_path(project_id: str | None = None) -> Path:
+    project_workbook = letters_intelligence_root(project_id) / "letters_intelligence.xlsx"
+    return project_workbook if project_workbook.exists() else LETTERS_PATH
+
+
 @st.cache_data(show_spinner=False)
+def _load_letters_workbook_cached(
+    workbook_path_str: str,
+    workbook_modified_ns: int,
+    workbook_size: int,
+    inbox_path_str: str,
+    inbox_fingerprint: tuple[tuple[str, int, int], ...],
+):
+    del workbook_modified_ns, workbook_size, inbox_fingerprint
+    workbook_path = Path(workbook_path_str)
+    inbox_path = Path(inbox_path_str)
+    sheets = {}
+    if workbook_path.exists():
+        try:
+            sheets = pd.read_excel(workbook_path, sheet_name=None)
+        except ImportError:
+            try:
+                sheets = _read_xlsx_sheets(workbook_path)
+            except Exception:
+                sheets = {}
+        except Exception:
+            try:
+                sheets = _read_xlsx_sheets(workbook_path)
+            except Exception:
+                sheets = {}
+    return merge_inbox_letters(
+        {name: df.fillna("") for name, df in sheets.items()},
+        inbox_path,
+        ccc.extract_text_from_path,
+    )
+
+
 def load_letters_workbook():
-    if not LETTERS_PATH.exists():
-        return {}
+    workbook_path = letters_workbook_path()
+    inbox_path = letters_inbox_dir()
     try:
-        sheets = pd.read_excel(LETTERS_PATH, sheet_name=None)
-    except ImportError:
-        try:
-            sheets = _read_xlsx_sheets(LETTERS_PATH)
-        except Exception:
-            return {}
+        inbox_path.mkdir(parents=True, exist_ok=True)
     except Exception:
-        try:
-            sheets = _read_xlsx_sheets(LETTERS_PATH)
-        except Exception:
-            return {}
-    return {name: df.fillna("") for name, df in sheets.items()}
+        pass
+    if workbook_path.exists():
+        stat = workbook_path.stat()
+        modified_ns, file_size = stat.st_mtime_ns, stat.st_size
+    else:
+        modified_ns, file_size = 0, 0
+    return _load_letters_workbook_cached(
+        str(workbook_path),
+        modified_ns,
+        file_size,
+        str(inbox_path),
+        folder_fingerprint(inbox_path),
+    )
 
 
 def tokenize_notice_text(value: str) -> set[str]:
@@ -7719,6 +7771,22 @@ def render_contract_clause_matching_engine():
 
 with tabs[7]:
     st.markdown("<div class='section-header'><h3>Letters Intelligence, Alerts Link & Issue Engine</h3></div>", unsafe_allow_html=True)
+    active_letters_inbox = letters_inbox_dir()
+    auto_ingest_register = letters.get("Auto Ingest Register", pd.DataFrame()) if letters else pd.DataFrame()
+    st.markdown(
+        "<div class='panel-note'><b>Automatic Letter Inbox</b><br>Place new letters in the project direction folders. The app extracts the reference, date, subject, classification, risk, actions, related references, and issue thread, then adds them to the intelligence tables automatically.</div>",
+        unsafe_allow_html=True,
+    )
+    st.code(str(active_letters_inbox), language=None)
+    if not auto_ingest_register.empty:
+        ingest_col1, ingest_col2, ingest_col3 = st.columns(3)
+        ingest_col1.metric("Inbox Files", len(auto_ingest_register))
+        ingest_col2.metric("Added Automatically", int(auto_ingest_register["Status"].eq("Added Automatically").sum()))
+        ingest_col3.metric("Needs Review", int(auto_ingest_register["Status"].isin(["Needs Review", "Read Error"]).sum()))
+        with st.expander("Automatic ingest register", expanded=False):
+            st.dataframe(auto_ingest_register, use_container_width=True, hide_index=True, height=dataframe_height(auto_ingest_register))
+    else:
+        st.caption("The inbox is empty. Add PDF, DOCX, TXT, EML, CSV, XLSX, or XLS letters to one of the two direction folders.")
     if not letters:
         st.warning("Letters workbook was not found. Add it under data/letters or data/import_templates.")
     else:
