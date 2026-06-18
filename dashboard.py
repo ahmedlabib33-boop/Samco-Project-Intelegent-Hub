@@ -1693,81 +1693,20 @@ def sanitize_conference_room_name(value: str) -> str:
     return cleaned or "Project-Intelligence-Hub-Room"
 
 
-def build_conference_call_embed_html(
-    room_name: str,
-    display_name: str,
-    start_audio_only: bool,
-    start_video_muted: bool,
-    subject_line: str,
-) -> str:
-    safe_room = sanitize_conference_room_name(room_name)
-    safe_display = html.escape(display_name or "Participant")
-    safe_subject = html.escape(subject_line or "Project Intelligence Hub Review")
-    audio_only_js = "true" if start_audio_only else "false"
-    video_muted_js = "true" if start_video_muted else "false"
-    return f"""
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px 14px 10px 14px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:10px;">
-        <div>
-          <div style="color:#e2e8f0;font-size:18px;font-weight:700;">Conference Call Room</div>
-          <div style="color:#94a3b8;font-size:12px;">{safe_subject}</div>
-        </div>
-        <div style="color:#cbd5e1;font-size:12px;">Room: <b>{safe_room}</b></div>
-      </div>
-      <div id="jitsi-meet-container" style="width:100%;height:760px;border-radius:10px;overflow:hidden;"></div>
-    </div>
-    <script src="https://meet.jit.si/external_api.js"></script>
-    <script>
-      const domain = "meet.jit.si";
-      const options = {{
-        roomName: "{safe_room}",
-        width: "100%",
-        height: 760,
-        parentNode: document.querySelector("#jitsi-meet-container"),
-        userInfo: {{
-          displayName: "{safe_display}"
-        }},
-        configOverwrite: {{
-          prejoinPageEnabled: true,
-          startAudioOnly: {audio_only_js},
-          startWithAudioMuted: false,
-          startWithVideoMuted: {video_muted_js},
-          disableDeepLinking: true
-        }},
-        interfaceConfigOverwrite: {{
-          SHOW_JITSI_WATERMARK: false,
-          SHOW_WATERMARK_FOR_GUESTS: false,
-          MOBILE_APP_PROMO: false,
-          DEFAULT_REMOTE_DISPLAY_NAME: "Participant",
-          DEFAULT_LOCAL_DISPLAY_NAME: "{safe_display}",
-          TILE_VIEW_MAX_COLUMNS: 5
-        }}
-      }};
-      new JitsiMeetExternalAPI(domain, options);
-    </script>
-    """
-
-
-def build_meeting_companion_html(room_name: str, room_url: str, dashboard_url: str) -> str:
-    safe_room = html.escape(room_name)
+def build_meeting_companion_html(room_url: str) -> str:
     safe_room_url = html.escape(room_url, quote=True)
-    safe_dashboard_url = html.escape(dashboard_url, quote=True)
     return f"""
     <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
                 margin:14px 0 12px;padding:12px 14px;background:#ffffff;border:1px solid #d7e3ec;
                 border-left:4px solid #168f8b;border-radius:8px;box-shadow:0 8px 24px rgba(23,59,99,.07);">
       <div style="min-width:260px;">
-        <div style="font-size:13px;font-weight:800;color:#173b63;">Live Meeting Companion</div>
-        <div style="font-size:12px;color:#526276;margin-top:3px;">Room <b>{safe_room}</b> | 5+ participants | call continues while slides are reviewed</div>
+        <div style="font-size:13px;font-weight:800;color:#173b63;">Project Meeting</div>
+        <div style="font-size:12px;color:#526276;margin-top:3px;">Open the call, then continue through the slides. Supports 5+ participants.</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <a href="{safe_room_url}" target="_blank" rel="noopener noreferrer"
            style="display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:6px;
-                  background:#173b63;color:#ffffff;text-decoration:none;font-size:12px;font-weight:800;">Open Call Window</a>
-        <a href="{safe_dashboard_url}" target="_blank" rel="noopener noreferrer"
-           style="display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:6px;
-                  background:#ffffff;color:#173b63;text-decoration:none;font-size:12px;font-weight:800;
-                  border:1px solid #b9cad8;">Open Dashboard Window</a>
+                  background:#173b63;color:#ffffff;text-decoration:none;font-size:12px;font-weight:800;">Join Project Meeting</a>
       </div>
     </div>
     """
@@ -7209,7 +7148,7 @@ try:
 except Exception:
     shared_dashboard_url = "http://127.0.0.1:8755/"
 st.markdown(
-    build_meeting_companion_html(shared_meeting_room, shared_meeting_url, shared_dashboard_url),
+    build_meeting_companion_html(shared_meeting_url),
     unsafe_allow_html=True,
 )
 
@@ -9980,108 +9919,33 @@ with tabs[12]:
 with tabs[14]:
     st.markdown("<div class='section-header'><h3>Conference Call</h3></div>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='panel-note'><b>Shared Project Review Room</b><br>Open the call in a separate browser window, then keep this dashboard open to move through every project slide while the conversation continues. Five or more participants can join the same room from independent devices.</div>",
+        "<div class='panel-note'><b>Talk While Reviewing the Project</b><br>Open the meeting once. Keep that window open, return to this dashboard, and move through the slides while everyone continues talking.</div>",
         unsafe_allow_html=True,
     )
 
-    call_col1, call_col2, call_col3 = st.columns(3)
-    conference_room_name = call_col1.text_input(
-        "Shared Room Code",
-        key="conference_room_name",
-        help="Every participant must use the same room code. The project room is shared by default.",
-    )
-    conference_display_name = call_col2.text_input(
-        "Your Display Name",
-        value=st.session_state.get("conference_display_name", "Participant"),
-        key="conference_display_name",
-    )
-    conference_topic = call_col3.selectbox(
-        "Current Slide / Topic",
-        [name for name in PROJECT_HUB_SLIDE_NAMES if name != "Conference Call"],
-        index=11 if "Delay Analysis - Time Impact Analysis" in PROJECT_HUB_SLIDE_NAMES else 0,
-        key="conference_current_topic",
-    )
-
-    mode_col1, mode_col2, mode_col3 = st.columns(3)
-    conference_audio_only = mode_col1.checkbox("Audio-first mode", value=True, key="conference_audio_only")
-    conference_start_video_muted = mode_col2.checkbox("Start with video muted", value=True, key="conference_start_video_muted")
-    conference_layout = mode_col3.selectbox(
-        "Meeting Layout",
-        ["Pop-out meeting window", "Embedded meeting on this slide"],
-        key="conference_layout",
-        help="Pop-out mode keeps the call independent from dashboard reruns and slide navigation.",
-    )
-
-    subject_col1, subject_col2 = st.columns([2, 1])
-    conference_subject = subject_col1.text_input(
-        "Meeting Subject",
-        value=st.session_state.get("conference_subject", f"{conference_topic} review"),
-        key="conference_subject",
-    )
-    subject_col2.metric("Participant Capacity", "5+", delta="Shared browser room")
-
-    notes_col1, notes_col2 = st.columns([2, 1])
-    conference_notes = notes_col1.text_area(
-        "Discussion Notes / Agenda",
-        value=st.session_state.get(
-            "conference_notes",
-            "Use this room to walk through the selected slide, explain issues live, and align actions in real time.",
-        ),
-        height=110,
-        key="conference_notes",
-    )
-    notes_col2.markdown("##### Suggested Review Flow")
-    notes_col2.markdown(
-        "\n".join(
-            [
-                "1. Confirm current slide/topic",
-                "2. Explain the issue or claim",
-                "3. Review evidence / schedule basis",
-                "4. Record actions and decisions",
-            ]
-        )
-    )
-
-    safe_room_name = sanitize_conference_room_name(conference_room_name)
-    room_url = f"https://meet.jit.si/{safe_room_name}"
+    safe_room_name = shared_meeting_room
+    room_url = shared_meeting_url
     status_col1, status_col2, status_col3 = st.columns(3)
-    status_col1.metric("Call Room", safe_room_name)
-    status_col2.metric("Mode", "Audio Call" if conference_audio_only else "Audio / Video")
-    status_col3.metric("Topic", conference_topic)
-    action_col1, action_col2 = st.columns(2)
-    action_col1.link_button("Open Call in New Window", room_url, width="stretch", type="primary")
-    action_col2.link_button("Open Dashboard in New Window", shared_dashboard_url, width="stretch")
+    status_col1.metric("Participants", "5+")
+    status_col2.metric("Meeting", "Audio / Video")
+    status_col3.metric("Room", safe_room_name)
+    st.link_button("Join Project Meeting", room_url, width="stretch", type="primary")
 
     invite_text = (
-        f"Project review: {conference_subject or conference_topic}\n"
+        "Join the live project review using these two links:\n"
         f"Dashboard: {shared_dashboard_url}\n"
-        f"Conference call: {room_url}\n"
-        f"Room code: {safe_room_name}"
+        f"Meeting: {room_url}"
     )
-    st.markdown("##### Invitation to Share")
-    st.code(invite_text, language=None)
+    with st.expander("Share with participants", expanded=False):
+        st.code(invite_text, language=None)
 
-    with st.expander("Participants and instructions", expanded=False):
-        st.write("Send both links above. Each participant opens the dashboard and the conference call in separate browser tabs or windows.")
-        st.write("The shared room supports at least five participants. Everyone must use the same room code.")
-        st.write("Use the persistent Live Meeting Companion above the slide tabs to reopen the call from any slide.")
-        st.write(f"Current agenda: {conference_notes}")
-
-    if conference_layout == "Embedded meeting on this slide":
-        st.info("After joining, you can switch between project slides. Streamlit keeps tab content mounted, so the call can continue while this embedded panel is hidden.")
-        st.components.v1.html(
-            build_conference_call_embed_html(
-                room_name=safe_room_name,
-                display_name=conference_display_name,
-                start_audio_only=conference_audio_only,
-                start_video_muted=conference_start_video_muted,
-                subject_line=conference_subject or f"{conference_topic} review",
-            ),
-            height=820,
-            scrolling=False,
-        )
-    else:
-        st.success("Pop-out meeting mode is ready. Open the call window once, then use this dashboard normally while speaking.")
+    st.markdown(
+        """
+        1. Click **Join Project Meeting**.
+        2. Allow microphone access and join the room.
+        3. Return to the dashboard window and review any slide while talking.
+        """
+    )
 
 st.divider()
 st.markdown("<p style='text-align:center;color:#667085;font-size:12px;'>Construction Project Control Platform | Designed and Developed By Eng. Ahmed Labib © Planning Department</p>", unsafe_allow_html=True)
