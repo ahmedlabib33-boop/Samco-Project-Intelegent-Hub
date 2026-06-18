@@ -1683,7 +1683,6 @@ PROJECT_HUB_SLIDE_NAMES = [
     "Delay Analysis - Time Impact Analysis",
     "Contract & Claims Intelligence Center",
     "Output Studio",
-    "Conference Call",
 ]
 
 
@@ -1693,22 +1692,34 @@ def sanitize_conference_room_name(value: str) -> str:
     return cleaned or "Project-Intelligence-Hub-Room"
 
 
-def build_meeting_companion_html(room_url: str) -> str:
-    safe_room_url = html.escape(room_url, quote=True)
+def build_inline_project_meeting_html(room_name: str) -> str:
+    safe_room = sanitize_conference_room_name(room_name)
     return f"""
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-                margin:14px 0 12px;padding:12px 14px;background:#ffffff;border:1px solid #d7e3ec;
-                border-left:4px solid #168f8b;border-radius:8px;box-shadow:0 8px 24px rgba(23,59,99,.07);">
-      <div style="min-width:260px;">
-        <div style="font-size:13px;font-weight:800;color:#173b63;">Project Meeting</div>
-        <div style="font-size:12px;color:#526276;margin-top:3px;">Open the call, then continue through the slides. Supports 5+ participants.</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <a href="{safe_room_url}" target="_blank" rel="noopener noreferrer"
-           style="display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:6px;
-                  background:#173b63;color:#ffffff;text-decoration:none;font-size:12px;font-weight:800;">Join Project Meeting</a>
-      </div>
+    <div style="background:#ffffff;border:1px solid #d7e3ec;border-radius:8px;padding:8px;">
+      <div id="project-meeting-container" style="width:100%;height:460px;border-radius:6px;overflow:hidden;"></div>
     </div>
+    <script src="https://meet.jit.si/external_api.js"></script>
+    <script>
+      new JitsiMeetExternalAPI("meet.jit.si", {{
+        roomName: "{safe_room}",
+        width: "100%",
+        height: 460,
+        parentNode: document.querySelector("#project-meeting-container"),
+        configOverwrite: {{
+          prejoinPageEnabled: true,
+          startAudioOnly: true,
+          startWithAudioMuted: false,
+          startWithVideoMuted: true,
+          disableDeepLinking: true
+        }},
+        interfaceConfigOverwrite: {{
+          SHOW_JITSI_WATERMARK: false,
+          SHOW_WATERMARK_FOR_GUESTS: false,
+          MOBILE_APP_PROMO: false,
+          TILE_VIEW_MAX_COLUMNS: 5
+        }}
+      }});
+    </script>
     """
 
 
@@ -7147,10 +7158,33 @@ try:
     shared_dashboard_url = str(st.context.url or "http://127.0.0.1:8755/")
 except Exception:
     shared_dashboard_url = "http://127.0.0.1:8755/"
-st.markdown(
-    build_meeting_companion_html(shared_meeting_url),
-    unsafe_allow_html=True,
-)
+
+meeting_title_col, meeting_action_col = st.columns([0.78, 0.22])
+meeting_title_col.markdown("#### Project Meeting")
+meeting_title_col.caption("Start the call here, then switch through the project slides while everyone continues talking. Supports 5+ participants.")
+if st.session_state.get("project_meeting_active", False):
+    if meeting_action_col.button("Close Meeting", key="close_project_meeting", width="stretch"):
+        st.session_state["project_meeting_active"] = False
+        st.rerun()
+else:
+    if meeting_action_col.button("Start Meeting", key="start_project_meeting", type="primary", width="stretch"):
+        st.session_state["project_meeting_active"] = True
+        st.rerun()
+
+with st.expander("Share meeting with participants", expanded=False):
+    st.code(
+        "Join the live project review:\n"
+        f"Dashboard: {shared_dashboard_url}\n"
+        f"Meeting room: {shared_meeting_url}",
+        language=None,
+    )
+
+if st.session_state.get("project_meeting_active", False):
+    st.components.v1.html(
+        build_inline_project_meeting_html(shared_meeting_room),
+        height=490,
+        scrolling=False,
+    )
 
 tabs = st.tabs(PROJECT_HUB_SLIDE_NAMES)
 
@@ -9915,37 +9949,6 @@ with tabs[12]:
                 use_container_width=True,
                 disabled=not bool(claim_html or contract_library_html),
             )
-
-with tabs[14]:
-    st.markdown("<div class='section-header'><h3>Conference Call</h3></div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div class='panel-note'><b>Talk While Reviewing the Project</b><br>Open the meeting once. Keep that window open, return to this dashboard, and move through the slides while everyone continues talking.</div>",
-        unsafe_allow_html=True,
-    )
-
-    safe_room_name = shared_meeting_room
-    room_url = shared_meeting_url
-    status_col1, status_col2, status_col3 = st.columns(3)
-    status_col1.metric("Participants", "5+")
-    status_col2.metric("Meeting", "Audio / Video")
-    status_col3.metric("Room", safe_room_name)
-    st.link_button("Join Project Meeting", room_url, width="stretch", type="primary")
-
-    invite_text = (
-        "Join the live project review using these two links:\n"
-        f"Dashboard: {shared_dashboard_url}\n"
-        f"Meeting: {room_url}"
-    )
-    with st.expander("Share with participants", expanded=False):
-        st.code(invite_text, language=None)
-
-    st.markdown(
-        """
-        1. Click **Join Project Meeting**.
-        2. Allow microphone access and join the room.
-        3. Return to the dashboard window and review any slide while talking.
-        """
-    )
 
 st.divider()
 st.markdown("<p style='text-align:center;color:#667085;font-size:12px;'>Construction Project Control Platform | Designed and Developed By Eng. Ahmed Labib © Planning Department</p>", unsafe_allow_html=True)
