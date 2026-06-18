@@ -175,13 +175,6 @@ def image_as_base64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("utf-8") if path.exists() else ""
 
 
-def read_text_file(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return path.read_text(encoding="latin-1")
-    except FileNotFoundError:
-        return ""
 
 
 def require_openpyxl():
@@ -487,10 +480,6 @@ def active_project_row(projects_df: pd.DataFrame) -> pd.Series:
 
 
 @st.cache_data(show_spinner=False)
-def load_markdown_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8", errors="replace")
 
 
 def build_overview_metrics():
@@ -1310,67 +1299,6 @@ def predict_activity_from_notice(notice_text: str, p6_df: pd.DataFrame) -> tuple
     return activity_id, activity_name, confidence
 
 
-def build_predicted_notice_register_df(
-    letters_book: dict[str, pd.DataFrame],
-    p6_df: pd.DataFrame,
-) -> pd.DataFrame:
-    if not letters_book:
-        return pd.DataFrame()
-
-    ref_map, thread_map = build_letters_reference_maps(letters_book)
-    issue_threads = letters_book.get("Issue Threads", pd.DataFrame())
-    thread_actions = {}
-    if not issue_threads.empty:
-        for _, row in issue_threads.iterrows():
-            thread_actions[str(row.get("Thread", "")).strip()] = {
-                "Priority": str(row.get("Priority", "")).strip(),
-                "Next Action": str(row.get("Next Action", "")).strip(),
-            }
-
-    rows = []
-    for ref, details in ref_map.items():
-        thread_info = thread_map.get(ref, {})
-        thread_name = thread_info.get("Thread", "")
-        thread_meta = thread_actions.get(thread_name, {})
-        combined_text = " ".join(
-            [
-                ref,
-                details.get("Subject", ""),
-                details.get("Main Purpose", ""),
-                details.get("Affected Activities", ""),
-                details.get("Risk Type", ""),
-                thread_name,
-            ]
-        )
-        predicted_activity_id, predicted_activity_name, confidence = predict_activity_from_notice(combined_text, p6_df)
-        rows.append(
-            {
-                "Notice Ref": ref,
-                "Date": details.get("Date", ""),
-                "From Party": details.get("From Party", ""),
-                "To Party": details.get("To Party", ""),
-                "Type": details.get("Type", ""),
-                "Subject": details.get("Subject", ""),
-                "Thread": thread_name,
-                "Predicted Delay Type": predict_delay_type(details.get("Type", ""), details.get("Risk Type", ""), details.get("Subject", ""), details.get("Main Purpose", "")),
-                "Predicted Status": predict_notice_status("Yes" if thread_info.get("Reply Ref", "") else "No", details.get("Type", "")),
-                "Reply Received": "Yes" if thread_info.get("Reply Ref", "") else "No",
-                "Reply Ref": thread_info.get("Reply Ref", ""),
-                "Reply Date": thread_info.get("Reply Date", ""),
-                "Predicted Activity Text": details.get("Affected Activities", ""),
-                "Predicted Activity ID": predicted_activity_id,
-                "Predicted Activity Name": predicted_activity_name,
-                "Prediction Confidence": confidence,
-                "Priority": thread_meta.get("Priority", details.get("Delay Risk", "")),
-                "Next Action": thread_meta.get("Next Action", details.get("Required Actions", "") or thread_info.get("Recommended Follow-up", "")),
-                "Approval Status": "Pending",
-                "User Comment": "",
-            }
-        )
-    result = pd.DataFrame(rows)
-    if result.empty:
-        return result
-    return result.sort_values(["Date", "Notice Ref"], ascending=[True, True], na_position="last").reset_index(drop=True)
 
 
 def risk_rank(value) -> int:
@@ -1402,17 +1330,6 @@ def dataframe_height(df: pd.DataFrame, max_height: int = 900, row_height: int = 
     return min(base + (len(df) * row_height), max_height)
 
 
-def activities_breakdown(records):
-    df = pd.DataFrame(records)
-    if df.empty:
-        return df
-    parts = df["activity_id"].astype(str).str.extract(r"(?P<discipline>[A-Z]+)-(?P<building>B\d+)", expand=True)
-    df = pd.concat([df, parts], axis=1)
-    df["discipline"] = df["discipline"].fillna("GENERAL")
-    df["building"] = df["building"].fillna("Project")
-    for col in ["planned_progress", "actual_progress", "planned_weight"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    return df
 
 
 def render_kpi_box(title: str, value: str):
@@ -1504,40 +1421,6 @@ def df_for_export(df: pd.DataFrame) -> pd.DataFrame:
     return export_df.reset_index()
 
 
-def build_export_html(report_title: str, metric_groups: list[tuple[str, dict[str, str]]], tables: list[tuple[str, pd.DataFrame]]) -> str:
-    sections = []
-    for group_title, values in metric_groups:
-        cards = "".join(
-            f"<div class='metric-card'><div class='metric-label'>{html.escape(str(k))}</div><div class='metric-value'>{html.escape(str(v))}</div></div>"
-            for k, v in values.items()
-        )
-        sections.append(f"<h2>{html.escape(group_title)}</h2><div class='metric-grid'>{cards}</div>")
-    for table_title, df in tables:
-        sections.append(f"<h2>{html.escape(table_title)}</h2>{df.to_html(index=False, escape=True)}")
-    return f"""
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>{html.escape(report_title)}</title>
-      <style>
-        body{{font-family:Arial,sans-serif;background:#f6fafc;color:#173b63;margin:24px}}
-        h1{{font-size:30px;margin:0 0 12px}}
-        h2{{font-size:20px;margin:28px 0 12px}}
-        .metric-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}}
-        .metric-card{{background:#fff;border:1px solid #dce7ef;border-left:4px solid #245f95;border-radius:10px;padding:14px}}
-        .metric-label{{font-size:12px;color:#42526b;font-weight:700}}
-        .metric-value{{font-size:24px;font-weight:800;margin-top:8px}}
-        table{{width:100%;border-collapse:collapse;background:#fff}}
-        th,td{{border:1px solid #dce7ef;padding:8px 10px;text-align:left;font-size:12px}}
-        th{{background:#eff6fa}}
-      </style>
-    </head>
-    <body>
-      <h1>{html.escape(report_title)}</h1>
-      {''.join(sections)}
-    </body>
-    </html>
-    """
 
 
 def build_the_big_decision_dashboard_html(
@@ -2687,53 +2570,6 @@ def export_linked_executive_dashboard_a3_summary_ppt(
     return stream.getvalue()
 
 
-def build_presentation_export(metric_groups: list[tuple[str, dict[str, str]]], selected_table_title: str, selected_df: pd.DataFrame) -> bytes:
-    prs = Presentation(str(PRESENTATION_TEMPLATE_PATH)) if PRESENTATION_TEMPLATE_PATH.exists() else Presentation()
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    logo_paths = [PRE_LOGO_PATH, ROYA_LOGO_PATH, ACEPM_LOGO_PATH, PRIME_LOGO_PATH, SAMCO_ALT_LOGO_PATH]
-    header_band = slide.shapes.add_shape(1, Inches(0.35), Inches(0.16), Inches(12.55), Inches(0.9))
-    header_band.fill.solid()
-    header_band.fill.fore_color.rgb = RGBColor(246, 250, 252)
-    header_band.line.color.rgb = RGBColor(220, 231, 239)
-    slot_lefts = [0.55, 1.65, 2.75, 3.85, 4.95]
-    slot_widths = [0.78, 0.66, 0.86, 0.86, 0.92]
-    slot_heights = [0.46, 0.40, 0.42, 0.42, 0.46]
-    for logo_path, left, width, height in zip(logo_paths, slot_lefts, slot_widths, slot_heights):
-        if logo_path.exists():
-            slide.shapes.add_picture(str(logo_path), Inches(left), Inches(0.39), width=Inches(width), height=Inches(height))
-    title_box = slide.shapes.add_textbox(Inches(6.05), Inches(0.24), Inches(5.9), Inches(0.38))
-    title_box.text_frame.text = "SAMCO Egypt - Flexible Dashboard Export"
-    title_box.text_frame.paragraphs[0].font.size = Pt(21)
-    title_box.text_frame.paragraphs[0].font.bold = True
-    title_box.text_frame.paragraphs[0].font.color.rgb = RGBColor(23, 59, 99)
-    subtitle_box = slide.shapes.add_textbox(Inches(6.05), Inches(0.58), Inches(5.8), Inches(0.18))
-    subtitle_box.text_frame.text = "Modern printable dashboard built from selected live program information"
-    subtitle_box.text_frame.paragraphs[0].font.size = Pt(8)
-    subtitle_box.text_frame.paragraphs[0].font.color.rgb = RGBColor(77, 100, 125)
-    top = Inches(1.08)
-    left_positions = [Inches(0.6), Inches(3.5), Inches(6.4), Inches(9.3)]
-    for group_title, values in metric_groups[:2]:
-        heading = slide.shapes.add_textbox(Inches(0.6), top, Inches(11.2), Inches(0.3))
-        heading.text_frame.text = group_title
-        heading.text_frame.paragraphs[0].font.size = Pt(15)
-        heading.text_frame.paragraphs[0].font.bold = True
-        top += Inches(0.35)
-        for idx, (label, value) in enumerate(list(values.items())[:4]):
-            card = slide.shapes.add_textbox(left_positions[idx], top, Inches(2.5), Inches(0.85))
-            tf = card.text_frame
-            tf.text = label
-            tf.paragraphs[0].font.size = Pt(10)
-            p = tf.add_paragraph()
-            p.text = value
-            p.font.size = Pt(18)
-            p.font.bold = True
-        top += Inches(1.0)
-    if not selected_df.empty:
-        add_simple_table_to_slide(slide, Inches(0.6), top, Inches(11.2), selected_table_title, selected_df)
-    stream = io.BytesIO()
-    prs.save(stream)
-    stream.seek(0)
-    return stream.getvalue()
 
 
 
@@ -4754,19 +4590,6 @@ def steel_tia_qty_sum(series: pd.Series | None) -> float:
     return float(pd.to_numeric(series, errors="coerce").fillna(0).sum())
 
 
-def numeric_sum_from_columns(df: pd.DataFrame, candidates: list[str]) -> float:
-    if df is None or df.empty:
-        return 0.0
-    normalized_lookup = {
-        re.sub(r"[^a-z0-9]+", "", str(col).lower()): col
-        for col in df.columns
-    }
-    for candidate in candidates:
-        normalized = re.sub(r"[^a-z0-9]+", "", candidate.lower())
-        col = normalized_lookup.get(normalized)
-        if col is not None:
-            return float(pd.to_numeric(df[col], errors="coerce").fillna(0).sum())
-    return 0.0
 
 
 def numeric_series_from_columns(df: pd.DataFrame, candidates: list[str], default: float = 0.0) -> pd.Series:
@@ -4925,43 +4748,8 @@ def build_bl_critical_path_comparison(bl_df: pd.DataFrame, activity_metrics: dic
     return working, comparison_df, summary
 
 
-def build_delay_tia_context() -> dict:
-    _, metadata_df = load_delay_tia_template_fallback("metadata")
-    _, master_df = load_delay_tia_template_fallback("master")
-    _, employer_raw_df = load_delay_tia_template_fallback("employer")
-    _, p6_df = load_delay_tia_template_fallback("p6")
-    _, relationship_df = load_delay_tia_template_fallback("relationship")
-    _, contract_df = load_delay_tia_template_fallback("contract")
-    _, ifc_df = load_delay_tia_template_fallback("ifc")
-    _, payments_df = load_delay_tia_template_fallback("payments")
-    _, rfi_df = load_delay_tia_template_fallback("rfi")
-    _, concurrency_matrix_df = load_delay_tia_template_fallback("concurrency")
-    bl_critical_path_df = filter_active_project(steel_tia_load_csv_or_empty(STEEL_TIA_DIR / "09- bl_critical_path.csv"))
-    _, samco_df = load_delay_tia_template_fallback("samco")
-    delay_events_df = filter_active_project(steel_tia_load_csv_or_empty(DELAYS_CSV_PATH))
-
-    context = build_delay_tia_context_from_frames(
-        master_df=master_df,
-        employer_raw_df=employer_raw_df,
-        p6_df=p6_df,
-        relationship_df=relationship_df,
-        contract_df=contract_df,
-        ifc_df=ifc_df,
-        payments_df=payments_df,
-        rfi_df=rfi_df,
-        bl_critical_path_df=bl_critical_path_df,
-        samco_df=samco_df,
-        delay_events_df=delay_events_df,
-    )
-    context["project_metadata_df"] = metadata_df
-    context["concurrency_matrix_df"] = concurrency_matrix_df
-    return context
 
 
-def steel_tia_read_uploaded_file(uploaded_file) -> pd.DataFrame:
-    if uploaded_file is None:
-        return pd.DataFrame()
-    return steel_tia_read_file_bytes(uploaded_file.read(), uploaded_file.name)
 
 
 def steel_tia_read_file_bytes(file_bytes: bytes, file_name: str) -> pd.DataFrame:
@@ -4985,35 +4773,10 @@ def delay_tia_cache_meta_path(cache_key: str) -> Path:
     return DELAY_TIA_UPLOAD_CACHE_DIR / f"{cache_key}.json"
 
 
-def persist_delay_tia_upload(uploaded_file, cache_key: str) -> tuple[str, pd.DataFrame]:
-    DELAY_TIA_UPLOAD_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    file_bytes = uploaded_file.getvalue()
-    delay_tia_cache_payload_path(cache_key).write_bytes(file_bytes)
-    delay_tia_cache_meta_path(cache_key).write_text(
-        json.dumps({"name": uploaded_file.name}, ensure_ascii=True),
-        encoding="utf-8",
-    )
-    return uploaded_file.name, steel_tia_read_file_bytes(file_bytes, uploaded_file.name)
 
 
-def load_persisted_delay_tia_upload(cache_key: str) -> tuple[str | None, pd.DataFrame]:
-    payload_path = delay_tia_cache_payload_path(cache_key)
-    meta_path = delay_tia_cache_meta_path(cache_key)
-    if not payload_path.exists() or not meta_path.exists():
-        return None, pd.DataFrame()
-    try:
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        file_name = str(meta.get("name", "")).strip() or f"{cache_key}.csv"
-        file_bytes = payload_path.read_bytes()
-        return file_name, steel_tia_read_file_bytes(file_bytes, file_name)
-    except Exception:
-        return None, pd.DataFrame()
 
 
-def clear_persisted_delay_tia_upload(cache_key: str) -> None:
-    for path in [delay_tia_cache_payload_path(cache_key), delay_tia_cache_meta_path(cache_key)]:
-        if path.exists():
-            path.unlink()
 
 
 def load_bl_fixed_context() -> dict[str, pd.DataFrame]:
@@ -6136,34 +5899,8 @@ def delay_tia_set_table_cell(cell, text: str):
     cell.text = text
 
 
-def delay_tia_fill_table_rows(table, rows: list[list[str]], start_row: int = 1):
-    while len(table.rows) < start_row + len(rows):
-        table.add_row()
-    for row_index, values in enumerate(rows, start=start_row):
-        for col_index, value in enumerate(values):
-            if col_index < len(table.rows[row_index].cells):
-                delay_tia_set_table_cell(table.rows[row_index].cells[col_index], value)
 
 
-def delay_tia_append_docx_dataframe(doc, title: str, df: pd.DataFrame, columns: list[str] | None = None) -> None:
-    doc.add_paragraph()
-    doc.add_heading(title, level=1)
-    if df is None or df.empty:
-        doc.add_paragraph("No data was generated from the current uploaded records.")
-        return
-    working_df = df.copy()
-    if columns:
-        keep_cols = [col for col in columns if col in working_df.columns]
-        if keep_cols:
-            working_df = working_df[keep_cols]
-    table = doc.add_table(rows=1, cols=len(working_df.columns))
-    table.style = "Table Grid"
-    for idx, col in enumerate(working_df.columns):
-        table.rows[0].cells[idx].text = str(col)
-    for _, row in working_df.iterrows():
-        cells = table.add_row().cells
-        for idx, col in enumerate(working_df.columns):
-            cells[idx].text = delay_tia_docx_text(row.get(col))
 
 
 def delay_tia_join_nonempty(parts: list[str]) -> str:
@@ -7117,75 +6854,6 @@ def build_delay_tia_final_delayed_activities_df(context: dict, analysis: dict) -
     return pd.concat([grouped, total_rows], ignore_index=True)
 
 
-def build_delay_tia_forensic_schedule_output_df(
-    context: dict,
-    analysis: dict,
-    concurrent_df: pd.DataFrame,
-    bl_summary: dict | None = None,
-) -> pd.DataFrame:
-    p6_df = context.get("p6_df", pd.DataFrame()).copy()
-    relationship_df = context.get("relationship_df", pd.DataFrame()).copy()
-    fragnet_df = analysis.get("fragnet_df", pd.DataFrame()).copy()
-    candidates_df = analysis.get("candidates_df", pd.DataFrame()).copy()
-    bl_summary = bl_summary or {}
-
-    current_critical_count = 0
-    current_longest_count = 0
-    negative_float_count = 0
-    near_critical_count = 0
-    if not p6_df.empty:
-        if "Critical" in p6_df.columns:
-            current_critical_count = int(p6_df["Critical"].astype(str).str.strip().str.lower().isin(["yes", "true", "1", "y"]).sum())
-        if "Longest Path" in p6_df.columns:
-            current_longest_count = int(p6_df["Longest Path"].astype(str).str.strip().str.lower().isin(["yes", "true", "1", "y"]).sum())
-        if "Total Float" in p6_df.columns:
-            total_float = pd.to_numeric(p6_df["Total Float"], errors="coerce")
-            negative_float_count = int((total_float < 0).sum())
-            near_critical_count = int(((total_float >= 0) & (total_float <= 10)).sum())
-
-    concurrent_path_rows = 0
-    non_steel_path_rows = 0
-    if isinstance(concurrent_df, pd.DataFrame) and not concurrent_df.empty:
-        current_critical = concurrent_df.get("Current Critical", pd.Series(dtype=object)).astype(str).str.strip().str.lower().eq("yes")
-        current_longest = concurrent_df.get("Current Longest Path", pd.Series(dtype=object)).astype(str).str.strip().str.lower().eq("yes")
-        path_mask = current_critical | current_longest
-        concurrent_path_rows = int(path_mask.sum())
-        non_steel_path_rows = int((path_mask & concurrent_df.get("Delay Stream", pd.Series(dtype=object)).astype(str).str.lower().ne("steel")).sum())
-
-    return pd.DataFrame(
-        [
-            {
-                "Forensic Test": "Schedule data completeness",
-                "Result": f"P6 activities={len(p6_df)}; relationships={len(relationship_df)}; fragnet rows={len(fragnet_df)}",
-                "Basis": "Uploaded P6 activity export, relationship file, and generated fragnet recommendation.",
-                "Submission Use": "Confirms the schedule records used for the TIA run.",
-            },
-            {
-                "Forensic Test": "Current critical / longest path status",
-                "Result": f"Critical={current_critical_count}; Longest Path={current_longest_count}; Negative Float={negative_float_count}; Near Critical 0-10d={near_critical_count}",
-                "Basis": "Current update fields Critical, Longest Path, and Total Float from the P6 export.",
-                "Submission Use": "Shows whether affected activities sit on current driving or near-driving paths.",
-            },
-            {
-                "Forensic Test": "BL vs update path movement",
-                "Result": f"BL critical={bl_summary.get('bl_count', 0)}; Current critical={bl_summary.get('current_count', 0)}; Matched={bl_summary.get('matched_count', 0)}; BL only={bl_summary.get('bl_only_count', 0)}; Current only={bl_summary.get('current_only_count', 0)}",
-                "Basis": "Automatic comparison between the BL fixed package and current Activities critical path analysis.",
-                "Submission Use": "Identifies whether delay exposure remained on, moved from, or moved to the driving path.",
-            },
-            {
-                "Forensic Test": "Event concurrency on driving path",
-                "Result": f"Concurrent/path rows={concurrent_path_rows}; Non-steel path rows={non_steel_path_rows}",
-                "Basis": "Concurrent Delay Review combining steel, RFI, IFC, float, critical, and longest-path status.",
-                "Submission Use": "Separates submitted TIA days from supporting concurrency evidence.",
-            },
-            {
-                "Forensic Test": "Fragnet defensibility",
-                "Result": f"Generated fragnet rows={len(fragnet_df)}; affected candidates={len(candidates_df)}",
-                "Basis": "Employer-only steel delay logic, relationship logic, activity selection, and recorded delay duration where available.",
-                "Submission Use": "Supports the schedule insertion basis for the claimed TIA event.",
-            },
-        ]
-    )
 def build_delay_tia_director_pack_context(
     context: dict,
     analysis: dict,
@@ -7259,12 +6927,6 @@ def build_delay_tia_director_pack_context(
     }
 
 
-def build_delay_tia_director_docx_report_bytes(context: dict, analysis: dict) -> bytes:
-    generator = TIADirectorPackGenerator(TIA_DIRECTOR_WORD_TEMPLATE_PATH, GENERATED_OUTPUTS_DIR, CONTRACT_CLAIMS_DB_PATH)
-    report_context = build_delay_tia_director_pack_context(context, analysis, overrides={"revision": "Rev. 00"})
-    report_context["missing_required_fields"] = []
-    output_path = generator.generate(report_context)
-    return output_path.read_bytes()
 
 
 def build_delay_tia_delay_report_df(context: dict, analysis: dict) -> pd.DataFrame:
