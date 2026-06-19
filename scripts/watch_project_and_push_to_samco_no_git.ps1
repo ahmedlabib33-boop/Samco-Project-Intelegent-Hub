@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $syncScript = Join-Path $PSScriptRoot "sync_current_to_samco_no_git.ps1"
-$logPath = Join-Path $root "project_data\no_git_auto_sync_watcher.log"
+$logPath = Join-Path $root "generated_outputs\logs\no_git_auto_sync_watcher.log"
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath -Parent) | Out-Null
 
 $ignoredPathFragments = @(
@@ -21,7 +21,7 @@ $ignoredPathFragments = @(
     "\.mypy_cache\",
     "\.ruff_cache\",
     "\.vite\",
-    "\project_data\",
+    "\generated_outputs\logs\",
     "\.streamlit\delay_tia_upload_cache\"
 )
 

@@ -1,0 +1,233 @@
+"""Folder-based project discovery and project-owned data paths."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
+
+import pandas as pd
+
+
+PROJECT_METADATA_FILE = "project.json"
+PROJECT_MANIFEST_FILE = "project_manifest.json"
+PROJECT_TEMPLATE_DIRNAME = "_PROJECT_TEMPLATE"
+PROJECT_SUBDIRECTORIES = (
+    "1-branding",
+    "2-contracts/source",
+    "2-contracts/evidence",
+    "3-evidence",
+    "4-notes",
+    "data/import_templates",
+    "delay_analysis/steel_delay_tia_templates",
+    "delay_analysis/methodology",
+    "bl",
+    "fixed",
+    "letters_intelligence/inbox/From Contractor",
+    "letters_intelligence/inbox/From Consultant",
+    "source_excel",
+    "exports",
+    "reports",
+    "slides",
+    "outputs",
+    "logs",
+)
+
+
+def safe_project_id(value: Any) -> str:
+    """Return a filesystem-safe project id while preserving readable names."""
+    text = str(value or "").strip()
+    return "".join(ch for ch in text if ch not in '<>:"/\\|?*').strip(" .")
+
+
+def read_project_metadata(project_dir: Path) -> dict[str, Any]:
+    manifest_path = project_dir / PROJECT_MANIFEST_FILE
+    metadata_path = project_dir / PROJECT_METADATA_FILE
+    metadata: dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                metadata.update(loaded)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            pass
+    if metadata_path.exists():
+        try:
+            loaded = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                for key, value in loaded.items():
+                    metadata.setdefault(key, value)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            metadata = {}
+
+    project_id = safe_project_id(metadata.get("project_id")) or project_dir.name
+    csv_project_name = ""
+    project_csv = project_dir / "data" / "import_templates" / "projects.csv"
+    if project_csv.exists():
+        try:
+            project_rows = pd.read_csv(project_csv, nrows=1).fillna("")
+            if not project_rows.empty:
+                csv_project_name = str(project_rows.iloc[0].get("project_name", "")).strip()
+        except (OSError, UnicodeDecodeError, pd.errors.ParserError):
+            csv_project_name = ""
+    project_name = str(csv_project_name or metadata.get("project_display_name") or metadata.get("project_name") or project_dir.name).strip()
+    return {
+        **metadata,
+        "project_id": project_id,
+        "project_name": project_name,
+        "project_display_name": project_name,
+        "project_folder_name": project_dir.name,
+        "project_dir": str(project_dir),
+    }
+
+
+def discover_projects(projects_root: Path) -> list[dict[str, Any]]:
+    """Discover every project folder; underscore-prefixed folders are templates."""
+    if not projects_root.exists():
+        return []
+    records = []
+    for path in projects_root.iterdir():
+        if not path.is_dir() or path.name.startswith(("_", ".")):
+            continue
+        ensure_project_manifest(path)
+        ensure_project_structure(path)
+        records.append(read_project_metadata(path))
+    return sorted(records, key=lambda row: (str(row["project_name"]).casefold(), str(row["project_id"]).casefold()))
+
+
+def projects_frame(projects_root: Path) -> pd.DataFrame:
+    records = discover_projects(projects_root)
+    if not records:
+        return pd.DataFrame(columns=["project_id", "project_name", "project_dir"])
+    return pd.DataFrame(records)
+
+
+def project_directory(projects_root: Path, project_id: str) -> Path:
+    clean_id = safe_project_id(project_id)
+    for record in discover_projects(projects_root):
+        if str(record.get("project_id", "")).strip().casefold() == clean_id.casefold():
+            return Path(str(record["project_dir"]))
+    return projects_root / clean_id
+
+
+def project_data_path(projects_root: Path, project_id: str, family: str, relative_path: Path | str) -> Path:
+    family_roots = {
+        "core": Path("data/import_templates"),
+        "delay_analysis": Path("delay_analysis/steel_delay_tia_templates"),
+        "bl": Path("bl"),
+        "letters": Path("letters_intelligence"),
+        "exports": Path("exports"),
+        "reports": Path("reports"),
+        "branding": Path("1-branding"),
+    }
+    if family not in family_roots:
+        raise ValueError(f"Unknown project data family: {family}")
+    return project_directory(projects_root, project_id) / family_roots[family] / Path(relative_path)
+
+
+def ensure_project_structure(project_dir: Path) -> None:
+    project_dir.mkdir(parents=True, exist_ok=True)
+    for relative_dir in PROJECT_SUBDIRECTORIES:
+        folder = project_dir / relative_dir
+        folder.mkdir(parents=True, exist_ok=True)
+        if not any(folder.iterdir()):
+            (folder / ".gitkeep").touch(exist_ok=True)
+    ensure_project_samples(project_dir)
+
+
+def ensure_project_samples(project_dir: Path) -> None:
+    """Create non-destructive examples for the standard user-managed folders."""
+    project_id = project_dir.name
+    manifest_path = project_dir / PROJECT_MANIFEST_FILE
+    if manifest_path.exists():
+        try:
+            project_id = safe_project_id(json.loads(manifest_path.read_text(encoding="utf-8")).get("project_id")) or project_id
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+            pass
+    samples = {
+        "1-branding/README.md": "# Branding\n\nReplace example files with project-approved brand assets. Existing files are never overwritten.\n",
+        "1-branding/project_identity_template.json": json.dumps({"project_name": "Example Project", "client": "Example Client", "contractor": "Example Contractor", "consultant": "Example Consultant"}, indent=2) + "\n",
+        "1-branding/color_palette_template.csv": f"project_id,role,color_hex\n{project_id},primary,#123B5D\n{project_id},secondary,#5B6870\n{project_id},accent,#C7A34B\n{project_id},background,#FFFFFF\n",
+        "1-branding/report_branding_template.json": json.dumps({"header_text": "Example Project", "footer_text": "Confidential", "logo_file": "logo.png"}, indent=2) + "\n",
+        "1-branding/logo_placeholder.txt": "Place the approved project logo here as logo.png.\n",
+        "2-contracts/evidence/contract_evidence_register_template.csv": "project_id,evidence_id,contract_clause,document_reference,event_id,description,status\n",
+        "2-contracts/evidence/clause_reference_template.csv": "project_id,clause_id,clause_title,source_file,source_page,entitlement_topic,notes\n",
+        "2-contracts/evidence/correspondence_reference_template.csv": "project_id,reference,date,from_party,to_party,subject,related_event_id,evidence_status\n",
+        "3-evidence/evidence_register_template.csv": "project_id,evidence_id,evidence_type,source_file,source_date,event_id,activity_id,description,verified\n",
+        "3-evidence/photo_log_template.csv": "project_id,photo_id,date,location,activity_id,event_id,file_name,caption,taken_by\n",
+        "3-evidence/document_reference_template.csv": "project_id,document_id,document_type,reference,date,source_file,related_event_id,notes\n",
+        "4-notes/meeting_notes_template.md": "# Meeting Notes\n\n- Date:\n- Attendees:\n- Decisions:\n- Actions:\n- Related event or activity:\n",
+        "4-notes/engineering_notes_template.md": "# Engineering Notes\n\n- Date:\n- Discipline:\n- Drawing / RFI reference:\n- Constraint:\n- Required action:\n",
+        "4-notes/claims_notes_template.md": "# Claims Notes\n\n- Date:\n- Event ID:\n- Clause reference:\n- Notice status:\n- Cause and effect:\n- Missing evidence:\n",
+    }
+    for relative_path, content in samples.items():
+        path = project_dir / relative_path
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+    readme_path = project_dir / "README.md"
+    if not readme_path.exists():
+        readme_path.write_text(
+            f"# {project_dir.name}\n\nThis folder is automatically discovered by Project Intelligence Hub. Edit project_manifest.json and project-owned data only.\n",
+            encoding="utf-8",
+        )
+
+
+def ensure_project_manifest(project_dir: Path) -> Path:
+    """Create a stable manifest or refresh only rename-sensitive path fields."""
+    manifest_path = project_dir / PROJECT_MANIFEST_FILE
+    now = datetime.now(timezone.utc).isoformat()
+    existing: dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                existing = loaded
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            existing = {}
+    legacy: dict[str, Any] = {}
+    legacy_path = project_dir / PROJECT_METADATA_FILE
+    if legacy_path.exists():
+        try:
+            loaded = json.loads(legacy_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                legacy = loaded
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            legacy = {}
+    project_id = safe_project_id(existing.get("project_id") or legacy.get("project_id") or project_dir.name)
+    folder_changed = (
+        str(existing.get("project_folder_name", "")) != project_dir.name
+        or str(existing.get("project_folder_path", "")) != str(project_dir.resolve())
+    )
+    manifest = {
+        **existing,
+        "project_id": project_id,
+        "project_display_name": str(existing.get("project_display_name") or legacy.get("project_name") or project_dir.name),
+        "project_folder_name": project_dir.name,
+        "project_folder_path": str(project_dir.resolve()),
+        "created_at": existing.get("created_at") or now,
+        "updated_at": now if folder_changed or not existing else existing.get("updated_at", now),
+        "status": existing.get("status") or legacy.get("status") or "Setup",
+    }
+    if manifest != existing:
+        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    return manifest_path
+
+
+def aggregate_project_csvs(paths: Iterable[tuple[str, Path]]) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+    for project_id, path in paths:
+        if not path.exists():
+            continue
+        try:
+            frame = pd.read_csv(path).fillna("")
+        except (OSError, UnicodeDecodeError, pd.errors.ParserError):
+            continue
+        if "project_id" not in frame.columns:
+            frame.insert(0, "project_id", project_id)
+        else:
+            blank = frame["project_id"].astype(str).str.strip().eq("")
+            frame.loc[blank, "project_id"] = project_id
+        frames.append(frame)
+    return pd.concat(frames, ignore_index=True, sort=False) if frames else pd.DataFrame()

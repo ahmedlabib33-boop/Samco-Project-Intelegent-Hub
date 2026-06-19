@@ -7,14 +7,11 @@ $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $syncScript = Join-Path $PSScriptRoot "sync_current_to_samco.ps1"
-$logPath = Join-Path $root "project_data\excel_sync_to_github.log"
+$logPath = Join-Path $root "generated_outputs\logs\excel_sync_to_github.log"
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath -Parent) | Out-Null
 
 $watchRoots = @(
-    "data",
-    "steel_delay_tia_templates",
-    "BL fixed",
-    "Fixed input",
+    "projects",
     "templates"
 ) | ForEach-Object { Join-Path $root $_ } | Where-Object { Test-Path -LiteralPath $_ }
 

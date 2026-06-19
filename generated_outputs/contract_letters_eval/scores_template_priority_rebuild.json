@@ -1,0 +1,261 @@
+{
+  "label": "template_priority_rebuild",
+  "timestamp": "2026-06-14T20:20:18.311025+00:00",
+  "artifact_path": "C:\\Users\\pc\\OneDrive\\Documents\\Project Intelligence Hub\\generated_outputs\\contract_letters_eval\\artifact_template_priority_rebuild.md",
+  "overall_score": 100.0,
+  "llm_average": 100.0,
+  "contract_score": 100.0,
+  "letters_score": 100.0,
+  "methodology_score": 100.0,
+  "details": {
+    "contract": [
+      {
+        "criterion": "contract library built",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "clauses classified by section and claim type",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "notice/time/cost columns available",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "contract question returns decision",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "contract answer includes evidence score",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "rebuttal detects client defenses",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "claim draft includes core sections",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "evidence mappings generated",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "contract KPIs generated",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "stored evidence created",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "late drawing clause ranked in top 3",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "broad design risk not ranked first",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "evidence maps to late-drawing or time-bar clauses",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "evidence mapping basis is contextual",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "scanned PDF source limitation disclosed",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "scanned PDF render diagnostics available",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "OCR installation requirement disclosed when unavailable",
+        "passed": true,
+        "weight": 8
+      }
+    ],
+    "letters": [
+      {
+        "criterion": "letters workbook loaded",
+        "passed": true,
+        "weight": 14
+      },
+      {
+        "criterion": "notice register generated",
+        "passed": true,
+        "weight": 14
+      },
+      {
+        "criterion": "thread linkage present",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "reply tracking present",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "delay type prediction present",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "open action tracking present",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "priority tracking present",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "notice refs from both parties present",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "risk/eot subjects visible",
+        "passed": true,
+        "weight": 6
+      }
+    ],
+    "methodology": [
+      {
+        "criterion": "mentions notices and time-bar",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "mentions entitlement",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "mentions critical path or longest path",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "mentions TIA/window methodology",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "mentions concurrency/contractor delay",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "mentions causation/cause and effect",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "mentions contemporaneous records/evidence",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "mentions cost substantiation",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "mentions client rejection/rebuttal",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "mentions attachments/checklist",
+        "passed": true,
+        "weight": 8
+      }
+    ],
+    "llm": [
+      {
+        "criterion": "answer is report-grade length",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "clear decision/risk/evidence labels",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "includes missing evidence",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "separates entitlement/proof/schedule/cost",
+        "passed": true,
+        "weight": 14
+      },
+      {
+        "criterion": "client rebuttal is actionable",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "claim draft is submission-oriented",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "letters are linked to claims workflow",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "uses precise claims language",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "methodology source read",
+        "passed": true,
+        "weight": 8
+      }
+    ]
+  },
+  "row_counts": {
+    "clauses": 66,
+    "evidence_mappings": 25,
+    "notices": 102,
+    "rebuttal_defenses": 2
+  },
+  "kpis": {
+    "total_clauses": 66,
+    "contractor_rights": 32,
+    "employer_obligations": 52,
+    "high_risk_clauses": 46,
+    "strong_claim_opportunities": 49,
+    "missing_evidence_items": 0,
+    "contract_status": "Contract Loaded",
+    "last_analysis_date": "2026-06-14T20:20:16+00:00"
+  }
+}

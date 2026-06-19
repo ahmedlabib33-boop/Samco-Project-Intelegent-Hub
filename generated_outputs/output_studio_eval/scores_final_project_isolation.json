@@ -1,0 +1,359 @@
+{
+  "label": "final_project_isolation",
+  "timestamp": "2026-06-19T11:48:05.505647+00:00",
+  "overall_score": 98.67,
+  "llm_average": 100.0,
+  "data_coverage_score": 100.0,
+  "export_coverage_score": 100.0,
+  "design_quality_score": 93.94,
+  "reliability_score": 100.0,
+  "data_sources_inspected": 26,
+  "generated_outputs_inspected": 192,
+  "details": {
+    "data_coverage": [
+      {
+        "criterion": "core dataset present: projects.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: activities.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: evm.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: contracts.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: payments.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: delay_events.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: risks.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: milestones.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: change_orders.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: s_curve.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: wbs.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: rfi_ status.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "core dataset present: ifc_conflict.csv",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "at least 15 output data sources inspected",
+        "passed": true,
+        "weight": 12
+      },
+      {
+        "criterion": "at least 8 generated/report artifacts inspected",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "letters workbook included",
+        "passed": true,
+        "weight": 6
+      },
+      {
+        "criterion": "data columns captured for audit",
+        "passed": true,
+        "weight": 8
+      }
+    ],
+    "export_coverage": [
+      {
+        "criterion": "output path visible: Executive dashboard",
+        "passed": true,
+        "weight": 5
+      },
+      {
+        "criterion": "output path visible: Original presentation print-only",
+        "passed": true,
+        "weight": 5
+      },
+      {
+        "criterion": "output path visible: Linked executive dashboard",
+        "passed": true,
+        "weight": 5
+      },
+      {
+        "criterion": "output path visible: Detailed Progress report",
+        "passed": true,
+        "weight": 5
+      },
+      {
+        "criterion": "download export visible: Download Executive Dashboard (.html)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Updated Original Presentation (.pptx)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Linked Executive Dashboard (.html)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Linked Executive Dashboard PowerPoint (.pptx) - Landscape",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Summarized Linked Dashboard (.html) - A3 Landscape One Page",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Detailed Progress Report (.xlsx)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Detailed Progress Report (.html)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Detailed Progress Report (.docx)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "download export visible: Download Power BI Style Dashboard (.html)",
+        "passed": true,
+        "weight": 4
+      },
+      {
+        "criterion": "Output Studio has no password gate",
+        "passed": true,
+        "weight": 6
+      },
+      {
+        "criterion": "all modes have export/download controls",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "HTML, PPTX, XLSX, DOCX exports available",
+        "passed": true,
+        "weight": 8
+      }
+    ],
+    "design_quality": [
+      {
+        "criterion": "design term present: management decision",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: executive",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: critical alerts",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: decision",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: risk",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: exposure",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: owner",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: action",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: dashboard",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: Power BI",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: modern",
+        "passed": false,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: digital",
+        "passed": false,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: governance",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "design term present: validation",
+        "passed": true,
+        "weight": 2
+      },
+      {
+        "criterion": "A3 / print-ready output referenced",
+        "passed": true,
+        "weight": 6
+      },
+      {
+        "criterion": "Flexible dashboard builder removed",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "Executive dashboard uses dark executive surface",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "Detailed Progress digital generators present",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "management-ready wording visible",
+        "passed": true,
+        "weight": 8
+      }
+    ],
+    "reliability": [
+      {
+        "criterion": "detailed progress validates openpyxl availability",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "download buttons disable empty original presentation",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "detailed HTML handles empty data sources",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "report assumptions displayed",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "validation checks displayed",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "Word export has DOCX availability guard",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "artifact evaluator generated",
+        "passed": true,
+        "weight": 6
+      }
+    ],
+    "llm_quality": [
+      {
+        "criterion": "Output Studio uses active project identity",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "download names include selected project identity",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "no fallback to another project",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "Power BI workflow remains available",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "all detailed report formats remain available",
+        "passed": true,
+        "weight": 10
+      },
+      {
+        "criterion": "validation remains visible",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "instructional governance panel remains removed",
+        "passed": true,
+        "weight": 8
+      },
+      {
+        "criterion": "executive decision dashboard remains available",
+        "passed": true,
+        "weight": 10
+      }
+    ]
+  }
+}

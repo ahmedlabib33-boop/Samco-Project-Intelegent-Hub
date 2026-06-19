@@ -1,83 +1,39 @@
-# Project Intelligence Hub - Run and Sync Commands
+# Project Intelligence Hub Operating Prompt
 
-Open PowerShell in:
+Work only in `C:\Users\pc\OneDrive\Documents\Project Intelligence Hub`.
 
-```text
-C:\Users\pc\OneDrive\Documents\Project Intelligence Hub
-```
+1. Preserve the existing `Dashboard project` selector and folder discovery.
+2. Use `project_id` from `project_manifest.json` as the stable identity everywhere.
+3. Use `ProjectContext` to resolve the selected ID to the folder's current actual path.
+4. Support folder renames without changing project identity or mixing data.
+5. Auto-discover unlimited future folders under `projects` without code registration.
+6. Scope every dashboard loader, Claims Intelligence operation, Delay TIA calculation, report, slide, export, cache, and database to the selected project.
+7. In `All projects`, allow only explicit portfolio aggregations retaining `project_id`; block project-specific claims/TIA workflows.
+8. Never fall back to a default, legacy, random, first, or previously selected project.
+9. Missing selected-project data must show a clean empty/setup state.
+10. Preserve all existing business logic, slides, reports, exports, and formats.
+11. Do not overwrite user files. Standard project samples are created only when missing.
+12. Maintain `data_to_program.md`, `data_lineage.json`, validation tests, and the active backup change log.
 
-## Start the Dashboard
-
-```powershell
-.\RUN_APP.bat
-```
-
-Local URL:
-
-```text
-http://127.0.0.1:8755
-```
-
-## Start the Public Tunnel
-
-```powershell
-.\RUN_TUNNEL.bat
-```
-
-Keep the tunnel window open while people use the public link.
-
-## Manually Sync the Complete Project to GitHub
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\sync_current_to_samco.ps1 -Message "Update Project Intelligence Hub"
-```
-
-Target repository:
-
-```text
-https://github.com/ahmedlabib33-boop/Samco-Project-Intelegent-Hub
-```
-
-## Start Automatic Full-Project Sync
-
-```powershell
-.\RUN_FULL_PROJECT_NO_GIT_SYNC.bat
-```
-
-This watches the complete project folder and synchronizes detected changes to the GitHub repository. `GITHUB_TOKEN` or `GH_TOKEN` must be configured with repository write access.
-
-## Start Excel and CSV Sync Only
-
-```powershell
-.\RUN_LIVE_EXCEL_SYNC.bat
-```
-
-This watches Excel and CSV data locations and runs the Git-based synchronization script when data changes.
-
-## Recommended Complete Startup
-
-Run each command in a separate PowerShell window:
+Run app:
 
 ```powershell
 .\RUN_APP.bat
 ```
 
-```powershell
-.\RUN_FULL_PROJECT_NO_GIT_SYNC.bat
-```
+Validate:
 
 ```powershell
-.\RUN_TUNNEL.bat
+python -m pytest -q tests
+python tools/validate_project_isolation.py --sync-probe
 ```
 
-## Health Check
+Full workspace no-Git repository sync only:
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8755/_stcore/health
+.\RUN_FULL_PROJECT_NO_GIT_SYNC.bat Watch 30
 ```
 
-The expected response is:
+Manual repository refresh is also available in Output Studio after `GITHUB_TOKEN` and `SYNC_ADMIN_PIN` are configured as environment variables. Never place either secret in code, prompts, configuration JSON, or documentation.
 
-```text
-ok
-```
+Target: `ahmedlabib33-boop/Samco-Project-Intelegent-Hub`, branch `main`.

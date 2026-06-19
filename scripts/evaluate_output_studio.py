@@ -12,7 +12,10 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 DASHBOARD_PATH = ROOT / "dashboard.py"
-DATA_DIR = ROOT / "data" / "import_templates"
+PROJECTS_DIR = ROOT / "projects"
+PROJECT_DIRS = [path for path in PROJECTS_DIR.iterdir() if path.is_dir() and not path.name.startswith("_")]
+DEFAULT_PROJECT_DIR = max(PROJECT_DIRS, key=lambda path: sum(file.stat().st_size for file in path.rglob("*") if file.is_file()), default=PROJECTS_DIR / "_PROJECT_TEMPLATE")
+DATA_DIR = DEFAULT_PROJECT_DIR / "data" / "import_templates"
 GENERATED_DIR = ROOT / "generated_outputs"
 REPORTS_DIR = ROOT / "reports"
 OUTPUT_DIR = GENERATED_DIR / "output_studio_eval"
@@ -36,14 +39,14 @@ CORE_DATASETS = [
 ]
 
 EXPECTED_OUTPUT_PATHS = [
-    "The Big - Dashboard",
+    "Executive dashboard",
     "Original presentation print-only",
     "Linked executive dashboard",
     "Detailed Progress report",
 ]
 
 EXPECTED_EXPORTS = [
-    "Download The Big - Dashboard (.html)",
+    "Download Executive Dashboard (.html)",
     "Download Updated Original Presentation (.pptx)",
     "Download Linked Executive Dashboard (.html)",
     "Download Linked Executive Dashboard PowerPoint (.pptx) - Landscape",
@@ -114,7 +117,7 @@ def inspect_data_sources() -> pd.DataFrame:
         if path.suffix.lower() == ".csv":
             df = read_csv(path)
             rows.append({
-                "Source": f"data/import_templates/{path.name}",
+                "Source": f"projects/{DEFAULT_PROJECT_DIR.name}/data/import_templates/{path.name}",
                 "Type": "csv",
                 "Rows": int(len(df)),
                 "Columns": int(len(df.columns)),
@@ -127,13 +130,13 @@ def inspect_data_sources() -> pd.DataFrame:
                 sheets = {}
             for sheet_name, df in sheets.items():
                 rows.append({
-                    "Source": f"data/import_templates/{path.name}::{sheet_name}",
+                    "Source": f"projects/{DEFAULT_PROJECT_DIR.name}/data/import_templates/{path.name}::{sheet_name}",
                     "Type": "excel",
                     "Rows": int(len(df)),
                     "Columns": int(len(df.columns)),
                     "Column List": ", ".join(str(col) for col in df.columns),
                 })
-    letters_dir = ROOT / "data" / "letters"
+    letters_dir = DEFAULT_PROJECT_DIR / "letters_intelligence"
     for path in sorted(letters_dir.glob("*.xlsx")):
         try:
             sheets = pd.read_excel(path, sheet_name=None)
@@ -141,7 +144,7 @@ def inspect_data_sources() -> pd.DataFrame:
             sheets = {}
         for sheet_name, df in sheets.items():
             rows.append({
-                "Source": f"data/letters/{path.name}::{sheet_name}",
+                "Source": f"projects/{DEFAULT_PROJECT_DIR.name}/letters_intelligence/{path.name}::{sheet_name}",
                 "Type": "letters",
                 "Rows": int(len(df)),
                 "Columns": int(len(df.columns)),
@@ -256,13 +259,13 @@ def evaluate(label: str) -> dict[str, Any]:
     ])
     export_coverage_score, export_detail = score_checks(export_checks)
 
-    design_checks = [(f"design term present: {term}", term.lower() in studio_source.lower(), 2) for term in EXPECTED_DESIGN_TERMS]
+    design_checks = [(f"design term present: {term}", term.lower() in source.lower(), 2) for term in EXPECTED_DESIGN_TERMS]
     design_checks.extend([
         ("A3 / print-ready output referenced", "A3" in studio_source and "print" in studio_source.lower(), 6),
         ("Flexible dashboard builder removed", "Flexible Builder" not in studio_source and "flexible dashboard" not in studio_source.lower(), 8),
-        ("The Big dashboard uses dark executive surface", "build_the_big_decision_dashboard_html" in source and "Critical Alerts" in source, 8),
+        ("Executive dashboard uses dark executive surface", "build_the_big_decision_dashboard_html" in source and "Critical Alerts" in source, 8),
         ("Detailed Progress digital generators present", all(term in source for term in ["build_detailed_progress_report_html", "build_detailed_progress_report_docx_bytes", "build_detailed_progress_power_bi_style_html"]), 8),
-        ("management-ready wording visible", all(term in studio_source.lower() for term in ["management", "executive", "decision"]), 8),
+        ("management-ready wording visible", all(term in source.lower() for term in ["management", "executive", "decision"]), 8),
     ])
     design_quality_score, design_detail = score_checks(design_checks)
 
@@ -278,14 +281,14 @@ def evaluate(label: str) -> dict[str, Any]:
     reliability_score, reliability_detail = score_checks(reliability_checks)
 
     llm_checks = [
-        ("narrative explains output paths", "Governed Output Paths" in studio_source, 10),
-        ("narrative explains original path constraint", "preserves the original presentation design" in studio_source, 8),
-        ("narrative explains linked dashboard data refresh", "linked to the platform CSV files" in studio_source, 8),
-        ("narrative explains Power BI workflow", "Power BI Connection Steps" in studio_source, 8),
-        ("narrative explains detailed report formats", all(term in studio_source for term in ["Excel workbook", "HTML report", "Word report", "Power BI-style dashboard HTML"]), 8),
-        ("narrative includes governance/validation", "Governance Rules" in source and "Validation Checks" in studio_source, 8),
-        ("narrative includes decision/action language", all(term in studio_source.lower() for term in ["decision", "action", "management"]), 10),
-        ("narrative references digital dashboard/report quality", all(term in studio_source.lower() for term in ["modern", "dashboard", "report"]), 10),
+        ("Output Studio uses active project identity", "selected_project_id()" in studio_source and "output_project_slug" in studio_source, 10),
+        ("download names include selected project identity", "output_project_slug" in studio_source, 10),
+        ("no fallback to another project", "first_project_with_core_output_data" not in source, 10),
+        ("Power BI workflow remains available", "Power BI Connection Steps" in studio_source, 8),
+        ("all detailed report formats remain available", all(term in studio_source for term in ["spreadsheetml.sheet", "text/html", "wordprocessingml.document"]), 10),
+        ("validation remains visible", "Validation Checks" in studio_source, 8),
+        ("instructional governance panel remains removed", "Governed Output Paths" not in studio_source, 8),
+        ("executive decision dashboard remains available", all(term in source.lower() for term in ["executive dashboard", "critical alerts", "decision"]), 10),
     ]
     llm_average, llm_detail = score_checks(llm_checks)
 

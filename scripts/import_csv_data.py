@@ -10,12 +10,14 @@ from construction_system.importers import import_csv_folder
 
 
 def main():
+    project_dirs = [path for path in (ROOT / "projects").iterdir() if path.is_dir() and not path.name.startswith("_")]
+    default_project = max(project_dirs, key=lambda path: sum(file.stat().st_size for file in path.rglob("*") if file.is_file()), default=ROOT / "projects" / "_PROJECT_TEMPLATE")
     parser = argparse.ArgumentParser(description="Import CSV files into the construction project database.")
     parser.add_argument(
         "folder",
         nargs="?",
-        default=str(ROOT / "data" / "import_templates"),
-        help="Folder containing CSV files. Defaults to data/import_templates",
+        default=str(default_project / "data" / "import_templates"),
+        help="Project-owned folder containing CSV files.",
     )
     parser.add_argument("--reset", action="store_true", help="Recreate the database before import")
     args = parser.parse_args()

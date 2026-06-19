@@ -7,8 +7,11 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
-IMPROVEMENT_DIR = ROOT / "Delay tia improvement files"
-STEEL_DIR = ROOT / "steel_delay_tia_templates"
+PROJECTS_DIR = ROOT / "projects"
+PROJECT_DIRS = [path for path in PROJECTS_DIR.iterdir() if path.is_dir() and not path.name.startswith("_")]
+PROJECT_DIR = max(PROJECT_DIRS, key=lambda path: sum(file.stat().st_size for file in path.rglob("*") if file.is_file()), default=PROJECTS_DIR / "_PROJECT_TEMPLATE")
+IMPROVEMENT_DIR = PROJECT_DIR / "delay_analysis" / "improvement_files"
+STEEL_DIR = PROJECT_DIR / "delay_analysis" / "steel_delay_tia_templates"
 OUT_DIR = ROOT / "generated_outputs" / "delay_tia_question"
 OUT_FILE = OUT_DIR / "question_preview.html"
 
@@ -89,7 +92,7 @@ def kpis(frames: dict[str, pd.DataFrame]) -> dict[str, float | int]:
         "Critical P6 Activities": int(p6_df.get("Critical", pd.Series(dtype=str)).astype(str).str.lower().eq("yes").sum()) if not p6_df.empty else 0,
         "Longest Path Activities": int(p6_df.get("Longest Path", pd.Series(dtype=str)).astype(str).str.lower().eq("yes").sum()) if not p6_df.empty else 0,
         "Employer Steel Qty": float(employer_qty.sum()) if not employer_qty.empty else 0.0,
-        "SAMCO Steel Qty Visibility Only": float(samco_qty.sum()) if not samco_qty.empty else 0.0,
+        "Contractor Steel Qty Visibility Only": float(samco_qty.sum()) if not samco_qty.empty else 0.0,
         "Max Claimed Delay Days": max_claimed,
         "Gross Claimed Delay Days": int(claimed_days.sum()) if not claimed_days.empty else 0,
         "Max Fragnet Duration": max_fragnet,
@@ -117,7 +120,7 @@ def card_grid(values: dict[str, float | int]) -> str:
         "Critical P6 Activities",
         "Longest Path Activities",
         "Employer Steel Qty",
-        "SAMCO Steel Qty Visibility Only",
+        "Contractor Steel Qty Visibility Only",
     ]
     cards = []
     for label in labels:
@@ -141,7 +144,7 @@ def main() -> None:
         f"The conservative answer is {int(values['Recommended Conservative Days'])} days. "
         "The methodology avoids adding overlapping streams together: it compares the strongest claimed/modelled delay durations, "
         "checks concurrency, and treats RFI/IFC/payment rows as support unless modelled into the CPM network. "
-        "Employer ROYA steel is used for the steel-delay calculation; SAMCO steel is visibility-only."
+        "Employer steel is used for the steel-delay calculation; contractor steel is mitigation visibility only."
     )
     html_doc = f"""<!doctype html>
 <html lang="en">

@@ -1,0 +1,1159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Output Studio Eval Scorecard</title>
+  <style>
+    :root {
+      --bg:#07131f; --panel:#0d2134; --panel2:#102940; --line:#284c68;
+      --text:#eef8ff; --muted:#a9bfd2; --accent:#33d8ca; --gold:#ffbf4a;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:radial-gradient(circle at top left,#153d5e 0,#07131f 44%); color:var(--text); font-family:Inter,Segoe UI,Arial,sans-serif; }
+    main { max-width:1440px; margin:0 auto; padding:30px; }
+    h1 { margin:0 0 8px; font-size:34px; letter-spacing:0; }
+    h2 { margin:28px 0 12px; font-size:20px; }
+    p { color:var(--muted); line-height:1.55; }
+    .cards { display:grid; grid-template-columns:repeat(6,minmax(145px,1fr)); gap:12px; margin:22px 0; }
+    .card { min-height:104px; border:1px solid var(--line); background:rgba(13,33,52,.86); border-radius:8px; padding:16px; }
+    .card span { display:block; color:var(--muted); font-size:13px; }
+    .card strong { display:block; margin-top:14px; font-size:26px; }
+    .panel { border:1px solid var(--line); border-radius:8px; background:rgba(13,33,52,.75); padding:16px; margin-top:16px; overflow:auto; }
+    .data-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .data-table th,.data-table td { padding:8px 10px; border-bottom:1px solid rgba(169,191,210,.18); text-align:left; vertical-align:top; }
+    .data-table th { background:var(--panel2); color:#defbff; position:sticky; top:0; }
+    pre { white-space:pre-wrap; color:#d8eefb; font-size:12px; }
+    .muted { color:var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Output Studio Eval Scorecard</h1>
+    <p>Eval-driven quality loop for modern digital reports, dashboards, exports, and governed management output.</p>
+    <section class="cards"><article class='card'><span>Overall</span><strong>98.67%</strong></article><article class='card'><span>LLM Average</span><strong>100.00%</strong></article><article class='card'><span>Data Coverage</span><strong>100.00%</strong></article><article class='card'><span>Export Coverage</span><strong>100.00%</strong></article><article class='card'><span>Design Quality</span><strong>93.94%</strong></article><article class='card'><span>Reliability</span><strong>100.00%</strong></article></section>
+    <section class="panel"><h2>Failed / Weak Checks</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>criterion</th>
+      <th>passed</th>
+      <th>weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>design term present: modern</td>
+      <td>False</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>design term present: digital</td>
+      <td>False</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table></section>
+    <section class="panel"><h2>All Output Data Inspected</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Source</th>
+      <th>Type</th>
+      <th>Rows</th>
+      <th>Columns</th>
+      <th>Column List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/activities.csv</td>
+      <td>csv</td>
+      <td>1363</td>
+      <td>16</td>
+      <td>project_id, wbs_id, activity_id, activity_name, planned_start, planned_finish, actual_start, actual_finish, forecast_start, forecast_finish, planned_weight, planned_progress, actual_progress, total_float_days, is_critical, responsible_party</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/change_orders.csv</td>
+      <td>csv</td>
+      <td>1</td>
+      <td>12</td>
+      <td>change_order_id, contract_id, project_id, title, submitted_date, approved_date, status, claimed_amount, approved_amount, cost_impact, time_impact_days, owner_response_due</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/claims.csv</td>
+      <td>csv</td>
+      <td>1</td>
+      <td>12</td>
+      <td>project_id, claim_id, contract_id, claim_event_ref, claim_title, notice_date, particulars_due, claimed_amount, claimed_days, status, entitlement_basis, responsibility</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/contracts.csv</td>
+      <td>csv</td>
+      <td>2</td>
+      <td>11</td>
+      <td>contract_id, project_id, package, contractor, contract_type, original_value, approved_variations, pending_variations, paid_to_date, retention_percent, status</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/cost_items.csv</td>
+      <td>csv</td>
+      <td>1363</td>
+      <td>8</td>
+      <td>project_id, wbs_id, cost_code, activity_name, budget_cost, committed_cost, actual_cost, forecast_cost</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/delay_events.csv</td>
+      <td>csv</td>
+      <td>25</td>
+      <td>14</td>
+      <td>project_id, Primary Event ID, Activity ID, Activity Name, BL Start, BL Finish, Start, Finish, Delayed duration, Overlap Start, Overlap Finish, BL Critical Path, Current Critical Path, Delayed duration after overlap</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/Delivered_steel_site.csv</td>
+      <td>csv</td>
+      <td>25</td>
+      <td>7</td>
+      <td>project_id, Coding No., Reference, Supplier, Unit/Bundle, Total Quantity, Date of delivery</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/engineering_log.csv</td>
+      <td>csv</td>
+      <td>4</td>
+      <td>11</td>
+      <td>project_id, Month, Sep, Oct, Nov, Dec, Jan, Feb, Mar, Apr, May</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/evm.csv</td>
+      <td>csv</td>
+      <td>1363</td>
+      <td>12</td>
+      <td>project_id, activity_id, activity_name, period, BAC, AC, EV, PV, CPI, SPI, CV, SV</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/ifc_conflict.csv</td>
+      <td>csv</td>
+      <td>16</td>
+      <td>11</td>
+      <td>project_id, Activity ID, Activity Name, Original Duration, Start, Finish, Approved structural slab shop drawings, Re-Start, Finish.1, Delayed days, Note</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/milestones.csv</td>
+      <td>csv</td>
+      <td>4</td>
+      <td>7</td>
+      <td>milestone_id, project_id, activity_name, planned_date, forecast_date, actual_date, milestone_contractual_type</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/payments.csv</td>
+      <td>csv</td>
+      <td>8</td>
+      <td>18</td>
+      <td>project_id, payment, contract, project, invoice no, invoice date, certified amount, paid amount, payment status, Contractual interest due, Date of Cash Cheque Receipt, Period for payment release, Period in which interest is applied, Amount of interest claimed (EGP), delayed duration(Days) , Unnamed: 14, Unnamed: 15, Unnamed: 16</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/progress_updates.csv</td>
+      <td>csv</td>
+      <td>1363</td>
+      <td>9</td>
+      <td>project_id, activity_id, update_date, planned_progress, actual_progress, planned_value, earned_value, actual_cost, notes</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/projects.csv</td>
+      <td>csv</td>
+      <td>1</td>
+      <td>14</td>
+      <td>project_id, project_name, client_name, contractor, planned_start, planned_finish, forecast_finish, contract_value, currency, status, planned_progress_percent, actual_progress_percent, planned_value, earned_value</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/rfi_ status.csv</td>
+      <td>csv</td>
+      <td>6</td>
+      <td>8</td>
+      <td>project_id, RFI, Activity ID, Activity Name, Submittion date, Reply, Delay beyond 10d, Note</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/rft_qtys.csv</td>
+      <td>csv</td>
+      <td>111</td>
+      <td>22</td>
+      <td>project_id, Resource ID, Activity ID, Activity Name, Original Duration, Planned Start, Planned Finish, Start, Finish, Budgeted Units, Actual Units, Remaining Units, Units % Complete, Budgeted Units / Time, Drive Activity Dates, Default Units / Time, Price / Unit, Remaining Units / Time, Max Units/Time, Calculate costs from units, Budgeted Cost , Spreadsheet Field</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/risks.csv</td>
+      <td>csv</td>
+      <td>2</td>
+      <td>11</td>
+      <td>risk_id, project_id, risk_title, risk_category, probability, time_impact_days, cost_impact, response_strategy, owner, status, due_date</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/s_curve.csv</td>
+      <td>csv</td>
+      <td>18</td>
+      <td>8</td>
+      <td>project_id, months, monthly_planned, cumm_monthly_planned, monthly_actual, cumm_monthly_actual, monthly_invoiced, cumm_monthly_invoiced</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/steel_activities_relationship.csv</td>
+      <td>csv</td>
+      <td>111</td>
+      <td>17</td>
+      <td>project_id, activity_id, activity_name, predecessor_details, successor_details, activity_status, total_float, original_duration, bl_project_start, bl_project_finish, start, finish, schedule_%_complete, activity_%_complete, performance_%_complete, budgeted_total_cost, earned_value_cost</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/steel_delay_status_mployer_free_issue_material.csv</td>
+      <td>csv</td>
+      <td>16</td>
+      <td>20</td>
+      <td>project_id, Ref No, Date (Request | Due | Delay beyond Due)\nCut off date: 6-May-2026, Type, Subject, Main Purpose, Key Requests, Scope Impact, Responsibility, Affected Activities, Start Dependency, Sequence Impact, Commercial Impact, Risk Type, Risk Owner, Delay Risk, EOT Potential, Claim Strength, Required Actions, Unnamed: 18</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/data/import_templates/wbs.csv</td>
+      <td>csv</td>
+      <td>361</td>
+      <td>16</td>
+      <td>project_id, wbs_code, wbs_name, total_activities, bl_project_duration, remaining_duration, total_float, bl_project_start, bl_project_finish, actual_start, actual_finish, schedule_%_complete, performance_%_complete, budget_at_completion, earned_value_cost, planned_value_cost</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/letters_intelligence/letters_intelligence.xlsx::From SAMCO to ACE</td>
+      <td>letters</td>
+      <td>82</td>
+      <td>18</td>
+      <td>Ref No, Date, Type, Subject, Main Purpose, Key Requests, Scope Impact, Responsibility, Affected Activities, Start Dependency, Sequence Impact, Commercial Impact, Risk Type, Risk Owner, Delay Risk, EOT Potential, Claim Strength, Required Actions</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/letters_intelligence/letters_intelligence.xlsx::From ACE to SAMCO</td>
+      <td>letters</td>
+      <td>36</td>
+      <td>18</td>
+      <td>Ref No, Date, Type, Subject, Main Purpose, Key Requests, Scope Impact, Responsibility, Affected Activities, Start Dependency, Sequence Impact, Commercial Impact, Risk Type, Risk Owner, Delay Risk, EOT Potential, Claim Strength, Required Actions</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/letters_intelligence/letters_intelligence.xlsx::SAMCO to ACE Links</td>
+      <td>letters</td>
+      <td>82</td>
+      <td>17</td>
+      <td>Thread, SAMCO Ref No, SAMCO Sheet Row, SAMCO Date, SAMCO Type, SAMCO Subject, Related ACE Ref No(s), ACE Sheet Row(s), ACE Date(s), ACE Subject(s), Relationship, Confidence, SAMCO Claim Strength, ACE Claim Strength, SAMCO Delay Risk, ACE Delay Risk, Recommended Follow-up</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/letters_intelligence/letters_intelligence.xlsx::ACE to SAMCO Links</td>
+      <td>letters</td>
+      <td>36</td>
+      <td>13</td>
+      <td>ACE Ref No, ACE Sheet Row, ACE Date, ACE Type, ACE Subject, Related SAMCO Ref No(s), SAMCO Sheet Row(s), SAMCO Subject(s), Thread(s), ACE Delay Risk, ACE EOT Potential, ACE Claim Strength, ACE Required Actions</td>
+    </tr>
+    <tr>
+      <td>projects/The Big -P.01-UP-20-April-26/letters_intelligence/letters_intelligence.xlsx::Issue Threads</td>
+      <td>letters</td>
+      <td>18</td>
+      <td>6</td>
+      <td>Thread, SAMCO Ref(s), 6, Main Link, Priority, Next Action</td>
+    </tr>
+  </tbody>
+</table></section>
+    <section class="panel"><h2>Generated / Report Artifacts</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Output</th>
+      <th>Extension</th>
+      <th>Size KB</th>
+      <th>Modified</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_all_templates_runtime_fix.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T14:54:16</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_baseline.md</td>
+      <td>.md</td>
+      <td>20.57</td>
+      <td>2026-06-14T06:45:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_contract_library_overall_update.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T19:45:36</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_contract_pdf_baseline.md</td>
+      <td>.md</td>
+      <td>22.35</td>
+      <td>2026-06-14T06:57:00</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_contract_pdf_source_disclosure.md</td>
+      <td>.md</td>
+      <td>23.24</td>
+      <td>2026-06-14T06:58:04</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_delay_tia_slide_trim.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-15T09:51:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_delay_tia_slide_trim_clean.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-15T09:54:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_evidence_mapping_improved.md</td>
+      <td>.md</td>
+      <td>22.35</td>
+      <td>2026-06-14T06:51:24</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_final.md</td>
+      <td>.md</td>
+      <td>21.58</td>
+      <td>2026-06-14T06:47:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_final_contract_pdf.md</td>
+      <td>.md</td>
+      <td>23.24</td>
+      <td>2026-06-14T06:58:29</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_final_improved_risks.md</td>
+      <td>.md</td>
+      <td>22.35</td>
+      <td>2026-06-14T06:51:34</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_final_ocr_diagnostics.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T07:01:26</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_full_template_fix.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T14:50:35</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_iter1_status_fix.md</td>
+      <td>.md</td>
+      <td>20.56</td>
+      <td>2026-06-14T06:46:25</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_iter2_strict_ranking_baseline.md</td>
+      <td>.md</td>
+      <td>21.44</td>
+      <td>2026-06-14T06:46:46</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_iter3_clause_search_ranking.md</td>
+      <td>.md</td>
+      <td>21.58</td>
+      <td>2026-06-14T06:47:17</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_ocr_diagnostics.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T07:00:57</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_reconstructed_delay_tia.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T20:06:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_reconstructed_delay_tia_final.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T20:09:48</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\artifact_template_priority_rebuild.md</td>
+      <td>.md</td>
+      <td>23.68</td>
+      <td>2026-06-14T23:20:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\overall_contract_page1.png</td>
+      <td>.png</td>
+      <td>211.93</td>
+      <td>2026-06-14T06:56:46</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\overall_contract_page2_ocr_diagnostics.png</td>
+      <td>.png</td>
+      <td>247.54</td>
+      <td>2026-06-14T07:01:09</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\score_log.jsonl</td>
+      <td>.jsonl</td>
+      <td>82.66</td>
+      <td>2026-06-15T09:54:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_all_templates_runtime_fix.json</td>
+      <td>.json</td>
+      <td>6.37</td>
+      <td>2026-06-14T14:54:16</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_baseline.json</td>
+      <td>.json</td>
+      <td>5.43</td>
+      <td>2026-06-14T06:45:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_contract_library_overall_update.json</td>
+      <td>.json</td>
+      <td>6.38</td>
+      <td>2026-06-14T19:45:36</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_contract_pdf_baseline.json</td>
+      <td>.json</td>
+      <td>5.96</td>
+      <td>2026-06-14T06:57:00</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_contract_pdf_source_disclosure.json</td>
+      <td>.json</td>
+      <td>6.11</td>
+      <td>2026-06-14T06:58:04</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_delay_tia_slide_trim.json</td>
+      <td>.json</td>
+      <td>6.36</td>
+      <td>2026-06-15T09:51:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_delay_tia_slide_trim_clean.json</td>
+      <td>.json</td>
+      <td>6.37</td>
+      <td>2026-06-15T09:54:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_evidence_mapping_improved.json</td>
+      <td>.json</td>
+      <td>5.97</td>
+      <td>2026-06-14T06:51:24</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_final.json</td>
+      <td>.json</td>
+      <td>5.67</td>
+      <td>2026-06-14T06:47:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_final_contract_pdf.json</td>
+      <td>.json</td>
+      <td>6.09</td>
+      <td>2026-06-14T06:58:29</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_final_improved_risks.json</td>
+      <td>.json</td>
+      <td>5.96</td>
+      <td>2026-06-14T06:51:34</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_final_ocr_diagnostics.json</td>
+      <td>.json</td>
+      <td>6.36</td>
+      <td>2026-06-14T07:01:26</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_full_template_fix.json</td>
+      <td>.json</td>
+      <td>6.36</td>
+      <td>2026-06-14T14:50:35</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_iter1_status_fix.json</td>
+      <td>.json</td>
+      <td>5.45</td>
+      <td>2026-06-14T06:46:25</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_iter2_strict_ranking_baseline.json</td>
+      <td>.json</td>
+      <td>5.72</td>
+      <td>2026-06-14T06:46:46</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_iter3_clause_search_ranking.json</td>
+      <td>.json</td>
+      <td>5.71</td>
+      <td>2026-06-14T06:47:17</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_ocr_diagnostics.json</td>
+      <td>.json</td>
+      <td>6.35</td>
+      <td>2026-06-14T07:00:57</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_reconstructed_delay_tia.json</td>
+      <td>.json</td>
+      <td>6.37</td>
+      <td>2026-06-14T20:06:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_reconstructed_delay_tia_final.json</td>
+      <td>.json</td>
+      <td>6.38</td>
+      <td>2026-06-14T20:09:48</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_letters_eval\scores_template_priority_rebuild.json</td>
+      <td>.json</td>
+      <td>6.37</td>
+      <td>2026-06-14T23:20:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\contract_pdf_text_overall_contract.txt</td>
+      <td>.txt</td>
+      <td>0.75</td>
+      <td>2026-06-14T19:39:57</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_all_templates_runtime_fix.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:54:15</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_baseline.md</td>
+      <td>.md</td>
+      <td>13.68</td>
+      <td>2026-06-14T06:31:09</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_before_template_alignment.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:29:42</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_cached_live_csv_loader.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T21:36:31</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_clause_ranking.md</td>
+      <td>.md</td>
+      <td>17.66</td>
+      <td>2026-06-14T06:39:44</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_cleanup_validation.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-18T22:47:13</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_concurrency_matrix_requested_columns_pre_replace.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T16:52:58</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_contract_library_overall_update.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-14T19:45:22</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_delay_tia_slide_trim.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T09:51:20</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_delay_tia_slide_trim_clean.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T09:54:17</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_final.md</td>
+      <td>.md</td>
+      <td>17.57</td>
+      <td>2026-06-14T06:35:10</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_final_clause_ranking.md</td>
+      <td>.md</td>
+      <td>17.66</td>
+      <td>2026-06-14T06:39:56</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_final_project_id_design_cleanup.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T12:09:00</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_final_project_isolation.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-19T09:50:21</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_folder_source_sync_model.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T16:12:15</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_full_template_fix.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:50:34</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_hide_delay_time_impact.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T10:21:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_import_templates_alignment.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:37:46</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_import_templates_final_db_update.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:39:20</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_import_templates_projectwide.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:38:42</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_iter1_fragnet_match.md</td>
+      <td>.md</td>
+      <td>13.68</td>
+      <td>2026-06-14T06:31:45</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_iter2_notice_link.md</td>
+      <td>.md</td>
+      <td>13.68</td>
+      <td>2026-06-14T06:32:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_iter3_strict_output_score.md</td>
+      <td>.md</td>
+      <td>13.68</td>
+      <td>2026-06-14T06:32:59</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_iter4_engine_only_score.md</td>
+      <td>.md</td>
+      <td>13.68</td>
+      <td>2026-06-14T06:33:34</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_iter5_methodology_output.md</td>
+      <td>.md</td>
+      <td>17.57</td>
+      <td>2026-06-14T06:34:32</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_latest_delay_tia_changes.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T11:44:14</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_latest_delay_tia_changes_v2.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T11:46:16</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_mep_activities_slide.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T15:38:43</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_mep_logic_schedule_update.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T16:29:59</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_mep_schedule_update.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T16:03:33</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_project_folder_restructure.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T22:59:08</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_project_id_design_cleanup.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T12:04:09</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_reconstructed_delay_tia.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-14T20:06:17</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_reconstructed_delay_tia_final.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-14T20:09:47</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_root_projects_architecture.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-19T05:00:13</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_schema_precheck.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:28:25</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_stable_project_id_isolation.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-19T09:38:38</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_steel_templates_02_to_10.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T17:00:08</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_steel_templates_02_to_10_final.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T17:02:09</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_template_alignment_after_core_fix.md</td>
+      <td>.md</td>
+      <td>12.01</td>
+      <td>2026-06-14T14:33:25</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_template_priority_rebuild.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-14T23:19:45</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\artifact_upload_files_only_cleanup.md</td>
+      <td>.md</td>
+      <td>21.82</td>
+      <td>2026-06-15T10:26:50</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\score_log.jsonl</td>
+      <td>.jsonl</td>
+      <td>176.05</td>
+      <td>2026-06-19T09:50:21</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_all_templates_runtime_fix.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-14T14:54:15</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_baseline.json</td>
+      <td>.json</td>
+      <td>5.96</td>
+      <td>2026-06-14T06:31:09</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_before_template_alignment.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-14T14:29:42</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_cached_live_csv_loader.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T21:36:31</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_clause_ranking.json</td>
+      <td>.json</td>
+      <td>5.97</td>
+      <td>2026-06-14T06:39:44</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_cleanup_validation.json</td>
+      <td>.json</td>
+      <td>5.99</td>
+      <td>2026-06-18T22:47:13</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_concurrency_matrix_requested_columns_pre_replace.json</td>
+      <td>.json</td>
+      <td>6.04</td>
+      <td>2026-06-14T16:52:58</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_contract_library_overall_update.json</td>
+      <td>.json</td>
+      <td>6.02</td>
+      <td>2026-06-14T19:45:22</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_delay_tia_slide_trim.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T09:51:20</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_delay_tia_slide_trim_clean.json</td>
+      <td>.json</td>
+      <td>6.01</td>
+      <td>2026-06-15T09:54:17</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_final.json</td>
+      <td>.json</td>
+      <td>5.96</td>
+      <td>2026-06-14T06:35:10</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_final_clause_ranking.json</td>
+      <td>.json</td>
+      <td>5.99</td>
+      <td>2026-06-14T06:39:56</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_final_project_id_design_cleanup.json</td>
+      <td>.json</td>
+      <td>6.02</td>
+      <td>2026-06-15T12:09:00</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_final_project_isolation.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-19T09:50:21</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_folder_source_sync_model.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T16:12:15</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_full_template_fix.json</td>
+      <td>.json</td>
+      <td>5.98</td>
+      <td>2026-06-14T14:50:34</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_hide_delay_time_impact.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T10:21:39</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_import_templates_alignment.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-14T14:37:46</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_import_templates_final_db_update.json</td>
+      <td>.json</td>
+      <td>6.01</td>
+      <td>2026-06-14T14:39:20</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_import_templates_projectwide.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-14T14:38:42</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_iter1_fragnet_match.json</td>
+      <td>.json</td>
+      <td>5.98</td>
+      <td>2026-06-14T06:31:45</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_iter2_notice_link.json</td>
+      <td>.json</td>
+      <td>5.98</td>
+      <td>2026-06-14T06:32:18</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_iter3_strict_output_score.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-14T06:32:59</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_iter4_engine_only_score.json</td>
+      <td>.json</td>
+      <td>5.99</td>
+      <td>2026-06-14T06:33:34</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_iter5_methodology_output.json</td>
+      <td>.json</td>
+      <td>5.99</td>
+      <td>2026-06-14T06:34:32</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_latest_delay_tia_changes.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T11:44:14</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_latest_delay_tia_changes_v2.json</td>
+      <td>.json</td>
+      <td>6.01</td>
+      <td>2026-06-15T11:46:16</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_mep_activities_slide.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T15:38:43</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_mep_logic_schedule_update.json</td>
+      <td>.json</td>
+      <td>6.01</td>
+      <td>2026-06-15T16:29:59</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_mep_schedule_update.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-15T16:03:33</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_project_folder_restructure.json</td>
+      <td>.json</td>
+      <td>6.01</td>
+      <td>2026-06-15T22:59:08</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_project_id_design_cleanup.json</td>
+      <td>.json</td>
+      <td>6.01</td>
+      <td>2026-06-15T12:04:09</td>
+    </tr>
+    <tr>
+      <td>generated_outputs\delay_tia_eval\scores_reconstructed_delay_tia.json</td>
+      <td>.json</td>
+      <td>6.00</td>
+      <td>2026-06-14T20:06:17</td>
+    </tr>
+  </tbody>
+</table></section>
+    <section class="panel"><h2>Output Studio Source Excerpt</h2><pre>
+    st.markdown("<div class='section-header'><h3>Output Studio</h3></div>", unsafe_allow_html=True)
+    with st.expander("Repository synchronization", expanded=False):
+        sync_notice = st.session_state.pop("repository_sync_notice", "")
+        if sync_notice:
+            st.success(sync_notice)
+        sync_admin_pin = st.text_input(
+            "Administrator PIN",
+            type="password",
+            key="repository_sync_admin_pin",
+        )
+        sync_authorized = repository_sync_authorized(sync_admin_pin)
+        sync_now_col, sync_watch_col = st.columns(2)
+        with sync_now_col:
+            if st.button(
+                "Sync",
+                key="repository_sync_once",
+                use_container_width=True,
+                disabled=not sync_authorized,
+            ):
+                sync_completed = False
+                with st.spinner("Synchronizing workspace..."):
+                    try:
+                        sync_ok, sync_output = run_repository_sync_once()
+                        if sync_ok:
+                            st.cache_data.clear()
+                            st.session_state["repository_sync_notice"] = "Repository synchronized and application data refreshed."
+                            sync_completed = True
+                        else:
+                            st.error("Repository synchronization failed.")
+                        if sync_output:
+                            st.code(sync_output, language="text")
+                    except Exception as exc:
+                        st.error(f"Repository synchronization failed: {exc}")
+                if sync_completed:
+                    st.rerun()
+        with sync_watch_col:
+            if st.button(
+                "Start 30-minute auto sync",
+                key="repository_sync_watch",
+                use_container_width=True,
+                disabled=not sync_authorized,
+            ):
+                try:
+                    start_repository_sync_watch()
+                    st.success("The 30-minute synchronization watcher started.")
+                except Exception as exc:
+                    st.error(f"Unable to start synchronization watcher: {exc}")
+        if not os.environ.get("SYNC_ADMIN_PIN", "").strip():
+            st.warning("Repository synchronization controls are locked because SYNC_ADMIN_PIN is not configured.")
+        st.code(repository_sync_log_tail(), language="text")
+    if True:
+        output_mode = st.radio(
+            "Choose dashboard output",
+            [
+                "Executive dashboard",
+                "Original presentation print-only",
+                "Linked executive dashboard",
+                "Detailed Progress report",
+            ],
+            horizontal=True,
+        )
+
+        metric_group_options = {
+            "Overview Metrics": {
+                "Project Start Date": format_project_date(overview_metrics.get("project_start")),
+                "Project Finish Date": format_project_date(overview_metrics.get("project_finish")),
+                "Project Duration [Days]": str(int(overview_metrics.get("duration_days", 0))),
+                "Duration Elapsed": pct(overview_metrics.get("duration_elapsed_pct")),
+                "Remaining Duration": pct(overview_metrics.get("remaining_duration_pct")),
+                "Overall Progress": pct(overview_metrics.get("overall_progress")),
+                "Planned Progress": pct(overview_metrics.get("planned_progress")),
+                "Contract Value": egp(overview_metrics.get("contract_value")),
+            },
+            "EVM Metrics": {
+                "BAC": egp(evm_metrics.get("bac")),
+                "AC": egp(evm_metrics.get("ac")),
+                "EV": egp(evm_metrics.get("ev")),
+                "PV": egp(evm_metrics.get("pv")),
+                "SV": egp(evm_metrics.get("sv")),
+                "CV": egp(evm_metrics.get("cv")),
+                "EAC": egp(evm_metrics.get("eac")),
+                "TCPI": f"{evm_metrics.get('tcpi'):.3f}" if evm_metrics.get("tcpi") is not None else "N/A",
+            },
+        }
+
+        output_project_slug = re.sub(r"[^A-Za-z0-9._-]+", "_", active_project_id or "all_projects").strip("_")
+        if output_mode == "Executive dashboard":
+            the_big_dashboard_html = build_the_big_decision_dashboard_html(
+                overview_metrics,
+                evm_metrics,
+                contract_metrics,
+                delay_metrics,
+                risk_metrics,
+                milestone_metrics,
+                activity_metrics,
+                s_curve_metrics,
+                active_project_record,
+            )
+            st.components.v1.html(the_big_dashboard_html, height=2100, scrolling=True)
+            st.download_button(
+                "Download Executive Dashboard (.html)",
+                data=the_big_dashboard_html.encode("utf-8"),
+                file_name=f"{output_project_slug}_executive_dashboard.html",
+                mime="text/html",
+                use_container_width=True,
+            )
+        elif output_mode == "Original presentation print-only":
+            original_template_bytes, original_template_unresolved = build_original_template_presentation(
+                overview_metrics,
+                evm_metrics,
+                contract_metrics,
+                delay_metrics,
+                risk_metrics,
+                milestone_metrics,
+                activity_metrics,
+                s_curve_metrics,
+            )
+            c1, c2 = st.columns(2)
+            c1.download_button(
+                "Download Updated Original Presentation (.pptx)",
+                data=original_template_bytes,
+                file_name=f"{output_project_slug}_presentation.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                use_container_width=True,
+                disabled=not bool(original_template_bytes),
+            )
+            c2.download_button(
+                "Download Updated Original Presentation for Print (.pptx)",
+                data=original_template_bytes,
+                file_name=f"{output_project_slug}_presentation_print.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                use_container_width=True,
+                disabled=not bool(original_template_bytes),
+            )
+            if original_template_unresolved:
+                st.markdown("#### Linking Items To Confirm")
+                st.dataframe(
+                    pd.DataFrame({"Unresolved Template Mapping": original_template_unresolved}),
+                    use_container_width=True,
+                    hide_index=True,
+                    height=dataframe_height(pd.DataFrame({"Unresolved Template Mapping": original_template_unresolved}), max_height=320),
+                )
+        elif output_mode == "Linked executive dashboard":
+            linked_selected_project_id = selected_project_id()
+            linked_generation_project_id = linked_selected_project_id
+
+            previous_active_project_id = st.session_state.get("active_project_id", "")
+            st.session_state["active_project_id"] = linked_generation_project_id
+            try:
+                linked_overview_metrics = build_overview_metrics()
+                linked_evm_metrics = build_evm_metrics()
+                linked_contract_metrics = build_contract_metrics()
+                linked_delay_metrics = build_delay_metrics()
+                linked_risk_metrics = build_risk_metrics()
+                linked_milestone_metrics = build_milestone_metrics()
+                linked_s_curve_metrics = build_s_curve_metrics()
+                linked_activity_metrics = build_activity_metrics()
+                linked_evmData = build_earned_value_analysis_data(linked_evm_metrics)
+                rootCauseDf = build_evm_root_cause_rows(linked_delay_metrics, linked_risk_metrics, linked_contract_metrics)
+                linked_project_title = linked_overview_metrics.get("project_name") or project.get("project_name", "Project")
+            finally:
+                st.session_state["active_project_id"] = previous_active_project_id
+
+            mitigationDf = build_evm_mitigation_rows()
+            evmComments = get_evm_comments()
+            linked_report_date = pd.Timestamp.today().strftime("%d %b %Y")
+            if "linked_exec_evm_comment_quantitativePerformance" not in st.session_state:
+                st.session_state["linked_exec_evm_comment_quantitativePerformance"] = evmComments.get("quantitativePerformance", "")
+            if "linked_exec_evm_comment_rootCauseLinkage" not in st.session_state:
+                st.session_state["linked_exec_evm_comment_rootCauseLinkage"] = evmComments.get("rootCauseLinkage", "")
+            if "linked_exec_evm_comment_mitigationRecovery" not in st.session_state:
+                st.session_state["linked_exec_evm_comment_mitigationRecovery"] = evmComments.get("mitigationRecovery", "")
+        </pre></section>
+  </main>
+</body>
+</html>

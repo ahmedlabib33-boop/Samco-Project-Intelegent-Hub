@@ -22,9 +22,12 @@ from construction_system.steel_delay_tia import (  # noqa: E402
 )
 
 
-DEFAULT_METHODOLOGY = Path(r"C:\Users\pc\OneDrive\Desktop\01 Letters\labib tia folders\TIA methodolgy.docx")
-TEMPLATE_DIR = ROOT / "steel_delay_tia_templates"
-APP_IMPORT_DIR = ROOT / "data" / "import_templates"
+PROJECTS_DIR = ROOT / "projects"
+PROJECT_DIRS = [path for path in PROJECTS_DIR.iterdir() if path.is_dir() and not path.name.startswith("_")]
+DEFAULT_PROJECT_DIR = max(PROJECT_DIRS, key=lambda path: sum(file.stat().st_size for file in path.rglob("*") if file.is_file()), default=PROJECTS_DIR / "_PROJECT_TEMPLATE")
+DEFAULT_METHODOLOGY = DEFAULT_PROJECT_DIR / "delay_analysis" / "methodology" / "TIA methodology.docx"
+TEMPLATE_DIR = DEFAULT_PROJECT_DIR / "delay_analysis" / "steel_delay_tia_templates"
+APP_IMPORT_DIR = DEFAULT_PROJECT_DIR / "data" / "import_templates"
 OUTPUT_DIR = ROOT / "generated_outputs" / "delay_tia_eval"
 SCORE_LOG = OUTPUT_DIR / "score_log.jsonl"
 

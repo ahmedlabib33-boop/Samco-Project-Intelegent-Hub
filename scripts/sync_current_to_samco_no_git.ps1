@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $apiBase = "https://api.github.com/repos/$Owner/$Repo"
-$logPath = Join-Path $root "project_data\no_git_sync_to_github.log"
+$logPath = Join-Path $root "generated_outputs\logs\no_git_sync_to_github.log"
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath -Parent) | Out-Null
 
 $excludedDirs = @(

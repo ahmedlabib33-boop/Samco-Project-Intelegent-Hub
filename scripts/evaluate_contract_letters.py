@@ -21,12 +21,14 @@ sys.path.insert(0, str(ROOT / "src"))
 import contract_claims_center as ccc  # noqa: E402
 
 
-DEFAULT_METHODOLOGY = Path(r"C:\Users\pc\OneDrive\Desktop\01 Letters\labib tia folders\TIA methodolgy.docx")
-CONTRACTS_DIR = ROOT / "project_data" / "contracts"
-OVERALL_CONTRACT_PDF = Path(r"C:\Users\pc\OneDrive\Desktop\01 Letters\Data analysis\01-Contract\Overall Contract.pdf")
+PROJECTS_DIR = ROOT / "projects"
+PROJECT_DIRS = [path for path in PROJECTS_DIR.iterdir() if path.is_dir() and not path.name.startswith("_")]
+PROJECT_DIR = max(PROJECT_DIRS, key=lambda path: sum(file.stat().st_size for file in path.rglob("*") if file.is_file()), default=PROJECTS_DIR / "_PROJECT_TEMPLATE")
+DEFAULT_METHODOLOGY = PROJECT_DIR / "delay_analysis" / "methodology" / "TIA methodology.docx"
+CONTRACTS_DIR = PROJECT_DIR / "contracts" / "source"
+OVERALL_CONTRACT_PDF = CONTRACTS_DIR / "Overall Contract.pdf"
 LETTERS_PATHS = [
-    Path(r"C:\Users\pc\Downloads\01-SAMCO-ACEPM_letters_linked (Final).xlsx"),
-    ROOT / "data" / "letters" / "01-SAMCO-ACEPM_letters_linked_updated.xlsx",
+    PROJECT_DIR / "letters_intelligence" / "letters_intelligence.xlsx",
 ]
 OUTPUT_DIR = ROOT / "generated_outputs" / "contract_letters_eval"
 SCORE_LOG = OUTPUT_DIR / "score_log.jsonl"

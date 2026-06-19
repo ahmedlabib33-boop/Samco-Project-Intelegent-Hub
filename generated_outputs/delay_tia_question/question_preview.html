@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delay TIA Question Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07131f;
+      --panel: #0d2134;
+      --panel-2: #102940;
+      --line: #244864;
+      --text: #ecf7ff;
+      --muted: #9fb8cc;
+      --accent: #36d6c8;
+      --warn: #ffba45;
+      --blue: #55a7ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: radial-gradient(circle at top left, #123a5a 0, var(--bg) 42%);
+      color: var(--text);
+    }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px; }
+    header { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin-bottom: 22px; }
+    h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: 0; }
+    h2 { margin: 30px 0 12px; font-size: 20px; }
+    p { color: var(--muted); line-height: 1.55; }
+    .answer {
+      border: 1px solid rgba(54, 214, 200, .42);
+      background: linear-gradient(135deg, rgba(54, 214, 200, .14), rgba(85, 167, 255, .08));
+      padding: 18px 20px;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 17px;
+    }
+    .metrics { display: grid; grid-template-columns: repeat(5, minmax(170px, 1fr)); gap: 12px; }
+    .metric { border: 1px solid var(--line); background: rgba(13, 33, 52, .88); padding: 14px; border-radius: 8px; min-height: 94px; }
+    .metric span { display: block; color: var(--muted); font-size: 13px; min-height: 34px; }
+    .metric strong { display: block; margin-top: 10px; font-size: 25px; color: var(--text); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .panel { border: 1px solid var(--line); background: rgba(13, 33, 52, .74); border-radius: 8px; padding: 16px; overflow: auto; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text); }
+    .data-table th { position: sticky; top: 0; background: var(--panel-2); color: #d9f7ff; text-align: left; }
+    .data-table th, .data-table td { border-bottom: 1px solid rgba(159, 184, 204, .18); padding: 9px 10px; vertical-align: top; }
+    .data-table tr:hover td { background: rgba(85, 167, 255, .08); }
+    .muted { color: var(--muted); }
+    .tag { color: var(--accent); font-weight: 700; }
+    @media (max-width: 980px) {
+      header, .grid { display: block; }
+      .metrics { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Delay TIA - question</h1>
+        <p>Column-inspected answer surface for Delay TIA improvement files and steel delay templates.</p>
+      </div>
+      <p><span class="tag">25</span> datasets loaded</p>
+    </header>
+    <section class="answer">The conservative answer is 152 days. The methodology avoids adding overlapping streams together: it compares the strongest claimed/modelled delay durations, checks concurrency, and treats RFI/IFC/payment rows as support unless modelled into the CPM network. Employer ROYA steel is used for the steel-delay calculation; SAMCO steel is visibility-only.</section>
+    <h2>Decision KPIs</h2>
+    <section class="metrics"><article class='metric'><span>Recommended Conservative Days</span><strong>152</strong></article>
+<article class='metric'><span>Max Claimed Delay Days</span><strong>152</strong></article>
+<article class='metric'><span>Max Fragnet Duration</span><strong>42</strong></article>
+<article class='metric'><span>Concurrent Delay Days</span><strong>246</strong></article>
+<article class='metric'><span>RFI Delay Beyond 10 Days</span><strong>84</strong></article>
+<article class='metric'><span>Evidence Rows</span><strong>17</strong></article>
+<article class='metric'><span>Critical P6 Activities</span><strong>573</strong></article>
+<article class='metric'><span>Longest Path Activities</span><strong>139</strong></article>
+<article class='metric'><span>Employer Steel Qty</span><strong>1,314.555</strong></article>
+<article class='metric'><span>SAMCO Steel Qty Visibility Only</span><strong>0</strong></article></section>
+    <h2>Answer Evidence Tables</h2>
+    <section class="grid">
+      <div class="panel"><h2>Claimed Delay Register</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Event ID</th>
+      <th>Activity ID</th>
+      <th>Activity Name</th>
+      <th>Pre-Impact Forecast Finish</th>
+      <th>Impacted Forecast Finish</th>
+      <th>Claimed Delay Duration (days)</th>
+      <th>Duration Basis</th>
+      <th>Inferred Duration Basis</th>
+      <th>Reviewer Comment</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>CON-B04-FOOT-1050</td>
+      <td>RFT for RC Raft &amp; Footings (B04) (footing)</td>
+      <td>24-Jan-2026</td>
+      <td>19-May-2026</td>
+      <td>56.0</td>
+      <td>Recorded master activity steel-delay column (absolute value)</td>
+      <td>Current Finish - BL Finish kept only as secondary fallback</td>
+      <td>Use recorded steel unavailability duration where populated in master activity file.</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>CON-B04-FOOT-1070</td>
+      <td>RFT for Columns &amp; Walls Below SOG (B04) (footing)</td>
+      <td>27-Jan-2026</td>
+      <td>18-May-2026</td>
+      <td>56.0</td>
+      <td>Recorded master activity steel-delay column (absolute value)</td>
+      <td>Current Finish - BL Finish kept only as secondary fallback</td>
+      <td>Use recorded steel unavailability duration where populated in master activity file.</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-21-Apr-2026-B02</td>
+      <td>CON-B02-BAS02-1010</td>
+      <td>RFT for Walls, Col. &amp; Cores (B02) (Bas 02)</td>
+      <td>19-Jan-2026</td>
+      <td>04-May-2026</td>
+      <td>14.0</td>
+      <td>Recorded master activity steel-delay column (absolute value)</td>
+      <td>Current Finish - BL Finish kept only as secondary fallback</td>
+      <td>Use recorded steel unavailability duration where populated in master activity file.</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-05-Feb-2026-B01</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>RFT for RC Raft &amp; Footings (B01) (footing)</td>
+      <td>18-Dec-2025</td>
+      <td>17-Feb-2026</td>
+      <td>9.0</td>
+      <td>Recorded master activity steel-delay column (absolute value)</td>
+      <td>Current Finish - BL Finish kept only as secondary fallback</td>
+      <td>Use recorded steel unavailability duration where populated in master activity file.</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B01</td>
+      <td>CON-B01-FOOT-1070</td>
+      <td>RFT for Columns &amp; Walls Below SOG (B01) (footing)</td>
+      <td>17-Dec-2025</td>
+      <td>18-May-2026</td>
+      <td>152.0</td>
+      <td>Current Finish - BL Finish</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-001</td>
+      <td>CON-B04-WT-1070</td>
+      <td>RFT for RC Raft (B04) (Water Tank)</td>
+      <td>NaN</td>
+      <td>29-Mar-2026</td>
+      <td>31.0</td>
+      <td>RFI review duration less contractual / allowed 10-day response period</td>
+      <td>Submitted 16-Feb-2026; replied 29-Mar-2026; delay beyond 10 days = 31.0 days</td>
+      <td>Affected activity taken directly from RFI Delay.xlsx Activity ID and Activity Name; final claimable days require critical path / longest path proof.</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-002</td>
+      <td>CON-B04-WT-1110</td>
+      <td>RFT for Walls (B04) (Water Tank)</td>
+      <td>NaN</td>
+      <td>18-Mar-2026</td>
+      <td>19.0</td>
+      <td>RFI review duration less contractual / allowed 10-day response period</td>
+      <td>Submitted 17-Feb-2026; replied 18-Mar-2026; delay beyond 10 days = 19.0 days</td>
+      <td>Affected activity taken directly from RFI Delay.xlsx Activity ID and Activity Name; final claimable days require critical path / longest path proof.</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-003</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>RFT for RC Raft &amp; Footings (B01) (footing)</td>
+      <td>NaN</td>
+      <td>07-Apr-2026</td>
+      <td>18.0</td>
+      <td>RFI review duration less contractual / allowed 10-day response period</td>
+      <td>Submitted 10-Mar-2026; replied 07-Apr-2026; delay beyond 10 days = 18.0 days</td>
+      <td>Affected activity taken directly from RFI Delay.xlsx Activity ID and Activity Name; final claimable days require critical path / longest path proof.</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-005</td>
+      <td>CON-B04-WT-1110</td>
+      <td>RFT for Walls (B04) (Water Tank)</td>
+      <td>NaN</td>
+      <td>05-Apr-2026</td>
+      <td>16.0</td>
+      <td>RFI review duration less contractual / allowed 10-day response period</td>
+      <td>Submitted 10-Mar-2026; replied 05-Apr-2026; delay beyond 10 days = 16.0 days</td>
+      <td>Affected activity taken directly from RFI Delay.xlsx Activity ID and Activity Name; final claimable days require critical path / longest path proof.</td>
+    </tr>
+  </tbody>
+</table></div>
+      <div class="panel"><h2>Fragnet Logic Register</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Fragnet ID</th>
+      <th>Delay Event ID</th>
+      <th>Fragnet Activity ID</th>
+      <th>Fragnet Activity Name</th>
+      <th>Fragnet Insert Before</th>
+      <th>Predecessor Activity ID</th>
+      <th>Predecessor Relationship Type</th>
+      <th>Predecessor Lag</th>
+      <th>Successor Activity ID</th>
+      <th>Successor Relationship Type</th>
+      <th>Successor Lag</th>
+      <th>Fragment Start</th>
+      <th>Fragment Finish</th>
+      <th>Fragment Duration</th>
+      <th>Logic Rationale</th>
+      <th>Record Reference</th>
+      <th>Evidence Reference</th>
+      <th>Claimed Delay Duration</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>FRAG-001</td>
+      <td>STEEL-STOCKOUT-05-Feb-2026-B01</td>
+      <td>FRAG-CON-B01-FOOT-1050</td>
+      <td>Client Steel Shortage - B01 - RFT - Before CON-B01-FOOT-1050</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>CON-B01-FOOT-1040</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B01-FOOT-1090</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>5-Feb-26</td>
+      <td>16-Feb-26</td>
+      <td>11.0</td>
+      <td>Insert before first affected activity CON-B01-FOOT-1050 due to steel shortage affecting B01.</td>
+      <td>CON-B01-FOOT-1050 - RFT for RC Raft &amp; Footings (B01) (footing)</td>
+      <td>Employer steel supply + master activity steel analysis</td>
+      <td>11.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-002</td>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>FRAG-CON-B04-FOOT-1050</td>
+      <td>Client Steel Shortage - B04 - RFT - Before CON-B04-FOOT-1050</td>
+      <td>CON-B04-FOOT-1050</td>
+      <td>CON-B04-FOOT-1040</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B04-FOOT-1080</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>10-Mar-26</td>
+      <td>21-Apr-26</td>
+      <td>42.0</td>
+      <td>Insert before first affected activity CON-B04-FOOT-1050 due to steel shortage affecting B04.</td>
+      <td>CON-B04-FOOT-1050 - RFT for RC Raft &amp; Footings (B04) (footing)</td>
+      <td>Employer steel supply + master activity steel analysis</td>
+      <td>42.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-003</td>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>FRAG-CON-B04-FOOT-1070</td>
+      <td>Client Steel Shortage - B04 - RFT - Before CON-B04-FOOT-1070</td>
+      <td>CON-B04-FOOT-1070</td>
+      <td>CON-B04-FOOT-1060</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B04-FOOT-1090</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>10-Mar-26</td>
+      <td>21-Apr-26</td>
+      <td>42.0</td>
+      <td>Insert before first affected activity CON-B04-FOOT-1070 due to steel shortage affecting B04.</td>
+      <td>CON-B04-FOOT-1070 - RFT for Columns &amp; Walls Below SOG (B04) (footing)</td>
+      <td>Employer steel supply + master activity steel analysis</td>
+      <td>42.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-004</td>
+      <td>STEEL-STOCKOUT-21-Apr-2026-B02</td>
+      <td>FRAG-CON-B02-BAS02-1010</td>
+      <td>Client Steel Shortage - B02 - RFT - Before CON-B02-BAS02-1010</td>
+      <td>CON-B02-BAS02-1010</td>
+      <td>CON-B02-BAS02-1000</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B02-BAS02-1020</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>21-Apr-26</td>
+      <td>7-May-26</td>
+      <td>16.0</td>
+      <td>Insert before first affected activity CON-B02-BAS02-1010 due to steel shortage affecting B02.</td>
+      <td>CON-B02-BAS02-1010 - RFT for Walls, Col. &amp; Cores (B02) (Bas 02)</td>
+      <td>Employer steel supply + master activity steel analysis</td>
+      <td>16.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-RFI-CLAIM6-001</td>
+      <td>RFI-CLAIM6-001</td>
+      <td>FRAG-RFI-CLAIM6-001</td>
+      <td>RFI response delay - RFI 001 / BD-CW-SAMCO-PCO-RFI-MECH-00001-R00</td>
+      <td>CON-B04-WT-1070</td>
+      <td>To be selected from P6 predecessor / last unaffected activity</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B04-WT-1070</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>26-Feb-2026</td>
+      <td>29-Mar-2026</td>
+      <td>31.0</td>
+      <td>Insert RFI-response delay fragnet before affected activity CON-B04-WT-1070 - RFT for RC Raft (B04) (Water Tank) because reply was required before: Reply required before installing sump pit boxes, earthing network, and casting raft concrete</td>
+      <td>RFI 001 / BD-CW-SAMCO-PCO-RFI-MECH-00001-R00</td>
+      <td>RFI Delay.xlsx + RFI submission/reply records</td>
+      <td>31.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-RFI-CLAIM6-002</td>
+      <td>RFI-CLAIM6-002</td>
+      <td>FRAG-RFI-CLAIM6-002</td>
+      <td>RFI response delay - RFI 002 / BD-CW-SAMCO-PCO-RFI-MECH-00002-R00</td>
+      <td>CON-B04-WT-1110</td>
+      <td>To be selected from P6 predecessor / last unaffected activity</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B04-WT-1110</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>27-Feb-2026</td>
+      <td>18-Mar-2026</td>
+      <td>19.0</td>
+      <td>Insert RFI-response delay fragnet before affected activity CON-B04-WT-1110 - RFT for Walls (B04) (Water Tank) because reply was required before: Reply required before crane anchors, sleeves/openings coordination, reinforcement closure, and casting</td>
+      <td>RFI 002 / BD-CW-SAMCO-PCO-RFI-MECH-00002-R00</td>
+      <td>RFI Delay.xlsx + RFI submission/reply records</td>
+      <td>19.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-RFI-CLAIM6-003</td>
+      <td>RFI-CLAIM6-003</td>
+      <td>FRAG-RFI-CLAIM6-003</td>
+      <td>RFI response delay - RFI 003</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>To be selected from P6 predecessor / last unaffected activity</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>20-Mar-2026</td>
+      <td>07-Apr-2026</td>
+      <td>18.0</td>
+      <td>Insert RFI-response delay fragnet before affected activity CON-B01-FOOT-1050 - RFT for RC Raft &amp; Footings (B01) (footing) because reply was required before: Final sump pit and penetration details required before embedded MEP and raft casting</td>
+      <td>RFI 003</td>
+      <td>RFI Delay.xlsx + RFI submission/reply records</td>
+      <td>18.0</td>
+    </tr>
+    <tr>
+      <td>FRAG-RFI-CLAIM6-005</td>
+      <td>RFI-CLAIM6-005</td>
+      <td>FRAG-RFI-CLAIM6-005</td>
+      <td>RFI response delay - RFI 005</td>
+      <td>CON-B04-WT-1110</td>
+      <td>To be selected from P6 predecessor / last unaffected activity</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>CON-B04-WT-1110</td>
+      <td>FS</td>
+      <td>0</td>
+      <td>20-Mar-2026</td>
+      <td>05-Apr-2026</td>
+      <td>16.0</td>
+      <td>Insert RFI-response delay fragnet before affected activity CON-B04-WT-1110 - RFT for Walls (B04) (Water Tank) because reply was required before: Reply required before fixing wall penetrations, closing shuttering, casting wall side 2, and external pipe installation</td>
+      <td>RFI 005</td>
+      <td>RFI Delay.xlsx + RFI submission/reply records</td>
+      <td>16.0</td>
+    </tr>
+  </tbody>
+</table></div>
+    </section>
+    <section class="panel" style="margin-top:16px"><h2>Concurrency Matrix</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Primary Event ID</th>
+      <th>Concurrent Event ID</th>
+      <th>Activity ID</th>
+      <th>Overlap Start</th>
+      <th>Overlap Finish</th>
+      <th>Concurrent Delay Days</th>
+      <th>Concurrent Source</th>
+      <th>Driving / Non-Driving</th>
+      <th>Reviewer Position</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>STEEL-STOCKOUT-05-Feb-2026-B01</td>
+      <td>RFI-001</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>16-Feb-26</td>
+      <td>16-Feb-26</td>
+      <td>0.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI-001</td>
+      <td>CON-B04-FOOT-1050</td>
+      <td>10-Mar-26</td>
+      <td>29-Mar-26</td>
+      <td>19.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI-002</td>
+      <td>CON-B04-FOOT-1050</td>
+      <td>10-Mar-26</td>
+      <td>18-Mar-26</td>
+      <td>8.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI--003</td>
+      <td>CON-B04-FOOT-1050</td>
+      <td>10-Mar-26</td>
+      <td>7-Apr-26</td>
+      <td>28.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI-005</td>
+      <td>CON-B04-FOOT-1050</td>
+      <td>10-Mar-26</td>
+      <td>5-Apr-26</td>
+      <td>26.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI-001</td>
+      <td>CON-B04-FOOT-1070</td>
+      <td>10-Mar-26</td>
+      <td>29-Mar-26</td>
+      <td>19.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI-002</td>
+      <td>CON-B04-FOOT-1070</td>
+      <td>10-Mar-26</td>
+      <td>18-Mar-26</td>
+      <td>8.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI--003</td>
+      <td>CON-B04-FOOT-1070</td>
+      <td>10-Mar-26</td>
+      <td>7-Apr-26</td>
+      <td>28.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>RFI-005</td>
+      <td>CON-B04-FOOT-1070</td>
+      <td>10-Mar-26</td>
+      <td>5-Apr-26</td>
+      <td>26.0</td>
+      <td>RFI</td>
+      <td>Potentially concurrent</td>
+      <td>Needs case-by-case causation review</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-001</td>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>CON-B04-WT-1070</td>
+      <td>26-Feb-2026</td>
+      <td>29-Mar-2026</td>
+      <td>31.0</td>
+      <td>RFI Delay.xlsx vs steel delay event register</td>
+      <td>To be determined by TIA / path movement</td>
+      <td>Potential concurrent owner-risk stream; final claim days must use net critical-path impact, not simple sum.</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-002</td>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>CON-B04-WT-1110</td>
+      <td>27-Feb-2026</td>
+      <td>18-Mar-2026</td>
+      <td>19.0</td>
+      <td>RFI Delay.xlsx vs steel delay event register</td>
+      <td>To be determined by TIA / path movement</td>
+      <td>Potential concurrent owner-risk stream; final claim days must use net critical-path impact, not simple sum.</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-003</td>
+      <td>No matching steel event by building in current register</td>
+      <td>CON-B01-FOOT-1050</td>
+      <td>20-Mar-2026</td>
+      <td>07-Apr-2026</td>
+      <td>18.0</td>
+      <td>RFI Delay.xlsx</td>
+      <td>To be determined by TIA / path movement</td>
+      <td>Do not add arithmetically until overlap and driving path are tested.</td>
+    </tr>
+    <tr>
+      <td>RFI-CLAIM6-005</td>
+      <td>STEEL-STOCKOUT-10-Mar-2026-B04</td>
+      <td>CON-B04-WT-1110</td>
+      <td>20-Mar-2026</td>
+      <td>05-Apr-2026</td>
+      <td>16.0</td>
+      <td>RFI Delay.xlsx vs steel delay event register</td>
+      <td>To be determined by TIA / path movement</td>
+      <td>Potential concurrent owner-risk stream; final claim days must use net critical-path impact, not simple sum.</td>
+    </tr>
+  </tbody>
+</table></section>
+    <section class="panel" style="margin-top:16px"><h2>Column Inventory Inspected Before Answering</h2><table border="1" class="dataframe data-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Dataset</th>
+      <th>Rows</th>
+      <th>Columns</th>
+      <th>Column List</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Delay tia improvement files/01-project_metadata_template.csv</td>
+      <td>1</td>
+      <td>14</td>
+      <td>Project Name, Contract No, Employer, Contractor, Consultant, Baseline Name, Impacted Update Name, Data Date, Prepared By, Report Revision, Report Date, Delay Category, Primary Cause Family, Primary Claim Position</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/02-delay_event_register_template.csv</td>
+      <td>26</td>
+      <td>20</td>
+      <td>Event ID, Event Type, Source File, Cause Description, Evidence Date, Impact Start Date, Recovery Date, Working Delay Days, Responsible Party, Linked Activity ID, Linked Activity Name, Linked Building / Zone, Steel Type / Diameter, Criticality Context, BL Path State, Current Path State, Contract Support Topic, Evidence Strength, Notice Ref, Comments</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/03-activity_impact_register_template.csv</td>
+      <td>9</td>
+      <td>22</td>
+      <td>Event ID, Activity ID, Activity Name, WBS, Building / Zone, BL Start, BL Finish, Current Start, Current Finish, Pre-Impact Forecast Finish, Impacted Forecast Finish, Claimed Delay Duration (days), Original Duration, Remaining Duration, Total Float, Critical, Longest Path, Candidate Score, First Affected Flag, Reason Selected, Predecessor Ready, Successor Exposed</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/04-fragnet_logic_register_template.csv</td>
+      <td>8</td>
+      <td>18</td>
+      <td>Fragnet ID, Delay Event ID, Fragnet Activity ID, Fragnet Activity Name, Fragnet Insert Before, Predecessor Activity ID, Predecessor Relationship Type, Predecessor Lag, Successor Activity ID, Successor Relationship Type, Successor Lag, Fragment Start, Fragment Finish, Fragment Duration, Logic Rationale, Record Reference, Evidence Reference, Claimed Delay Duration</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/05-claimed_delay_register_template.csv</td>
+      <td>9</td>
+      <td>9</td>
+      <td>Event ID, Activity ID, Activity Name, Pre-Impact Forecast Finish, Impacted Forecast Finish, Claimed Delay Duration (days), Duration Basis, Inferred Duration Basis, Reviewer Comment</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/06-causation_matrix_template.csv</td>
+      <td>8</td>
+      <td>13</td>
+      <td>Event ID, Activity ID, Activity Name, Primary Cause, Causal Path Proven, Downstream Successor, Downstream Milestone Impact, Employer Risk, Contractor Risk, Excusable Potential, Compensable Potential, Needs More Evidence, Conclusion</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/07-concurrency_matrix_template.csv</td>
+      <td>13</td>
+      <td>9</td>
+      <td>Primary Event ID, Concurrent Event ID, Activity ID, Overlap Start, Overlap Finish, Concurrent Delay Days, Concurrent Source, Driving / Non-Driving, Reviewer Position</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/08-evidence_register_template.csv</td>
+      <td>17</td>
+      <td>13</td>
+      <td>Evidence Ref, Event ID, Activity ID, Document Type, Source File, Source Row, Document Date, Description, Linked Letter Ref, Linked RFI Ref, Linked MIR Ref, Linked Delivery Ref, Used In Report</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/09-primavera_fragnet_import_template.csv</td>
+      <td>8</td>
+      <td>18</td>
+      <td>Activity ID, Activity Name, WBS, Original Duration, Calendar, Activity Type, Start, Finish, Predecessor Activity ID, Predecessor Relationship Type, Predecessor Lag, Successor Activity ID, Successor Relationship Type, Successor Lag, Delay Event ID, Claimed Delay Duration, Responsible Party, Notes</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/10-xer_build_context_template.csv</td>
+      <td>1</td>
+      <td>13</td>
+      <td>Project ID, Project Short Name, WBS Root, Default Calendar, Activity ID Prefix, Relationship Code Standard, Lag Unit, Duration Unit, Baseline Source, Update Source, Sample XER Reference, Validation Status, Comment</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/11-field_mapping_matrix.csv</td>
+      <td>23</td>
+      <td>8</td>
+      <td>Source File, Source Column, Canonical Dataset, Canonical Column, Required, Transformation Rule, Used In, Notes</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/12-implementation_backlog.csv</td>
+      <td>12</td>
+      <td>7</td>
+      <td>Order, Work Package, Objective, Target File / Module, Output, Priority, Status</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/15-director_report_section_mapping.csv</td>
+      <td>10</td>
+      <td>5</td>
+      <td>Report Section, Primary Dataset, Secondary Dataset, Current Program Source, Gap Closed By</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/16-docx_data_binding_matrix.csv</td>
+      <td>10</td>
+      <td>5</td>
+      <td>Template Area, Field / Table, Binding Dataset, Binding Column / Logic, Required</td>
+    </tr>
+    <tr>
+      <td>Delay tia improvement files/18-rfi_delay_claim6_normalized.csv</td>
+      <td>4</td>
+      <td>22</td>
+      <td>Event ID, RFI Ref, Submission Date, Reply Date, Impact Start, Review Duration Days, Delay Beyond 10 Days, Activity ID, Activity Name, Subject, Main Purpose, Start Dependency, Sequence Impact, Commercial Impact, Responsibility, Risk Owner, Delay Risk, EOT Potential, Claim Strength, Required Actions, Key Requests, Scope Impact</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/01- master_activity_steel_analysis.csv</td>
+      <td>12</td>
+      <td>27</td>
+      <td>Activity ID, Activity Name, Resource ID, Register Building / Zone Allocation, Drive Activity Dates, BL Start, BL Finish, Start, Finish, Allocation Date, Allocation Ref, Act. Start Status, Act. Finish Status, Original Duration, Actual Duration, Remaining Duration, Deviated Duration, Budgeted Units, Actual Units, Available units supplied by client vs Actual units of activities, Delayed duration in days due to steel un avilability in site, Remaining Units, Units % Complete, Budgeted Units / Time, Responsibility, Reason for Delay, Note</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/02- employer_steel_supply.csv</td>
+      <td>4</td>
+      <td>2</td>
+      <td>Date of receiving units supplied by client, Available units at site received by client</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/03- p6_activity_export.csv</td>
+      <td>1363</td>
+      <td>20</td>
+      <td>Activity ID, Activity Name, WBS, Baseline Start, Baseline Finish, Start, Finish, Actual Start, Actual Finish, Remaining Duration, Total Float, Free Float, Critical, Longest Path, Predecessors, Successors, Remaining Units, Budgeted Units, Physical % Complete, Unnamed: 19</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/04- relationship_file.csv</td>
+      <td>791</td>
+      <td>5</td>
+      <td>Activity ID, Activity Name, Predecessors, Predecessor Details, Successors</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/05- contract_library.csv</td>
+      <td>66</td>
+      <td>9</td>
+      <td>Clause / Topic, Location, Plain English Meaning, Research the Lines, Who Holds Leverage, Notice / Time Bar, Money Impact, Schedule Impact, Practical Action / Evidence</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/06- ifc_conflict.csv</td>
+      <td>7</td>
+      <td>8</td>
+      <td>RFI No., Date Of Submission To consultant, Date Of Reciving Reply from consultant, Var, Construction Phase, Civil Activity (Pre-MEP), MEP Activity (Intermediate Stage), Civil Activity (Post-MEP)</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/07- payments.csv</td>
+      <td>8</td>
+      <td>17</td>
+      <td>payment_id, contract_id, project_id, invoice_no, invoice_date, certified_amount, paid_amount, payment_status, Unnamed: 8, Unnamed: 9, Unnamed: 10, Unnamed: 11, Unnamed: 12, Unnamed: 13, Unnamed: 14, Unnamed: 15, Unnamed: 16</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/08- rfi_status.csv</td>
+      <td>7</td>
+      <td>8</td>
+      <td>RFI No., Date Of Submission To consultant, Date Of Reciving Reply from consultant, Var, Construction Phase, Civil Activity (Pre-MEP), MEP Activity (Intermediate Stage), Civil Activity (Post-MEP)</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/09- samco_steel_supplied_at_site.csv</td>
+      <td>18</td>
+      <td>4</td>
+      <td>Coding No., Supplier, Total Quantity, Date of delivery</td>
+    </tr>
+    <tr>
+      <td>steel_delay_tia_templates/RFI Delay.csv</td>
+      <td>4</td>
+      <td>19</td>
+      <td>Ref No, Date (Submission | Reply | Delay beyond 10d), Type, Subject, Main Purpose, Key Requests, Scope Impact, Responsibility, Activity ID, Activity Name, Start Dependency, Sequence Impact, Commercial Impact, Risk Type, Risk Owner, Delay Risk, EOT Potential, Claim Strength, Required Actions</td>
+    </tr>
+  </tbody>
+</table></section>
+  </main>
+</body>
+</html>

@@ -30,11 +30,17 @@ class ContractClause:
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CLAUSE_LIBRARY_CANDIDATES = [
-    PROJECT_ROOT / "project_data" / "contracts" / "Overall_Contract_clause_library.xlsx",
-    PROJECT_ROOT / "data" / "import_templates" / "Overall_Contract_clause_library.xlsx",
-    Path(r"C:\Users\pc\Downloads\Overall_Contract_clause_library.xlsx"),
+    PROJECT_ROOT / "projects" / "_PROJECT_TEMPLATE" / "contracts" / "source" / "Overall_Contract_clause_library.xlsx",
 ]
 CLAUSE_LIBRARY_PATH = next((path for path in CLAUSE_LIBRARY_CANDIDATES if path.exists()), CLAUSE_LIBRARY_CANDIDATES[0])
+
+
+def set_clause_library_path(path: Path) -> None:
+    """Set the active project's clause library without cross-project fallback."""
+    global CLAUSE_LIBRARY_PATH, CONTRACT_CLAUSES
+    CLAUSE_LIBRARY_PATH = Path(path)
+    if "CONTRACT_CLAUSES" in globals():
+        CONTRACT_CLAUSES = _load_clause_library()
 
 
 def _seed_clauses() -> List[ContractClause]:
@@ -43,8 +49,8 @@ def _seed_clauses() -> List[ContractClause]:
         clause_id="1.0",
         topic="Contract basics",
         location="Agreement / Contract Data",
-        plain_english="Project is the Big Project civil works between Roya as Employer and Samco as Contractor, effective 30-Apr-2025.",
-        beneath_lines="All later letters should be read against this baseline: parties, project, price, time, and risk allocation are fixed from this date.",
+        plain_english="The signed agreement and contract data define the parties, project, effective date, price, time, and risk allocation.",
+        beneath_lines="All later letters should be read against the project-specific signed agreement and contract data.",
         leverage_holder="Neutral",
         notice_requirement="Use exact contract references in all notices.",
         money_impact="Defines the starting commercial baseline.",
@@ -55,7 +61,7 @@ def _seed_clauses() -> List[ContractClause]:
         clause_id="1.1",
         topic="Accepted Contract Amount",
         location="Agreement / Appendix",
-        plain_english="Contract amount is EGP 367,286,025 including social insurance, duties, and taxes except VAT.",
+        plain_english="The accepted contract amount and included taxes are governed by the project-specific signed agreement and appendix.",
         beneath_lines="The price is intended to be comprehensive. The Contractor must prove why any extra is outside the agreed scope or qualifies under variation/adjustment clauses.",
         leverage_holder="Employer",
         notice_requirement="Any extra must follow Variation or Claim procedure.",
@@ -176,14 +182,17 @@ def _seed_clauses() -> List[ContractClause]:
 
 def _load_clause_library() -> List[ContractClause]:
     if not CLAUSE_LIBRARY_PATH.exists():
-        return _seed_clauses()
+        return []
 
     try:
-        df = pd.read_excel(CLAUSE_LIBRARY_PATH, sheet_name="Clause Library").fillna("")
+        if CLAUSE_LIBRARY_PATH.suffix.lower() == ".csv":
+            df = pd.read_csv(CLAUSE_LIBRARY_PATH).fillna("")
+        else:
+            df = pd.read_excel(CLAUSE_LIBRARY_PATH, sheet_name="Clause Library").fillna("")
     except ImportError:
-        return _seed_clauses()
+        return []
     except Exception:
-        return _seed_clauses()
+        return []
 
     clauses: List[ContractClause] = []
     for index, row in df.iterrows():
@@ -204,7 +213,7 @@ def _load_clause_library() -> List[ContractClause]:
                 practical_action=str(row.get("Practical Action / Evidence", "")).strip(),
             )
         )
-    return clauses or _seed_clauses()
+    return clauses
 
 
 CONTRACT_CLAUSES = _load_clause_library()

@@ -2,26 +2,39 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Create demo database",
+      "label": "PIH: Configure sync credentials securely",
       "type": "shell",
-      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-      "args": ["scripts/init_database.py"],
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\tools\\configure_github_sync_credentials.ps1"
+      ],
       "problemMatcher": []
     },
     {
-      "label": "Generate HTML report",
+      "label": "PIH: Sync repository now",
       "type": "shell",
-      "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
-      "args": ["scripts/generate_html_report.py"],
+      "command": "${workspaceFolder}\\RUN_FULL_PROJECT_NO_GIT_SYNC.bat",
+      "args": ["Once", "30"],
       "problemMatcher": []
     },
     {
-      "label": "Run Streamlit dashboard",
+      "label": "PIH: Watch repository every 30 minutes",
       "type": "shell",
-      "command": "${workspaceFolder}\\.venv\\Scripts\\streamlit.exe",
-      "args": ["run", "dashboard.py"],
+      "command": "${workspaceFolder}\\RUN_FULL_PROJECT_NO_GIT_SYNC.bat",
+      "args": ["Watch", "30"],
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "PIH: Preview repository sync",
+      "type": "shell",
+      "command": "${workspaceFolder}\\RUN_FULL_PROJECT_NO_GIT_SYNC.bat",
+      "args": ["DryRun", "30"],
       "problemMatcher": []
     }
   ]
 }
-

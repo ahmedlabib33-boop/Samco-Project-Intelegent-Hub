@@ -7,10 +7,10 @@ from typing import Callable
 import pandas as pd
 
 
-SAMCO_SHEET = "From SAMCO to ACE"
-ACE_SHEET = "From ACE to SAMCO"
-SAMCO_LINKS_SHEET = "SAMCO to ACE Links"
-ACE_LINKS_SHEET = "ACE to SAMCO Links"
+SAMCO_SHEET = "From Contractor"
+ACE_SHEET = "From Consultant"
+SAMCO_LINKS_SHEET = "Contractor Links"
+ACE_LINKS_SHEET = "Consultant Links"
 THREADS_SHEET = "Issue Threads"
 AUTO_REGISTER_SHEET = "Auto Ingest Register"
 
@@ -71,25 +71,25 @@ def _clean_reference(value: str) -> str:
 
 def _direction_from_path(path: Path, text: str) -> str:
     folder_text = " ".join(part.lower() for part in path.parts)
-    if "from samco" in folder_text:
-        return "SAMCO to ACEPM"
-    if "from acepm" in folder_text or "from ace" in folder_text:
-        return "ACEPM to SAMCO"
+    if "from samco" in folder_text or "from contractor" in folder_text:
+        return "Contractor to Consultant"
+    if "from acepm" in folder_text or "from ace" in folder_text or "from consultant" in folder_text or "from engineer" in folder_text:
+        return "Consultant to Contractor"
     upper_text = text.upper()
     if "BD-CW-SAMCO-ACE" in upper_text:
-        return "SAMCO to ACEPM"
+        return "Contractor to Consultant"
     if "BD-ACEPM-SAMCO" in upper_text:
-        return "ACEPM to SAMCO"
+        return "Consultant to Contractor"
     return "Needs Review"
 
 
 def _extract_reference(path: Path, text: str, direction: str) -> str:
     references = [_clean_reference(match.group(0)) for match in FULL_REFERENCE_PATTERN.finditer(f"{path.stem}\n{text}")]
-    if direction == "SAMCO to ACEPM":
+    if direction == "Contractor to Consultant":
         own_reference = next((ref for ref in references if ref.startswith("BD-CW-SAMCO-ACE")), "")
         if own_reference:
             return own_reference
-    elif direction == "ACEPM to SAMCO":
+    elif direction == "Consultant to Contractor":
         own_reference = next((ref for ref in references if ref.startswith("BD-ACEPM-SAMCO")), "")
         if own_reference:
             return own_reference
@@ -99,9 +99,14 @@ def _extract_reference(path: Path, text: str, direction: str) -> str:
     if not leading_number or direction == "Needs Review":
         return ""
     number = int(leading_number.group(1))
-    if direction == "SAMCO to ACEPM":
+    folder_text = " ".join(part.lower() for part in path.parts)
+    if "from samco" in folder_text:
         return f"BD-CW-SAMCO-ACE-LET-STR-{number:03d}"
-    return f"BD-ACEPM-SAMCO-LET-{number:03d}"
+    if "from acepm" in folder_text or "from ace" in folder_text:
+        return f"BD-ACEPM-SAMCO-LET-{number:03d}"
+    if direction == "Contractor to Consultant":
+        return f"LTR-CTR-{number:03d}"
+    return f"LTR-CNS-{number:03d}"
 
 
 def _extract_date(text: str) -> str:
@@ -204,7 +209,14 @@ def _related_references(text: str, current_reference: str, opposite_direction: s
 
 
 def _ensure_frame(sheets: dict[str, pd.DataFrame], name: str, columns: list[str]) -> pd.DataFrame:
-    frame = sheets.get(name, pd.DataFrame(columns=columns)).copy().fillna("")
+    legacy_aliases = {
+        SAMCO_SHEET: "From SAMCO to ACE",
+        ACE_SHEET: "From ACE to SAMCO",
+        SAMCO_LINKS_SHEET: "SAMCO to ACE Links",
+        ACE_LINKS_SHEET: "ACE to SAMCO Links",
+    }
+    source_name = name if name in sheets else legacy_aliases.get(name, name)
+    frame = sheets.get(source_name, pd.DataFrame(columns=columns)).copy().fillna("")
     for column in columns:
         if column not in frame.columns:
             frame[column] = ""
@@ -229,6 +241,17 @@ def merge_inbox_letters(
         if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
     ]
     for path in files:
+        direction_hint = _direction_from_path(path, "")
+        reference_hint = _extract_reference(path, "", direction_hint)
+        hint_target = samco_df if direction_hint == "Contractor to Consultant" else ace_df
+        if reference_hint and hint_target["Ref No"].astype(str).str.strip().eq(reference_hint).any():
+            register_rows.append({
+                "Source File": path.relative_to(inbox_dir).as_posix(), "Direction": direction_hint,
+                "Reference": reference_hint, "Date": "", "Subject": path.stem,
+                "Classification": "", "Delay Risk": "", "Issue Thread": "",
+                "Status": "Already Registered", "Message": "The reference already exists in the intelligence workbook.",
+            })
+            continue
         try:
             text = str(extract_text(path) or "").strip()
         except Exception as exc:
@@ -256,7 +279,7 @@ def merge_inbox_letters(
             })
             continue
 
-        target_df = samco_df if direction == "SAMCO to ACEPM" else ace_df
+        target_df = samco_df if direction == "Contractor to Consultant" else ace_df
         if target_df["Ref No"].astype(str).str.strip().eq(reference).any():
             register_rows.append({
                 "Source File": path.relative_to(inbox_dir).as_posix(), "Direction": direction,
@@ -267,7 +290,7 @@ def merge_inbox_letters(
             })
             continue
 
-        responsibility = "Engineer / Employer" if direction == "SAMCO to ACEPM" else "Contractor"
+        responsibility = "Engineer / Employer" if direction == "Contractor to Consultant" else "Contractor"
         row = {
             "Ref No": reference,
             "Date": date,
@@ -289,7 +312,7 @@ def merge_inbox_letters(
             "Required Actions": classification["action"],
         }
         target_df = pd.concat([target_df, pd.DataFrame([row])], ignore_index=True)
-        if direction == "SAMCO to ACEPM":
+        if direction == "Contractor to Consultant":
             samco_df = target_df
             related = _related_references(text, reference, "ACEPM")
             link_row = {
@@ -321,7 +344,7 @@ def merge_inbox_letters(
         short_ref = reference.split("-")[-1]
         if thread_match.any():
             index = thread_match[thread_match].index[0]
-            ref_column = "SAMCO Ref(s)" if direction == "SAMCO to ACEPM" else "6"
+            ref_column = "SAMCO Ref(s)" if direction == "Contractor to Consultant" else "6"
             existing = [item.strip() for item in str(threads_df.at[index, ref_column]).split(";") if item.strip()]
             if short_ref not in existing:
                 existing.append(short_ref)
@@ -331,8 +354,8 @@ def merge_inbox_letters(
         else:
             threads_df = pd.concat([threads_df, pd.DataFrame([{
                 "Thread": classification["thread"],
-                "SAMCO Ref(s)": short_ref if direction == "SAMCO to ACEPM" else "",
-                "6": short_ref if direction == "ACEPM to SAMCO" else "",
+                "SAMCO Ref(s)": short_ref if direction == "Contractor to Consultant" else "",
+                "6": short_ref if direction == "Consultant to Contractor" else "",
                 "Main Link": f"Automatically classified from {path.name}",
                 "Priority": delay_risk,
                 "Next Action": classification["action"],

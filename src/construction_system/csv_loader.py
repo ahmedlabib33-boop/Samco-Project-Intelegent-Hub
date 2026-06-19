@@ -1,28 +1,30 @@
 """CSV Data Loader - Load all dashboard data from CSV files."""
 
 import pandas as pd
-import os
 import re
 from pathlib import Path
 from typing import Any
 from typing import Dict, Optional
 
-# Define CSV file paths
-DATA_DIR = Path(__file__).parent.parent.parent / "data" / "import_templates"
+from .project_catalog import discover_projects, project_data_path, projects_frame
+
+
+APP_DIR = Path(__file__).parent.parent.parent
+PROJECTS_DIR = APP_DIR / "projects"
 
 CSV_FILES = {
-    "projects": DATA_DIR / "projects.csv",
-    "activities": DATA_DIR / "activities.csv",
-    "contracts": DATA_DIR / "contracts.csv",
-    "cost_items": DATA_DIR / "cost_items.csv",
-    "delay_events": DATA_DIR / "delay_events.csv",
-    "risks": DATA_DIR / "risks.csv",
-    "milestones": DATA_DIR / "milestones.csv",
-    "payments": DATA_DIR / "payments.csv",
-    "progress_updates": DATA_DIR / "progress_updates.csv",
-    "change_orders": DATA_DIR / "change_orders.csv",
-    "claims": DATA_DIR / "claims.csv",
-    "wbs": DATA_DIR / "wbs.csv",
+    "projects": "projects.csv",
+    "activities": "activities.csv",
+    "contracts": "contracts.csv",
+    "cost_items": "cost_items.csv",
+    "delay_events": "delay_events.csv",
+    "risks": "risks.csv",
+    "milestones": "milestones.csv",
+    "payments": "payments.csv",
+    "progress_updates": "progress_updates.csv",
+    "change_orders": "change_orders.csv",
+    "claims": "claims.csv",
+    "wbs": "wbs.csv",
 }
 
 
@@ -68,7 +70,7 @@ def normalize_import_template_frame(file_key: str, df: pd.DataFrame) -> pd.DataF
     elif file_key == "delay_events":
         _copy_column_if_missing(working, "delay_id", ["delay_id", "delay event id", "event id", "Primary Event ID"])
         _copy_column_if_missing(working, "delay_title", ["delay_title", "event_title", "Primary Event ID", "Activity Name"])
-        _copy_column_if_missing(working, "project_id", ["project_id", "project"], "The Big -P.01-UP-20-April-26")
+        _copy_column_if_missing(working, "project_id", ["project_id", "project"])
         _copy_column_if_missing(working, "activity_id", ["activity_id", "Activity ID"])
         _copy_column_if_missing(working, "activity_name", ["activity_name", "Activity Name"])
         _copy_column_if_missing(working, "start_date", ["start_date", "Start", "Overlap Start", "BL Start"])
@@ -85,8 +87,9 @@ def normalize_import_template_frame(file_key: str, df: pd.DataFrame) -> pd.DataF
 class CSVDataLoader:
     """Load and cache CSV data for dashboard."""
     
-    def __init__(self):
+    def __init__(self, project_id: str = ""):
         """Initialize data loader with cache."""
+        self.project_id = str(project_id or "").strip()
         self.cache = {}
         self.load_status = {}
     
@@ -110,18 +113,27 @@ class CSVDataLoader:
                 raise ValueError(f"Unknown CSV file: {file_key}")
             return None
         
-        file_path = CSV_FILES[file_key]
-        
-        # Check if file exists
-        if not file_path.exists():
-            self.load_status[file_key] = f"File not found: {file_path}"
-            if required:
-                raise FileNotFoundError(f"Required CSV file not found: {file_path}")
-            return None
-        
         try:
-            # Load CSV
-            df = normalize_import_template_frame(file_key, pd.read_csv(file_path))
+            records = discover_projects(PROJECTS_DIR)
+            project_ids = [self.project_id] if self.project_id else [row["project_id"] for row in records]
+            frames = []
+            for project_id in project_ids:
+                file_path = project_data_path(PROJECTS_DIR, project_id, "core", CSV_FILES[file_key])
+                if not file_path.exists():
+                    continue
+                frame = normalize_import_template_frame(file_key, pd.read_csv(file_path))
+                if "project_id" not in frame.columns:
+                    frame.insert(0, "project_id", project_id)
+                else:
+                    source_ids = frame["project_id"].astype(str).str.strip()
+                    mismatched = source_ids.ne("") & source_ids.ne(project_id)
+                    if mismatched.any() and "source_project_id" not in frame.columns:
+                        frame.insert(1, "source_project_id", source_ids)
+                    frame["project_id"] = project_id
+                frames.append(frame)
+            df = pd.concat(frames, ignore_index=True, sort=False) if frames else pd.DataFrame()
+            if df.empty and required:
+                raise FileNotFoundError(f"Required CSV file not found for project scope: {file_key}")
             self.cache[file_key] = df
             self.load_status[file_key] = f"Loaded: {len(df)} rows"
             return df
@@ -133,10 +145,7 @@ class CSVDataLoader:
     
     def get_projects(self) -> pd.DataFrame:
         """Get projects data."""
-        df = self.load_csv("projects", required=False)
-        if df is None:
-            return pd.DataFrame()
-        return df
+        return projects_frame(PROJECTS_DIR)
     
     def get_activities(self) -> pd.DataFrame:
         """Get activities data."""
