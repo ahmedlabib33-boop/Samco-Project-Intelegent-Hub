@@ -116,6 +116,8 @@ The Output Studio contains a protected **Repository synchronization** panel with
 - **Start 30-minute auto sync**: starts the same watcher used by `RUN_FULL_PROJECT_NO_GIT_SYNC.bat Watch 30`.
 - A recent log preview from `logs/github_sync.log`.
 
+`SYNC_ADMIN_PIN` is optional. When configured, the Sync action requests it; when omitted, the button remains available. `GITHUB_TOKEN` can be provided either as an operating-system environment variable or as a Streamlit secret and is passed only to the synchronization child process.
+
 VS Code provides the same operations through **Terminal > Run Task** using the `PIH:` tasks in `.vscode/tasks.json`.
 
 Use **PIH: Configure sync credentials securely** first. VS Code requests the replacement token and a new administrator PIN through hidden terminal prompts, validates repository access, and writes them only to the Windows user environment. The administrator PIN must contain at least eight characters.

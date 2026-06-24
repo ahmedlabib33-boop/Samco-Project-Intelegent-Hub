@@ -177,10 +177,28 @@ def _github_sync_command(mode: str, interval_minutes: int = 30) -> list[str]:
     ]
 
 
+def _streamlit_secret(name: str) -> str:
+    try:
+        return str(st.secrets.get(name, "") or "").strip()
+    except (FileNotFoundError, KeyError, TypeError):
+        return ""
+
+
+def _github_sync_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    for name in ("GITHUB_TOKEN", "GH_TOKEN"):
+        if not environment.get(name, "").strip():
+            secret = _streamlit_secret(name)
+            if secret:
+                environment[name] = secret
+    return environment
+
+
 def run_repository_sync_once() -> tuple[bool, str]:
     result = subprocess.run(
         _github_sync_command("Once"),
         cwd=APP_DIR,
+        env=_github_sync_environment(),
         capture_output=True,
         text=True,
         timeout=900,
@@ -197,6 +215,7 @@ def start_repository_sync_watch() -> None:
     subprocess.Popen(
         _github_sync_command("Watch", 30),
         cwd=APP_DIR,
+        env=_github_sync_environment(),
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -213,8 +232,8 @@ def repository_sync_log_tail(max_lines: int = 8) -> str:
 
 
 def repository_sync_authorized(pin: str) -> bool:
-    expected = os.environ.get("SYNC_ADMIN_PIN", "").strip()
-    return bool(expected) and hmac.compare_digest(pin.strip(), expected)
+    expected = os.environ.get("SYNC_ADMIN_PIN", "").strip() or _streamlit_secret("SYNC_ADMIN_PIN")
+    return not expected or hmac.compare_digest(pin.strip(), expected)
 
 
 def image_as_base64(path: Path) -> str:
@@ -9114,15 +9133,18 @@ with tabs[11]:
 
 with tabs[13]:
     st.markdown("<div class='section-header'><h3>Output Studio</h3></div>", unsafe_allow_html=True)
-    with st.expander("Repository synchronization", expanded=False):
+    with st.expander("Sync repository", expanded=True):
         sync_notice = st.session_state.pop("repository_sync_notice", "")
         if sync_notice:
             st.success(sync_notice)
-        sync_admin_pin = st.text_input(
-            "Administrator PIN",
-            type="password",
-            key="repository_sync_admin_pin",
-        )
+        configured_sync_pin = os.environ.get("SYNC_ADMIN_PIN", "").strip() or _streamlit_secret("SYNC_ADMIN_PIN")
+        sync_admin_pin = ""
+        if configured_sync_pin:
+            sync_admin_pin = st.text_input(
+                "Administrator PIN",
+                type="password",
+                key="repository_sync_admin_pin",
+            )
         sync_authorized = repository_sync_authorized(sync_admin_pin)
         sync_now_col, sync_watch_col = st.columns(2)
         with sync_now_col:
@@ -9160,8 +9182,6 @@ with tabs[13]:
                     st.success("The 30-minute synchronization watcher started.")
                 except Exception as exc:
                     st.error(f"Unable to start synchronization watcher: {exc}")
-        if not os.environ.get("SYNC_ADMIN_PIN", "").strip():
-            st.warning("Repository synchronization controls are locked because SYNC_ADMIN_PIN is not configured.")
         st.code(repository_sync_log_tail(), language="text")
     if True:
         output_mode = st.radio(
