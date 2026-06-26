@@ -6,9 +6,9 @@ Work only in `C:\Users\pc\OneDrive\Documents\Project Intelligence Hub`.
 2. Use `project_id` from `project_manifest.json` as the stable identity everywhere.
 3. Use `ProjectContext` to resolve the selected ID to the folder's current actual path.
 4. Support folder renames without changing project identity or mixing data.
-5. Auto-discover unlimited future folders under `projects` without code registration.
+5. Auto-discover unlimited future folders under `projects`, including `projects/<sector>/<project>` layouts, without code registration.
 6. Scope every dashboard loader, Claims Intelligence operation, Delay TIA calculation, report, slide, export, cache, and database to the selected project.
-7. In `All projects`, allow only explicit portfolio aggregations retaining `project_id`; block project-specific claims/TIA workflows.
+7. In `Decision Making dashboard`, allow only explicit portfolio aggregations retaining `project_id`; block project-specific claims/TIA workflows.
 8. Never fall back to a default, legacy, random, first, or previously selected project.
 9. Missing selected-project data must show a clean empty/setup state.
 10. Preserve all existing business logic, slides, reports, exports, and formats.

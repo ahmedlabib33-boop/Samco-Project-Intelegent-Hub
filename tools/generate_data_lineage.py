@@ -31,6 +31,9 @@ def item(page, section, displayed, source_file, columns, transform, function, sc
 
 LINEAGE = [
     item("Global", "Project selector", "Dropdown label and folder label", "project_manifest.json", "project_id, project_display_name, project_folder_name, project_folder_path, status", "Folder discovery; stable project_id; current folder name shown when different", "project_catalog.discover_projects / dashboard.project_filter_options", scope="portfolio", source_folder="", output="All tabs"),
+    item("Decision Making dashboard", "Overall Portfolio", "Portfolio KPI cards, sector donut, budget bar, bubble scatter, gauges, timeline, risk heatmap, SPI/CPI quadrant, radar, EV comparison, registry table", "projects.csv, activities.csv, evm.csv, risks.csv, milestones.csv + project_manifest.json", "project_id, sector_name, project_name, contract_value, progress, BAC, PV, EV, AC, SPI, CPI, risk and milestone rows", "Build one project registry row per discovered project; derive portfolio charts from registry without cross-project fallback", "dashboard.build_decision_dashboard_registry / render_decision_making_dashboard", scope="portfolio", source_folder="{sector}/{project}/data/import_templates", output="Streamlit Decision Making dashboard"),
+    item("Decision Making dashboard", "Sector Analysis", "Sector filter, sector health, budget vs spent, progress gauges, benchmark scatter, resource proxy, milestones, EV metrics", "projects.csv, evm.csv, risks.csv, milestones.csv", "Sector, Contract Value, AC, Progress, SPI, CPI, Risks, Milestones", "Filter portfolio registry rows by sector folder name", "dashboard.render_decision_making_dashboard", scope="portfolio", source_folder="{sector}/{project}/data/import_templates", output="Streamlit Decision Making dashboard"),
+    item("Decision Making dashboard", "Projects Analysis", "Multi-project filter, summary cards, budget comparison, progress/quality/safety trends, SPI/CPI scatter, risk stacked bars, EV comparison matrix", "projects.csv, evm.csv, risks.csv, milestones.csv", "Project, Contract Value, Progress, Quality, Safety, SPI, CPI, Risks, BAC, PV, EV, AC", "User-selected project comparison from registry rows", "dashboard.render_decision_making_dashboard", scope="portfolio", source_folder="{sector}/{project}/data/import_templates", output="Streamlit Decision Making dashboard"),
     item("Global", "Header", "Project, contractor, employer, currency, status", "projects.csv + project_manifest.json", "project_name, contractor, client_name, currency, status", "Manifest identity merged with selected project metadata row", "dashboard active_project_record / build_overview_metrics"),
     item("Overview", "Date cards", "Start, finish, duration, elapsed, remaining", "projects.csv", "planned_start, planned_finish", "Parse dates; duration=finish-start; elapsed bounded to 0-100%", "dashboard.build_overview_metrics"),
     item("Overview", "Progress cards", "Overall and planned progress", "projects.csv", "actual_progress_percent, planned_progress_percent", "Numeric normalization; portfolio is contract-value weighted", "dashboard.build_overview_metrics"),
@@ -60,7 +63,7 @@ LINEAGE = [
     item("Branding", "Logo and report identity", "Header logo and identity", "logo.png + project identity templates", "logo_file, project_display_name, contractor, client", "Use 1-branding first; selected-project legacy branding only as compatibility", "dashboard project_logo_path", source_folder="1-branding"),
     item("Evidence", "Evidence registers", "Claim/TIA supporting evidence", "evidence register templates and uploaded evidence", "evidence_id, source_file, event_id, activity_id, verified", "Selected project only", "project_context.evidence_path / contract_claims_center", source_folder="3-evidence"),
     item("Notes", "Project notes", "Meeting, engineering, and claims notes", "*.md", "date, references, decisions, actions", "Selected project only; notes are not imported into another project", "project_context.notes_path", source_folder="4-notes"),
-    item("Portfolio", "All projects", "Portfolio overview, core KPIs, letters", "all discovered project core CSVs", "project_id retained on every row", "Aggregate only explicitly supported portfolio datasets; claims/TIA project workflows are blocked", "dashboard.load_core_csv / load_letters_workbook", scope="portfolio", validation="every aggregated row has project_id"),
+    item("Portfolio", "Decision Making dashboard", "Portfolio overview, core KPIs, letters", "all discovered project core CSVs", "project_id retained on every row", "Aggregate only explicitly supported portfolio datasets; claims/TIA project workflows are blocked", "dashboard.load_core_csv / load_letters_workbook", scope="portfolio", validation="every aggregated row has project_id"),
 ]
 
 
@@ -77,9 +80,10 @@ def main() -> None:
         "",
         "- The existing `Dashboard project` selector writes `active_project_id` to Streamlit session state.",
         "- `ProjectContext` resolves that stable ID to exactly one current folder through `project_manifest.json`.",
-        "- Project-specific Claims Intelligence, Delay TIA, reports, slides, and exports are blocked in `All projects` mode.",
+        "- Project-specific Claims Intelligence, Delay TIA, reports, slides, and exports are blocked in `Decision Making dashboard` mode.",
         "- Missing files produce empty/setup states. No loader falls back to another project.",
         "- Core portfolio aggregation is explicit and retains `project_id` on every row.",
+        "- The portfolio option is named `Decision Making dashboard`; it supports root projects and `projects/{sector}/{project}` folders.",
         "",
         "## Complete Mapping",
         "",

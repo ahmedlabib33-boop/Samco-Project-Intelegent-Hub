@@ -13,6 +13,7 @@ import pandas as pd
 PROJECT_METADATA_FILE = "project.json"
 PROJECT_MANIFEST_FILE = "project_manifest.json"
 PROJECT_TEMPLATE_DIRNAME = "_PROJECT_TEMPLATE"
+DEFAULT_SECTOR_NAME = "Unassigned"
 PROJECT_SUBDIRECTORIES = (
     "1-branding",
     "2-contracts/source",
@@ -41,7 +42,12 @@ def safe_project_id(value: Any) -> str:
     return "".join(ch for ch in text if ch not in '<>:"/\\|?*').strip(" .")
 
 
-def read_project_metadata(project_dir: Path) -> dict[str, Any]:
+def safe_sector_name(value: Any) -> str:
+    text = str(value or "").strip()
+    return text or DEFAULT_SECTOR_NAME
+
+
+def read_project_metadata(project_dir: Path, sector_dir: Path | None = None) -> dict[str, Any]:
     manifest_path = project_dir / PROJECT_MANIFEST_FILE
     metadata_path = project_dir / PROJECT_METADATA_FILE
     metadata: dict[str, Any] = {}
@@ -72,6 +78,9 @@ def read_project_metadata(project_dir: Path) -> dict[str, Any]:
         except (OSError, UnicodeDecodeError, pd.errors.ParserError):
             csv_project_name = ""
     project_name = str(csv_project_name or metadata.get("project_display_name") or metadata.get("project_name") or project_dir.name).strip()
+    sector_name = safe_sector_name(metadata.get("sector_name") or (sector_dir.name if sector_dir else DEFAULT_SECTOR_NAME))
+    sector_id = safe_project_id(metadata.get("sector_id") or sector_name) or DEFAULT_SECTOR_NAME
+    relative_label = f"{sector_dir.name}/{project_dir.name}" if sector_dir else project_dir.name
     return {
         **metadata,
         "project_id": project_id,
@@ -79,27 +88,60 @@ def read_project_metadata(project_dir: Path) -> dict[str, Any]:
         "project_display_name": project_name,
         "project_folder_name": project_dir.name,
         "project_dir": str(project_dir),
+        "project_relative_path": relative_label,
+        "sector_id": sector_id,
+        "sector_name": sector_name,
+        "sector_folder_name": sector_dir.name if sector_dir else "",
+        "sector_dir": str(sector_dir) if sector_dir else "",
     }
 
 
+def _is_ignored_discovery_folder(path: Path) -> bool:
+    return not path.is_dir() or path.name.startswith(("_", "."))
+
+
+def _looks_like_project_folder(path: Path) -> bool:
+    indicators = (
+        PROJECT_MANIFEST_FILE,
+        PROJECT_METADATA_FILE,
+        "data",
+        "delay_analysis",
+        "1-branding",
+        "2-contracts",
+        "project.json",
+    )
+    return any((path / indicator).exists() for indicator in indicators)
+
+
+def _iter_project_folders(projects_root: Path) -> Iterable[tuple[Path, Path | None]]:
+    """Yield root projects and sector-contained projects without hardcoded registration."""
+    for path in sorted(projects_root.iterdir(), key=lambda item: item.name.casefold()):
+        if _is_ignored_discovery_folder(path):
+            continue
+        child_dirs = [child for child in path.iterdir() if child.is_dir() and not child.name.startswith(("_", "."))]
+        if _looks_like_project_folder(path) or not child_dirs:
+            yield path, None
+            continue
+        for child in sorted(child_dirs, key=lambda item: item.name.casefold()):
+            yield child, path
+
+
 def discover_projects(projects_root: Path) -> list[dict[str, Any]]:
-    """Discover every project folder; underscore-prefixed folders are templates."""
+    """Discover root projects and projects nested under sector folders."""
     if not projects_root.exists():
         return []
     records = []
-    for path in projects_root.iterdir():
-        if not path.is_dir() or path.name.startswith(("_", ".")):
-            continue
+    for path, sector_dir in _iter_project_folders(projects_root):
         ensure_project_manifest(path)
         ensure_project_structure(path)
-        records.append(read_project_metadata(path))
-    return sorted(records, key=lambda row: (str(row["project_name"]).casefold(), str(row["project_id"]).casefold()))
+        records.append(read_project_metadata(path, sector_dir=sector_dir))
+    return sorted(records, key=lambda row: (str(row.get("sector_name", "")).casefold(), str(row["project_name"]).casefold(), str(row["project_id"]).casefold()))
 
 
 def projects_frame(projects_root: Path) -> pd.DataFrame:
     records = discover_projects(projects_root)
     if not records:
-        return pd.DataFrame(columns=["project_id", "project_name", "project_dir"])
+        return pd.DataFrame(columns=["project_id", "project_name", "project_dir", "sector_id", "sector_name"])
     return pd.DataFrame(records)
 
 

@@ -27,6 +27,24 @@ def test_discovers_more_than_twenty_project_folders(tmp_path):
     assert all(not row["project_id"].startswith("_") for row in records)
 
 
+def test_discovers_projects_nested_under_sector_folders(tmp_path):
+    sector = tmp_path / "Infrastructure"
+    project = sector / "Bridge Package"
+    ensure_project_structure(project)
+    (project / "project.json").write_text(
+        json.dumps({"project_id": "BRIDGE-001", "project_name": "Bridge Package"}),
+        encoding="utf-8",
+    )
+    ensure_project_structure(tmp_path / "_PROJECT_TEMPLATE")
+
+    records = discover_projects(tmp_path)
+
+    assert len(records) == 1
+    assert records[0]["project_id"] == "BRIDGE-001"
+    assert records[0]["sector_name"] == "Infrastructure"
+    assert records[0]["project_relative_path"] == "Infrastructure/Bridge Package"
+
+
 def test_project_data_paths_are_isolated(tmp_path):
     first = project_data_path(tmp_path, "P-01", "core", "activities.csv")
     second = project_data_path(tmp_path, "P-02", "core", "activities.csv")

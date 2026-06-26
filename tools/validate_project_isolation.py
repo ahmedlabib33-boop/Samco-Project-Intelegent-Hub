@@ -111,7 +111,7 @@ def main() -> int:
     results.check("16. No Git CLI command is required", not forbidden_git_cli)
     results.check("18. Dynamic onboarding needs no code registration", "discover_projects" in (ROOT / "dashboard.py").read_text(encoding="utf-8"))
     results.check("19. Synchronization watches entire workspace", "$root" in sync_text and "-Recurse" in sync_text)
-    config = json.loads((ROOT / "tools/github_sync_config.json").read_text(encoding="utf-8"))
+    config = json.loads((ROOT / "tools/github_sync_config.json").read_text(encoding="utf-8-sig"))
     excluded = set(config["excluded_directories"])
     results.check("20. Synchronization includes code and project folders", "src" not in excluded and "projects" not in excluded)
     state = json.loads((ROOT / ".sync_state/local_manifest.json").read_text(encoding="utf-8-sig"))

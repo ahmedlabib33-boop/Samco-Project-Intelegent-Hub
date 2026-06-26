@@ -15,6 +15,10 @@ class ProjectContext:
     project_folder_name: str
     project_folder_path: Path
     is_all_projects: bool
+    sector_id: str
+    sector_name: str
+    sector_folder_name: str
+    sector_folder_path: Path
     data_path: Path
     outputs_path: Path
     reports_path: Path
@@ -50,6 +54,10 @@ def build_project_context(record: dict[str, Any] | None, projects_root: Path) ->
             project_folder_name="",
             project_folder_path=portfolio_root,
             is_all_projects=True,
+            sector_id="portfolio",
+            sector_name="Decision Making dashboard",
+            sector_folder_name="",
+            sector_folder_path=projects_root,
             data_path=portfolio_root / "data",
             outputs_path=portfolio_root / "outputs",
             reports_path=portfolio_root / "reports",
@@ -66,6 +74,7 @@ def build_project_context(record: dict[str, Any] | None, projects_root: Path) ->
     folder_path = Path(str(record["project_dir"])).resolve()
     project_id = str(record["project_id"]).strip()
     display_name = str(record.get("project_name") or record.get("project_display_name") or folder_path.name).strip()
+    sector_folder = Path(str(record.get("sector_dir") or folder_path.parent)).resolve()
     return ProjectContext(
         project_id=project_id,
         project_key=project_id.casefold(),
@@ -73,6 +82,10 @@ def build_project_context(record: dict[str, Any] | None, projects_root: Path) ->
         project_folder_name=folder_path.name,
         project_folder_path=folder_path,
         is_all_projects=False,
+        sector_id=str(record.get("sector_id") or "").strip(),
+        sector_name=str(record.get("sector_name") or "").strip(),
+        sector_folder_name=str(record.get("sector_folder_name") or "").strip(),
+        sector_folder_path=sector_folder,
         data_path=folder_path / "data",
         outputs_path=folder_path / "outputs",
         reports_path=folder_path / "reports",

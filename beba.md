@@ -2,7 +2,7 @@
 
 ## Identity And Discovery
 
-The existing `Dashboard project` selector is driven by folders under `projects/`. `project_id` is the stable identity used for filtering, caching, databases, reports, slides, exports, and lineage. The folder name is the current location and may be renamed.
+The existing `Dashboard project` selector is driven by folders under `projects/`. `project_id` is the stable identity used for filtering, caching, databases, reports, slides, exports, and lineage. The folder name is the current location and may be renamed. The portfolio option is named **Decision Making dashboard**.
 
 Each project contains `project_manifest.json`:
 
@@ -11,7 +11,7 @@ Each project contains `project_manifest.json`:
 - `project_folder_name` and `project_folder_path`: refreshed automatically after a rename.
 - `created_at`, `updated_at`, and `status`: lifecycle metadata.
 
-New folders are discovered without code changes. Missing manifests, standard folders, samples, README files, and empty-folder `.gitkeep` files are created without overwriting user files. The architecture is tested with 25 folders and has no fixed project-count limit.
+New folders are discovered without code changes. Projects may stay directly under `projects/`, or may be grouped as `projects/<sector>/<project>`. Sector names are taken from the sector folder names. Missing manifests, standard folders, samples, README files, and empty-folder `.gitkeep` files are created without overwriting user files. The architecture is tested with 25 folders and has no fixed project-count limit.
 
 ## Project Structure
 
@@ -38,6 +38,18 @@ projects/<current-folder-name>/
   logs/
 ```
 
+Sector layout is also supported:
+
+```text
+projects/<sector-folder-name>/<project-folder-name>/
+  project_manifest.json
+  data/import_templates/
+  delay_analysis/
+  reports/
+  slides/
+  exports/
+```
+
 `1-branding`, `2-contracts/evidence`, `3-evidence`, and `4-notes` contain non-destructive sample templates. Existing files are never replaced.
 
 ## Project Context
@@ -52,14 +64,15 @@ projects/<current-folder-name>/
 - Reports/slides/exports/logs: same-named folders inside the selected project.
 - Branding: `1-branding/logo.png`.
 
-There is no fallback to another project. Missing project data produces an empty/setup state. `All projects` aggregates only supported portfolio core data with `project_id` retained; project-specific Claims Intelligence and Delay TIA workflows require one selected project.
+There is no fallback to another project. Missing project data produces an empty/setup state. `Decision Making dashboard` aggregates only supported portfolio core data with `project_id` retained; project-specific Claims Intelligence and Delay TIA workflows require one selected project.
 
 ## Adding Or Renaming A Project
 
 1. Copy `projects/_PROJECT_TEMPLATE` to any folder name under `projects`.
-2. Refresh Streamlit. The app creates a manifest and standard structure.
-3. Fill project-owned CSVs and update display metadata.
-4. Keep the generated `project_id` stable.
+2. Optional: create a sector folder and place the project under `projects/<sector>/`.
+3. Refresh Streamlit. The app creates a manifest and standard structure.
+4. Fill project-owned CSVs and update display metadata.
+5. Keep the generated `project_id` stable.
 
 To rename, rename only the folder. The next discovery refresh updates manifest path fields and the selector folder label while keeping `project_id` unchanged.
 

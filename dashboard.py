@@ -482,22 +482,270 @@ def load_core_csv(path: Path, project_id: str | None = None):
 
 
 def project_filter_options(projects_df: pd.DataFrame) -> list[dict[str, str]]:
+    portfolio_label = "Decision Making dashboard"
     if projects_df.empty:
-        return [{"label": "All projects", "project_id": ""}]
-    options = [{"label": "All projects", "project_id": ""}]
+        return [{"label": portfolio_label, "project_id": ""}]
+    options = [{"label": portfolio_label, "project_id": ""}]
     for _, row in projects_df.iterrows():
         project_id = str(row.get("project_id", "")).strip()
         project_name = str(row.get("project_name", "")).strip()
         project_folder_name = str(row.get("project_folder_name", "")).strip()
+        sector_name = str(row.get("sector_name", "")).strip()
         if not project_id and not project_name:
             continue
         label = project_name or project_id
+        if sector_name and sector_name.casefold() != "unassigned":
+            label = f"{sector_name} / {label}"
         if project_id and project_id not in label:
             label = f"{label} ({project_id})"
         if project_folder_name and project_folder_name not in label and project_folder_name != project_id:
             label = f"{label} [Folder: {project_folder_name}]"
         options.append({"label": label, "project_id": project_id})
     return options
+
+
+def _project_group_value(df: pd.DataFrame, project_id: str, candidates: list[str], agg: str = "sum", default: float = 0.0) -> float:
+    if df.empty or "project_id" not in df.columns:
+        return default
+    column = first_existing_column(df, candidates)
+    if not column:
+        return default
+    scoped = df[df["project_id"].astype(str).str.strip().eq(project_id)]
+    if scoped.empty:
+        return default
+    values = scoped[column].apply(parse_numeric)
+    if agg == "mean":
+        return float(values.dropna().mean()) if not values.dropna().empty else default
+    return float(values.fillna(0).sum())
+
+
+def _project_group_count(df: pd.DataFrame, project_id: str) -> int:
+    if df.empty or "project_id" not in df.columns:
+        return 0
+    return int(df[df["project_id"].astype(str).str.strip().eq(project_id)].shape[0])
+
+
+def _project_first_value(df: pd.DataFrame, project_id: str, candidates: list[str], default: Any = "") -> Any:
+    if df.empty or "project_id" not in df.columns:
+        return default
+    scoped = df[df["project_id"].astype(str).str.strip().eq(project_id)]
+    if scoped.empty:
+        return default
+    column = first_existing_column(scoped, candidates)
+    if not column:
+        return default
+    value = scoped.iloc[0].get(column, default)
+    return default if pd.isna(value) else value
+
+
+def build_decision_dashboard_registry(projects_catalog_df: pd.DataFrame) -> pd.DataFrame:
+    if projects_catalog_df.empty:
+        return pd.DataFrame()
+    projects_df = load_core_csv(PROJECTS_CSV_PATH)
+    activities_df = load_core_csv(ACTIVITIES_CSV_PATH)
+    evm_df = load_core_csv(EVM_CSV_PATH)
+    risks_df = load_core_csv(RISKS_CSV_PATH)
+    milestones_df = load_core_csv(MILESTONES_CSV_PATH)
+    rows = []
+    for _, catalog_row in projects_catalog_df.iterrows():
+        project_id = str(catalog_row.get("project_id", "")).strip()
+        if not project_id:
+            continue
+        contract_value = _project_first_value(projects_df, project_id, ["contract_value", "Contract Value", "budget", "Budget", "BAC"], 0)
+        if parse_numeric(contract_value) == 0:
+            contract_value = _project_group_value(evm_df, project_id, ["BAC", "bac", "budget_at_completion", "Budget at Completion"])
+        planned_progress = _project_first_value(projects_df, project_id, ["planned_progress", "Planned Progress", "baseline_progress"], 0)
+        actual_progress = _project_first_value(projects_df, project_id, ["overall_progress", "actual_progress", "Actual Progress", "progress"], 0)
+        if parse_numeric(actual_progress) == 0:
+            actual_progress = _project_group_value(activities_df, project_id, ["actual_progress", "Physical % Complete", "physical_percent_complete", "progress"], agg="mean")
+        start_date = pd.to_datetime(_project_first_value(projects_df, project_id, ["project_start", "start_date", "Project Start Date", "baseline_start"], ""), errors="coerce")
+        finish_date = pd.to_datetime(_project_first_value(projects_df, project_id, ["project_finish", "finish_date", "Project Finish Date", "baseline_finish"], ""), errors="coerce")
+        bac = _project_group_value(evm_df, project_id, ["BAC", "bac", "budget_at_completion", "Budget at Completion"])
+        pv = _project_group_value(evm_df, project_id, ["PV", "pv", "planned_value", "Planned Value"])
+        ev = _project_group_value(evm_df, project_id, ["EV", "ev", "earned_value", "Earned Value"])
+        ac = _project_group_value(evm_df, project_id, ["AC", "ac", "actual_cost", "Actual Cost"])
+        spi = _project_first_value(evm_df, project_id, ["SPI", "spi"], 0)
+        cpi = _project_first_value(evm_df, project_id, ["CPI", "cpi"], 0)
+        spi = parse_numeric(spi) or ((ev / pv) if pv else 0)
+        cpi = parse_numeric(cpi) or ((ev / ac) if ac else 0)
+        risk_count = _project_group_count(risks_df, project_id)
+        milestone_count = _project_group_count(milestones_df, project_id)
+        progress_value = parse_numeric(actual_progress)
+        planned_value = parse_numeric(planned_progress)
+        status = "On Track"
+        if risk_count >= 5 or (planned_value and progress_value < planned_value - 10) or (spi and spi < 0.9):
+            status = "High Attention"
+        elif risk_count or (planned_value and progress_value < planned_value - 3) or (spi and spi < 1):
+            status = "Watch"
+        rows.append({
+            "project_id": project_id,
+            "Project": str(catalog_row.get("project_name") or catalog_row.get("project_display_name") or project_id),
+            "Sector": str(catalog_row.get("sector_name") or "Unassigned"),
+            "Folder": str(catalog_row.get("project_relative_path") or catalog_row.get("project_folder_name") or ""),
+            "Contract Value": parse_numeric(contract_value),
+            "BAC": bac,
+            "PV": pv,
+            "EV": ev,
+            "AC": ac,
+            "SPI": float(spi or 0),
+            "CPI": float(cpi or 0),
+            "Progress": float(progress_value or 0),
+            "Planned Progress": float(planned_value or 0),
+            "Quality": float(parse_numeric(_project_first_value(projects_df, project_id, ["quality_score", "Quality Score", "quality"], 0)) or 0),
+            "Safety": float(parse_numeric(_project_first_value(projects_df, project_id, ["safety_score", "Safety Score", "safety"], 0)) or 0),
+            "Risks": risk_count,
+            "Milestones": milestone_count,
+            "Start": start_date,
+            "Finish": finish_date,
+            "Status": status,
+        })
+    return pd.DataFrame(rows)
+
+
+def render_decision_kpi_cards(registry_df: pd.DataFrame) -> None:
+    if registry_df.empty:
+        st.info("No project folders were detected yet. Add project folders under projects, or under projects/<sector>/<project>.")
+        return
+    total_value = registry_df["Contract Value"].fillna(0).sum()
+    total_bac = registry_df["BAC"].fillna(0).sum()
+    total_ev = registry_df["EV"].fillna(0).sum()
+    total_ac = registry_df["AC"].fillna(0).sum()
+    cards = [
+        ("Projects", len(registry_df), "Detected folders"),
+        ("Sectors", registry_df["Sector"].nunique(), "Portfolio groups"),
+        ("Contract Value", egp(total_value), "Project budgets"),
+        ("BAC", egp(total_bac), "Budget at completion"),
+        ("Actual Cost", egp(total_ac), "Cost to date"),
+        ("Earned Value", egp(total_ev), "Value earned"),
+        ("Avg Progress", pct(registry_df["Progress"].mean()), "Physical progress"),
+        ("Avg SPI", f"{registry_df['SPI'].replace(0, pd.NA).dropna().mean():.2f}" if not registry_df["SPI"].replace(0, pd.NA).dropna().empty else "N/A", "Schedule index"),
+        ("Avg CPI", f"{registry_df['CPI'].replace(0, pd.NA).dropna().mean():.2f}" if not registry_df["CPI"].replace(0, pd.NA).dropna().empty else "N/A", "Cost index"),
+        ("Open Risks", int(registry_df["Risks"].fillna(0).sum()), "Risk records"),
+    ]
+    for chunk_start in (0, 5):
+        cols = st.columns(5)
+        for col, (label, value, note) in zip(cols, cards[chunk_start:chunk_start + 5]):
+            col.markdown(
+                f"<div class='metric-card'><div class='metric-label'>{html.escape(str(label))}</div><div class='metric-value'>{html.escape(str(value))}</div><div class='metric-note'>{html.escape(str(note))}</div></div>",
+                unsafe_allow_html=True,
+            )
+
+
+def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
+    registry_df = build_decision_dashboard_registry(projects_catalog_df)
+    st.markdown("<div class='section-header'><h3>Decision Making dashboard</h3></div>", unsafe_allow_html=True)
+    render_decision_kpi_cards(registry_df)
+    if registry_df.empty:
+        return
+
+    open_col, open_button_col = st.columns([0.72, 0.28])
+    project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in registry_df.iterrows()}
+    with open_col:
+        target_label = st.selectbox("Open project", list(project_labels.keys()), key="decision_dashboard_open_project")
+    with open_button_col:
+        st.write("")
+        if st.button("Open selected project", type="primary", use_container_width=True):
+            st.session_state["active_project_id"] = project_labels[target_label]
+            st.rerun()
+
+    portfolio_tab, sector_tab, projects_tab = st.tabs(["Overall Portfolio", "Sector Analysis", "Projects Analysis"])
+    with portfolio_tab:
+        left, right = st.columns([0.42, 0.58])
+        sector_summary = registry_df.groupby("Sector", as_index=False).agg(projects=("project_id", "count"), budget=("Contract Value", "sum"), progress=("Progress", "mean"))
+        with left:
+            fig = px.pie(sector_summary, names="Sector", values="projects", hole=0.54, title="Sector Distribution", color_discrete_sequence=["#0B3A5B", "#1A8A8F", "#D4A017", "#617487", "#8D6E63"])
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            status_summary = registry_df["Status"].value_counts().reset_index()
+            status_summary.columns = ["Status", "Projects"]
+            fig = px.bar(status_summary, x="Status", y="Projects", title="Status Breakdown", color="Status", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
+            st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
+        with right:
+            fig = px.bar(sector_summary.sort_values("budget", ascending=True), x="budget", y="Sector", orientation="h", title="Budget Allocation by Sector", labels={"budget": "Contract Value"})
+            st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
+            fig = px.scatter(registry_df, x="Progress", y="Contract Value", size=registry_df["Contract Value"].clip(lower=1), color="Sector", hover_name="Project", title="Progress Overview")
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+        timeline_df = registry_df.dropna(subset=["Start", "Finish"]).copy()
+        if not timeline_df.empty:
+            fig = px.timeline(timeline_df, x_start="Start", x_end="Finish", y="Project", color="Sector", title="Project Schedules")
+            fig.update_yaxes(autorange="reversed")
+            st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+        charts_col1, charts_col2 = st.columns(2)
+        with charts_col1:
+            fig = px.scatter(registry_df, x="SPI", y="CPI", color="Status", hover_name="Project", title="SPI vs CPI Quadrant", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
+            fig.add_hline(y=1, line_dash="dash", line_color="#607080")
+            fig.add_vline(x=1, line_dash="dash", line_color="#607080")
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            ev_long = registry_df[["Project", "BAC", "PV", "EV", "AC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+            fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="BAC / PV / EV / AC Comparison")
+            st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+        with charts_col2:
+            radar_values = [
+                registry_df["Progress"].mean(),
+                max(min(registry_df["SPI"].replace(0, pd.NA).dropna().mean() * 100 if not registry_df["SPI"].replace(0, pd.NA).dropna().empty else 0, 100), 0),
+                max(min(registry_df["CPI"].replace(0, pd.NA).dropna().mean() * 100 if not registry_df["CPI"].replace(0, pd.NA).dropna().empty else 0, 100), 0),
+                registry_df["Quality"].mean(),
+                registry_df["Safety"].mean(),
+            ]
+            radar_labels = ["Progress", "Schedule", "Cost", "Quality", "Safety"]
+            fig = go.Figure(data=go.Scatterpolar(r=radar_values, theta=radar_labels, fill="toself", line_color="#1A8A8F"))
+            fig.update_layout(title="Quality & Safety Radar", polar=dict(radialaxis=dict(range=[0, 100])), showlegend=False)
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            fig = px.line(registry_df.sort_values("Project"), x="Project", y=["SPI", "CPI"], markers=True, title="EVM Trend by Project")
+            st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+        risk_heat = registry_df.assign(Risk_Band=pd.cut(registry_df["Risks"], bins=[-1, 0, 3, 999], labels=["Low", "Medium", "High"]))
+        heat_df = pd.crosstab(risk_heat["Sector"], risk_heat["Risk_Band"])
+        fig = px.imshow(heat_df, text_auto=True, title="Risk Assessment Matrix", color_continuous_scale=["#EAF3F4", "#D4A017", "#C94C4C"])
+        st.plotly_chart(style_plotly(fig, 340), use_container_width=True)
+        display_df = registry_df[["Sector", "Project", "Status", "Contract Value", "Progress", "Planned Progress", "SPI", "CPI", "Risks", "Milestones", "Folder"]].copy()
+        st.dataframe(display_df, use_container_width=True, hide_index=True, height=dataframe_height(display_df, max_height=520))
+
+    with sector_tab:
+        sector_name = st.selectbox("Sector", sorted(registry_df["Sector"].dropna().unique()), key="decision_sector_filter")
+        scoped = registry_df[registry_df["Sector"].eq(sector_name)].copy()
+        render_decision_kpi_cards(scoped)
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = px.bar(scoped, x="Project", y=["Contract Value", "AC"], barmode="group", title="Budget vs Spent per Project")
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            fig = px.bar(scoped, x="Project", y="Milestones", color="Status", title="Milestone Completion Tracking")
+            st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+        with c2:
+            fig = px.bar(scoped, x="Project", y="Progress", color="Status", title="Progress Gauges per Project", range_y=[0, 100])
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            fig = px.scatter(scoped, x="SPI", y="CPI", size=scoped["Risks"].clip(lower=1), hover_name="Project", title="Performance Radar vs Benchmark")
+            fig.add_hline(y=1, line_dash="dash", line_color="#607080")
+            fig.add_vline(x=1, line_dash="dash", line_color="#607080")
+            st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+        resource_df = scoped[["Project", "Milestones", "Risks"]].rename(columns={"Milestones": "Team / Work Packages", "Risks": "Equipment / Risk Load"})
+        st.dataframe(resource_df, use_container_width=True, hide_index=True)
+
+    with projects_tab:
+        default_projects = registry_df["Project"].head(5).tolist()
+        selected_projects = st.multiselect("Projects", registry_df["Project"].tolist(), default=default_projects, key="decision_projects_filter")
+        scoped = registry_df[registry_df["Project"].isin(selected_projects)].copy()
+        if scoped.empty:
+            st.info("Select one or more projects to compare.")
+            return
+        render_decision_kpi_cards(scoped)
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = px.pie(scoped, names="Project", values="Contract Value", hole=0.45, title="Budget Distribution Comparison")
+            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
+            fig = px.scatter(scoped, x="SPI", y="CPI", color="Status", size=scoped["Contract Value"].clip(lower=1), hover_name="Project", title="SPI vs CPI Scatter")
+            fig.add_hline(y=1, line_dash="dash", line_color="#607080")
+            fig.add_vline(x=1, line_dash="dash", line_color="#607080")
+            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
+        with c2:
+            trends = scoped[["Project", "Progress", "Quality", "Safety"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+            fig = px.line(trends, x="Project", y="Value", color="Metric", markers=True, title="Progress / Quality / Safety Trends")
+            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
+            ev_long = scoped[["Project", "BAC", "PV", "EV", "AC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+            fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="EV Metrics Comparison")
+            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
+        risk_stack = scoped[["Project", "Risks", "Status"]].copy()
+        fig = px.bar(risk_stack, x="Project", y="Risks", color="Status", title="Risk Distribution")
+        st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
+        st.dataframe(scoped[["Sector", "Project", "Status", "Contract Value", "Progress", "SPI", "CPI", "Risks", "Milestones"]], use_container_width=True, hide_index=True)
 
 
 def selected_project_id() -> str:
@@ -4565,6 +4813,9 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+if active_project_context.is_all_projects:
+    render_decision_making_dashboard(projects_for_selector_df)
 
 export_sources = {
     "Overview Metrics": df_for_export(metrics_frame("Overview", {
