@@ -64,7 +64,7 @@ projects/<sector-folder-name>/<project-folder-name>/
 - Reports/slides/exports/logs: same-named folders inside the selected project.
 - Branding: `1-branding/logo.png`.
 
-There is no fallback to another project. Missing project data produces an empty/setup state. `Decision Making dashboard` aggregates only supported portfolio core data with `project_id` retained; project-specific Claims Intelligence and Delay TIA workflows require one selected project.
+There is no fallback to another project. Missing project data produces an empty/setup state. `Decision Making dashboard` aggregates only supported portfolio core data with `project_id` retained and appears as a standalone Phase 1 portfolio command view. Project tabs, Claims Intelligence, Delay TIA, reports, slides, and exports appear only after opening a Phase 2 project workspace.
 
 ## Adding Or Renaming A Project
 

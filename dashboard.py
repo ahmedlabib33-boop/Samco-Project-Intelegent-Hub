@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+# pyright: reportGeneralTypeIssues=false, reportCallIssue=false, reportArgumentType=false, reportAttributeAccessIssue=false, reportOptionalCall=false, reportOptionalSubscript=false, reportOperatorIssue=false, reportOptionalMemberAccess=false
 import base64
 import html
 import importlib
@@ -633,20 +634,72 @@ def render_decision_kpi_cards(registry_df: pd.DataFrame) -> None:
 
 def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
     registry_df = build_decision_dashboard_registry(projects_catalog_df)
-    st.markdown("<div class='section-header'><h3>Decision Making dashboard</h3></div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class='section-header'>
+          <h3>Decision Making dashboard</h3>
+          <p style='margin:6px 0 0;color:#526276;font-size:13px'>Phase 1 - portfolio command view for top management decisions. Select a project below to move into Phase 2 project controls.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     render_decision_kpi_cards(registry_df)
     if registry_df.empty:
         return
 
-    open_col, open_button_col = st.columns([0.72, 0.28])
+    high_attention = int(registry_df["Status"].astype(str).eq("High Attention").sum())
+    watch_count = int(registry_df["Status"].astype(str).eq("Watch").sum())
+    avg_spi = registry_df["SPI"].replace(0, pd.NA).dropna().mean()
+    avg_cpi = registry_df["CPI"].replace(0, pd.NA).dropna().mean()
+    portfolio_position = "Stable portfolio" if high_attention == 0 and watch_count <= max(1, len(registry_df) // 4) else "Management attention required"
+    decision_notes = [
+        f"Portfolio position: {portfolio_position}",
+        f"Projects requiring attention: {high_attention + watch_count}",
+        f"Average SPI: {avg_spi:.2f}" if pd.notna(avg_spi) else "Average SPI: not available",
+        f"Average CPI: {avg_cpi:.2f}" if pd.notna(avg_cpi) else "Average CPI: not available",
+    ]
+    st.markdown(
+        "<div style='display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin:14px 0 16px'>"
+        "<div class='metric-card' style='border-left-color:#0B3A5B'><div class='metric-label'>Phase 1</div><div class='metric-value'>Portfolio Decision View</div><div class='metric-note'>Overall portfolio, sectors, priorities, EVM position, risk exposure, and management action points.</div></div>"
+        "<div class='metric-card' style='border-left-color:#D4A017'><div class='metric-label'>Phase 2</div><div class='metric-value'>Project Deep Dive</div><div class='metric-note'>Open one project to enter its isolated slides, reports, Delay TIA, claims, exports, and project controls workflow.</div></div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<div class='panel-note'><b>Management Decision Brief</b><br>"
+        + "<br>".join(html.escape(note) for note in decision_notes)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    open_col, open_button_col = st.columns([0.68, 0.32])
     project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in registry_df.iterrows()}
     with open_col:
-        target_label = st.selectbox("Open project", list(project_labels.keys()), key="decision_dashboard_open_project")
+        target_label = st.selectbox("Phase 2 project transition", list(project_labels.keys()), key="decision_dashboard_open_project")
     with open_button_col:
         st.write("")
-        if st.button("Open selected project", type="primary", use_container_width=True):
+        if st.button("Open project workspace", type="primary", use_container_width=True):
             st.session_state["active_project_id"] = project_labels[target_label]
             st.rerun()
+
+    preview_cols = st.columns(3)
+    preview_df = registry_df.sort_values(["Status", "Risks", "Progress"], ascending=[True, False, True]).head(6)
+    status_color = {"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"}
+    for idx, (_, row) in enumerate(preview_df.iterrows()):
+        color = status_color.get(str(row["Status"]), "#0B3A5B")
+        with preview_cols[idx % 3]:
+            st.markdown(
+                f"""
+                <div class='metric-card' style='min-height:150px;border-left-color:{color}'>
+                  <div class='metric-label'>{html.escape(str(row['Sector']))}</div>
+                  <div class='metric-value' style='font-size:18px'>{html.escape(str(row['Project']))}</div>
+                  <div class='metric-note'>Status: <b>{html.escape(str(row['Status']))}</b></div>
+                  <div class='metric-note'>Progress: {pct(row['Progress'])} | SPI: {float(row['SPI']):.2f} | CPI: {float(row['CPI']):.2f}</div>
+                  <div class='metric-note'>Contract: {egp(row['Contract Value'])} | Risks: {int(row['Risks'])}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     portfolio_tab, sector_tab, projects_tab = st.tabs(["Overall Portfolio", "Sector Analysis", "Projects Analysis"])
     with portfolio_tab:
@@ -4816,6 +4869,7 @@ st.markdown(
 
 if active_project_context.is_all_projects:
     render_decision_making_dashboard(projects_for_selector_df)
+    st.stop()
 
 export_sources = {
     "Overview Metrics": df_for_export(metrics_frame("Overview", {

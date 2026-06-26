@@ -8,7 +8,7 @@ Work only in `C:\Users\pc\OneDrive\Documents\Project Intelligence Hub`.
 4. Support folder renames without changing project identity or mixing data.
 5. Auto-discover unlimited future folders under `projects`, including `projects/<sector>/<project>` layouts, without code registration.
 6. Scope every dashboard loader, Claims Intelligence operation, Delay TIA calculation, report, slide, export, cache, and database to the selected project.
-7. In `Decision Making dashboard`, allow only explicit portfolio aggregations retaining `project_id`; block project-specific claims/TIA workflows.
+7. In `Decision Making dashboard`, allow only explicit portfolio aggregations retaining `project_id`; keep it as standalone Phase 1 and show project-specific slides only after opening a Phase 2 project workspace.
 8. Never fall back to a default, legacy, random, first, or previously selected project.
 9. Missing selected-project data must show a clean empty/setup state.
 10. Preserve all existing business logic, slides, reports, exports, and formats.
