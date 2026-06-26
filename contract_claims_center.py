@@ -332,10 +332,10 @@ def compute_file_hash_from_bytes(data: bytes) -> str:
 
 
 def ensure_contract_claims_dirs(app_dir: Path) -> dict[str, Path]:
-    base_dir = app_dir / "2-contracts"
+    base_dir = app_dir / "05-contracts"
     contracts_dir = base_dir / "source"
-    evidence_dir = base_dir / "evidence"
-    exports_dir = app_dir / "exports" / "claims"
+    evidence_dir = app_dir / "06-evidence"
+    exports_dir = app_dir / "11-outputs"
     for path in [base_dir, contracts_dir, evidence_dir, exports_dir]:
         path.mkdir(parents=True, exist_ok=True)
     return {

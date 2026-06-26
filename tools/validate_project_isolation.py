@@ -24,6 +24,43 @@ from src.construction_system.project_context import build_project_context
 PROJECTS = ROOT / "projects"
 
 
+def _expected_project_folders(projects_root: Path) -> set[Path]:
+    """Return project folders for both flat and sector/project layouts."""
+    expected: set[Path] = set()
+    if not projects_root.exists():
+        return expected
+
+    project_markers = {
+        "project_manifest.json",
+        "01-data",
+        "02-delay_analysis",
+        "08-branding",
+        "05-contracts",
+        "11-outputs",
+        "data",
+        "delay_analysis",
+        "1-branding",
+        "2-contracts",
+        "outputs",
+    }
+
+    for folder in projects_root.iterdir():
+        if not folder.is_dir() or folder.name.startswith(("_", ".")):
+            continue
+
+        has_project_marker = any((folder / marker).exists() for marker in project_markers)
+        child_dirs = [child for child in folder.iterdir() if child.is_dir() and not child.name.startswith(("_", "."))]
+
+        if has_project_marker:
+            expected.add(folder.resolve())
+            continue
+
+        for child in child_dirs:
+            expected.add(child.resolve())
+
+    return expected
+
+
 class Results:
     def __init__(self) -> None:
         self.rows: list[tuple[str, bool, str]] = []
@@ -53,11 +90,17 @@ def main() -> int:
     args = parser.parse_args()
     results = Results()
     records = discover_projects(PROJECTS)
-    folder_names = {path.name for path in PROJECTS.iterdir() if path.is_dir() and not path.name.startswith(("_", "."))}
-    record_names = {Path(record["project_dir"]).name for record in records}
+    expected_project_dirs = _expected_project_folders(PROJECTS)
+    record_project_dirs = {Path(record["project_dir"]).resolve() for record in records}
 
     results.check("1. Existing registry detects projects", bool(records), f"{len(records)} detected")
-    results.check("2. Every project folder is detected", folder_names == record_names)
+    missing_project_dirs = sorted(str(path.relative_to(PROJECTS)) for path in expected_project_dirs - record_project_dirs)
+    unexpected_project_dirs = sorted(str(path.relative_to(PROJECTS)) for path in record_project_dirs - expected_project_dirs)
+    results.check(
+        "2. Every project folder is detected",
+        expected_project_dirs == record_project_dirs,
+        f"missing={missing_project_dirs[:3]} unexpected={unexpected_project_dirs[:3]}" if missing_project_dirs or unexpected_project_dirs else "",
+    )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_root = Path(temp_dir)

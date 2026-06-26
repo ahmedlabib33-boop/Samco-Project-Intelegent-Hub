@@ -50,7 +50,7 @@ def test_project_data_paths_are_isolated(tmp_path):
     second = project_data_path(tmp_path, "P-02", "core", "activities.csv")
 
     assert first != second
-    assert first == tmp_path / "P-01" / "data" / "import_templates" / "activities.csv"
+    assert first == tmp_path / "P-01" / "01-data" / "import_templates" / "activities.csv"
 
 
 def test_aggregate_adds_project_id_when_source_omits_it(tmp_path):
@@ -86,12 +86,12 @@ def test_folder_rename_preserves_project_id_and_updates_context_path(tmp_path):
 def test_standard_structure_and_samples_are_non_destructive(tmp_path):
     project = tmp_path / "P-01"
     ensure_project_structure(project)
-    identity = project / "1-branding" / "project_identity_template.json"
+    identity = project / "08-branding" / "project_identity_template.json"
     identity.write_text("user-owned", encoding="utf-8")
 
     ensure_project_structure(project)
 
     assert identity.read_text(encoding="utf-8") == "user-owned"
-    assert (project / "2-contracts" / "evidence" / "contract_evidence_register_template.csv").exists()
-    assert (project / "3-evidence" / "photo_log_template.csv").exists()
-    assert (project / "4-notes" / "claims_notes_template.md").exists()
+    assert (project / "06-evidence" / "contract_evidence_register_template.csv").exists()
+    assert (project / "06-evidence" / "photo_log_template.csv").exists()
+    assert (project / "09-notes" / "claims_notes_template.md").exists()

@@ -15,24 +15,21 @@ PROJECT_MANIFEST_FILE = "project_manifest.json"
 PROJECT_TEMPLATE_DIRNAME = "_PROJECT_TEMPLATE"
 DEFAULT_SECTOR_NAME = "Unassigned"
 PROJECT_SUBDIRECTORIES = (
-    "1-branding",
-    "2-contracts/source",
-    "2-contracts/evidence",
-    "3-evidence",
-    "4-notes",
-    "data/import_templates",
-    "delay_analysis/steel_delay_tia_templates",
-    "delay_analysis/methodology",
-    "bl",
-    "fixed",
-    "letters_intelligence/inbox/From Contractor",
-    "letters_intelligence/inbox/From Consultant",
-    "source_excel",
-    "exports",
-    "reports",
-    "slides",
-    "outputs",
-    "logs",
+    "01-data/import_templates",
+    "02-delay_analysis/steel_delay_tia_templates",
+    "02-delay_analysis/methodology",
+    "03-schedule",
+    "04-source_excel",
+    "05-contracts/source",
+    "05-contracts/clauses",
+    "06-evidence",
+    "07-letters_intelligence/inbox/From Contractor",
+    "07-letters_intelligence/inbox/From Consultant",
+    "08-branding",
+    "09-notes",
+    "10-deliverables",
+    "11-outputs",
+    "12-logs",
 )
 
 
@@ -69,7 +66,9 @@ def read_project_metadata(project_dir: Path, sector_dir: Path | None = None) -> 
 
     project_id = safe_project_id(metadata.get("project_id")) or project_dir.name
     csv_project_name = ""
-    project_csv = project_dir / "data" / "import_templates" / "projects.csv"
+    project_csv = project_dir / "01-data" / "import_templates" / "projects.csv"
+    if not project_csv.exists():
+        project_csv = project_dir / "data" / "import_templates" / "projects.csv"
     if project_csv.exists():
         try:
             project_rows = pd.read_csv(project_csv, nrows=1).fillna("")
@@ -104,6 +103,10 @@ def _looks_like_project_folder(path: Path) -> bool:
     indicators = (
         PROJECT_MANIFEST_FILE,
         PROJECT_METADATA_FILE,
+        "01-data",
+        "02-delay_analysis",
+        "08-branding",
+        "05-contracts",
         "data",
         "delay_analysis",
         "1-branding",
@@ -119,7 +122,7 @@ def _iter_project_folders(projects_root: Path) -> Iterable[tuple[Path, Path | No
         if _is_ignored_discovery_folder(path):
             continue
         child_dirs = [child for child in path.iterdir() if child.is_dir() and not child.name.startswith(("_", "."))]
-        if _looks_like_project_folder(path) or not child_dirs:
+        if _looks_like_project_folder(path):
             yield path, None
             continue
         for child in sorted(child_dirs, key=lambda item: item.name.casefold()):
@@ -155,13 +158,19 @@ def project_directory(projects_root: Path, project_id: str) -> Path:
 
 def project_data_path(projects_root: Path, project_id: str, family: str, relative_path: Path | str) -> Path:
     family_roots = {
-        "core": Path("data/import_templates"),
-        "delay_analysis": Path("delay_analysis/steel_delay_tia_templates"),
-        "bl": Path("bl"),
-        "letters": Path("letters_intelligence"),
-        "exports": Path("exports"),
-        "reports": Path("reports"),
-        "branding": Path("1-branding"),
+        "core": Path("01-data/import_templates"),
+        "delay_analysis": Path("02-delay_analysis/steel_delay_tia_templates"),
+        "bl": Path("03-schedule"),
+        "fixed": Path("03-schedule"),
+        "letters": Path("07-letters_intelligence"),
+        "exports": Path("11-outputs"),
+        "outputs": Path("11-outputs"),
+        "reports": Path("10-deliverables"),
+        "slides": Path("10-deliverables"),
+        "branding": Path("08-branding"),
+        "contracts": Path("05-contracts"),
+        "evidence": Path("06-evidence"),
+        "notes": Path("09-notes"),
     }
     if family not in family_roots:
         raise ValueError(f"Unknown project data family: {family}")
@@ -188,20 +197,20 @@ def ensure_project_samples(project_dir: Path) -> None:
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
             pass
     samples = {
-        "1-branding/README.md": "# Branding\n\nReplace example files with project-approved brand assets. Existing files are never overwritten.\n",
-        "1-branding/project_identity_template.json": json.dumps({"project_name": "Example Project", "client": "Example Client", "contractor": "Example Contractor", "consultant": "Example Consultant"}, indent=2) + "\n",
-        "1-branding/color_palette_template.csv": f"project_id,role,color_hex\n{project_id},primary,#123B5D\n{project_id},secondary,#5B6870\n{project_id},accent,#C7A34B\n{project_id},background,#FFFFFF\n",
-        "1-branding/report_branding_template.json": json.dumps({"header_text": "Example Project", "footer_text": "Confidential", "logo_file": "logo.png"}, indent=2) + "\n",
-        "1-branding/logo_placeholder.txt": "Place the approved project logo here as logo.png.\n",
-        "2-contracts/evidence/contract_evidence_register_template.csv": "project_id,evidence_id,contract_clause,document_reference,event_id,description,status\n",
-        "2-contracts/evidence/clause_reference_template.csv": "project_id,clause_id,clause_title,source_file,source_page,entitlement_topic,notes\n",
-        "2-contracts/evidence/correspondence_reference_template.csv": "project_id,reference,date,from_party,to_party,subject,related_event_id,evidence_status\n",
-        "3-evidence/evidence_register_template.csv": "project_id,evidence_id,evidence_type,source_file,source_date,event_id,activity_id,description,verified\n",
-        "3-evidence/photo_log_template.csv": "project_id,photo_id,date,location,activity_id,event_id,file_name,caption,taken_by\n",
-        "3-evidence/document_reference_template.csv": "project_id,document_id,document_type,reference,date,source_file,related_event_id,notes\n",
-        "4-notes/meeting_notes_template.md": "# Meeting Notes\n\n- Date:\n- Attendees:\n- Decisions:\n- Actions:\n- Related event or activity:\n",
-        "4-notes/engineering_notes_template.md": "# Engineering Notes\n\n- Date:\n- Discipline:\n- Drawing / RFI reference:\n- Constraint:\n- Required action:\n",
-        "4-notes/claims_notes_template.md": "# Claims Notes\n\n- Date:\n- Event ID:\n- Clause reference:\n- Notice status:\n- Cause and effect:\n- Missing evidence:\n",
+        "08-branding/README.md": "# Branding\n\nReplace example files with project-approved brand assets. Existing files are never overwritten.\n",
+        "08-branding/project_identity_template.json": json.dumps({"project_name": "Example Project", "client": "Example Client", "contractor": "Example Contractor", "consultant": "Example Consultant"}, indent=2) + "\n",
+        "08-branding/color_palette_template.csv": f"project_id,role,color_hex\n{project_id},primary,#123B5D\n{project_id},secondary,#5B6870\n{project_id},accent,#C7A34B\n{project_id},background,#FFFFFF\n",
+        "08-branding/report_branding_template.json": json.dumps({"header_text": "Example Project", "footer_text": "Confidential", "logo_file": "logo.png"}, indent=2) + "\n",
+        "08-branding/logo_placeholder.txt": "Place the approved project logo here as logo.png.\n",
+        "06-evidence/contract_evidence_register_template.csv": "project_id,evidence_id,contract_clause,document_reference,event_id,description,status\n",
+        "06-evidence/clause_reference_template.csv": "project_id,clause_id,clause_title,source_file,source_page,entitlement_topic,notes\n",
+        "06-evidence/correspondence_reference_template.csv": "project_id,reference,date,from_party,to_party,subject,related_event_id,evidence_status\n",
+        "06-evidence/evidence_register_template.csv": "project_id,evidence_id,evidence_type,source_file,source_date,event_id,activity_id,description,verified\n",
+        "06-evidence/photo_log_template.csv": "project_id,photo_id,date,location,activity_id,event_id,file_name,caption,taken_by\n",
+        "06-evidence/document_reference_template.csv": "project_id,document_id,document_type,reference,date,source_file,related_event_id,notes\n",
+        "09-notes/meeting_notes_template.md": "# Meeting Notes\n\n- Date:\n- Attendees:\n- Decisions:\n- Actions:\n- Related event or activity:\n",
+        "09-notes/engineering_notes_template.md": "# Engineering Notes\n\n- Date:\n- Discipline:\n- Drawing / RFI reference:\n- Constraint:\n- Required action:\n",
+        "09-notes/claims_notes_template.md": "# Claims Notes\n\n- Date:\n- Event ID:\n- Clause reference:\n- Notice status:\n- Cause and effect:\n- Missing evidence:\n",
     }
     for relative_path, content in samples.items():
         path = project_dir / relative_path

@@ -137,9 +137,9 @@ APP_DIR = Path(__file__).parent
 LOGO_PATH = APP_DIR / "assets" / "logo.png"
 PROJECTS_DIR = APP_DIR / "projects"
 PATH_TOKENS_DIR = APP_DIR / ".project_paths"
-IMPORT_TEMPLATES_DIR = PATH_TOKENS_DIR / "data" / "import_templates"
-STEEL_TIA_DIR = PATH_TOKENS_DIR / "delay_analysis" / "steel_delay_tia_templates"
-BL_FIXED_DIR = PATH_TOKENS_DIR / "bl"
+IMPORT_TEMPLATES_DIR = PATH_TOKENS_DIR / "01-data" / "import_templates"
+STEEL_TIA_DIR = PATH_TOKENS_DIR / "02-delay_analysis" / "steel_delay_tia_templates"
+BL_FIXED_DIR = PATH_TOKENS_DIR / "03-schedule"
 PROJECTS_CSV_PATH = IMPORT_TEMPLATES_DIR / "projects.csv"
 ACTIVITIES_CSV_PATH = IMPORT_TEMPLATES_DIR / "activities.csv"
 EVM_CSV_PATH = IMPORT_TEMPLATES_DIR / "evm.csv"
@@ -287,11 +287,64 @@ def format_project_date(value, fallback: str = "N/A") -> str:
         return fallback
 
 
-def parse_numeric(value):
-    if pd.isna(value):
-        return 0.0
-    cleaned = str(value).replace("$", "").replace(",", "").replace("%", "").strip()
-    return float(cleaned) if cleaned else 0.0
+
+def parse_numeric(value, default=0.0):
+    """
+    Safe numeric parser for dashboard calculations.
+    Converts real numeric values to float.
+    Returns default for business text such as Yes, No, Approved, Pending, N/A.
+    """
+    import re
+    import pandas as pd
+
+    if value is None:
+        return default
+
+    try:
+        if pd.isna(value):
+            return default
+    except Exception:
+        pass
+
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip()
+
+    if not text:
+        return default
+
+    lowered = text.lower()
+
+    non_numeric_values = {
+        "yes", "no", "true", "false",
+        "y", "n",
+        "approved", "rejected", "pending",
+        "open", "closed",
+        "done", "not done",
+        "n/a", "na", "none", "null",
+        "-", "--"
+    }
+
+    if lowered in non_numeric_values:
+        return default
+
+    negative = False
+    if text.startswith("(") and text.endswith(")"):
+        negative = True
+        text = text[1:-1]
+
+    cleaned = re.sub(r"[^0-9.\-]", "", text)
+
+    if cleaned in {"", "-", ".", "-.", ".-", "--"}:
+        return default
+
+    try:
+        number = float(cleaned)
+        return -number if negative else number
+    except (ValueError, TypeError):
+        return default
+
 
 
 def normalized_column_lookup(df: pd.DataFrame) -> dict[str, str]:
@@ -667,12 +720,12 @@ def build_decision_dashboard_registry(projects_catalog_df: pd.DataFrame) -> pd.D
 def decision_status_badge(value: str) -> tuple[str, str, str]:
     status = str(value or "Neutral")
     if status in {"On Track", "Healthy", "Cost Efficient", "Complete"}:
-        return status, "#123F3D", "#50D5B7"
+        return status, "#123F3D", "#FFFFFF"
     if status in {"Watch", "Watchlist", "Cost Watch", "Partial"}:
-        return status, "#4E3D12", "#D4A017"
+        return status, "#4E3D12", "#FFFFFF"
     if status in {"High Attention", "Critical", "Cost Critical", "Missing critical fields"}:
-        return status, "#4B1D22", "#F05D5E"
-    return status, "#173B63", "#69A7D8"
+        return status, "#4B1D22", "#FFFFFF"
+    return status, "#173B63", "#FFFFFF"
 
 
 def validate_decision_dashboard_data(registry_df: pd.DataFrame) -> dict[str, Any]:
@@ -710,50 +763,77 @@ def apply_decision_dashboard_filters(registry_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def render_decision_command_bar(registry_df: pd.DataFrame, quality: dict[str, Any]) -> None:
-    if st.button("Reset Decision Dashboard filters", key="decision_reset_filters", use_container_width=False):
-        for key in ["decision_filter_sectors", "decision_filter_statuses", "decision_filter_projects", "decision_filter_progress", "decision_chart_section"]:
-            st.session_state.pop(key, None)
-        st.rerun()
+    st.markdown("<div class='decision-section-title'>Portfolio Filters</div>", unsafe_allow_html=True)
     sectors = sorted(registry_df["Sector"].dropna().astype(str).unique().tolist())
     statuses = sorted(registry_df["Status"].dropna().astype(str).unique().tolist())
     projects = sorted(registry_df["Project"].dropna().astype(str).unique().tolist())
-    col1, col2, col3, col4 = st.columns([0.23, 0.2, 0.22, 0.35])
+    col1, col2, col3, col4 = st.columns([0.23, 0.2, 0.22, 0.35], gap="medium")
     with col1:
-        st.multiselect("Sector filter", sectors, key="decision_filter_sectors")
+        with st.container(border=True):
+            st.multiselect("Sector filter", sectors, key="decision_filter_sectors")
     with col2:
-        st.multiselect("Status filter", statuses, key="decision_filter_statuses")
+        with st.container(border=True):
+            st.multiselect("Status filter", statuses, key="decision_filter_statuses")
     with col3:
-        st.slider("Progress range", 0, 100, key="decision_filter_progress", value=st.session_state.get("decision_filter_progress", (0, 100)))
+        with st.container(border=True):
+            st.slider("Progress range", 0, 100, key="decision_filter_progress", value=st.session_state.get("decision_filter_progress", (0, 100)))
     with col4:
-        st.multiselect("Project filter", projects, key="decision_filter_projects")
-    col5, col6, col7 = st.columns([0.34, 0.33, 0.33])
+        with st.container(border=True):
+            st.multiselect("Project filter", projects, key="decision_filter_projects")
+    col5, col6, col7, col8 = st.columns([0.30, 0.22, 0.27, 0.21], gap="medium")
     with col5:
-        st.selectbox("Chart section", ["All sections", "Health and EVM", "Cash flow", "Risks and decisions"], key="decision_chart_section")
+        with st.container(border=True):
+            st.selectbox("Chart section", ["All sections", "Health and EVM", "Cash flow", "Risks and decisions"], key="decision_chart_section")
     badge_text, badge_bg, badge_fg = decision_status_badge(str(quality["status"]))
     with col6:
-        st.markdown(f"<div class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>Data quality: {html.escape(badge_text)}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='decision-filter-status'><span class='decision-filter-label'>Data quality</span><span class='decision-badge' style='background:{badge_bg};color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:900 !important;'>{html.escape(badge_text)}</span></div>", unsafe_allow_html=True)
     with col7:
-        st.markdown(f"<div class='decision-updated'>Last updated: {html.escape(str(quality['last_updated']))}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='decision-filter-status'><span class='decision-filter-label'>Last updated</span><strong>{html.escape(str(quality['last_updated']))}</strong></div>", unsafe_allow_html=True)
+    with col8:
+        if st.button("Reset filters", key="decision_reset_filters", width="stretch"):
+            for key in ["decision_filter_sectors", "decision_filter_statuses", "decision_filter_projects", "decision_filter_progress", "decision_chart_section"]:
+                st.session_state.pop(key, None)
+            st.rerun()
     if quality["missing_fields"]:
         st.caption("Missing fields: " + ", ".join(quality["missing_fields"]))
 
 
-def render_decision_kpi_card(col, icon: str, title: str, value: Any, status: str, help_text: str, delta: float | None = None) -> None:
+def render_status_badge(status: str) -> str:
     badge_text, badge_bg, badge_fg = decision_status_badge(status)
-    if delta is None:
-        delta_html = "<span class='decision-delta neutral'>Baseline comparison unavailable</span>"
-    elif delta > 0:
-        delta_html = f"<span class='decision-delta good'>▲ {delta:.1f}%</span>"
-    elif delta < 0:
-        delta_html = f"<span class='decision-delta bad'>▼ {abs(delta):.1f}%</span>"
-    else:
-        delta_html = "<span class='decision-delta warn'>■ no major change</span>"
+    return f"<span class='decision-badge' style='background:{badge_bg};color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:900 !important;'>{html.escape(badge_text)}</span>"
+
+
+def dashboard_display(value: Any, fallback: str = "N/A") -> str:
+    if value is None:
+        return fallback
+    if isinstance(value, float) and (pd.isna(value) or value in (float("inf"), float("-inf"))):
+        return fallback
+    text = str(value).strip()
+    return text if text and text.lower() not in {"nan", "none", "inf", "-inf"} else fallback
+
+
+def render_executive_kpi_card(
+    col,
+    title: str,
+    value: Any,
+    icon: str,
+    status: str,
+    delta_text: str | None = None,
+    delta_direction: str = "neutral",
+    help_text: str | None = None,
+) -> None:
+    delta_class = {"up": "good", "down": "bad", "flat": "warn", "neutral": "neutral"}.get(delta_direction, "neutral")
+    delta_label = delta_text or "↔ Comparison unavailable"
+    title_attr = html.escape(help_text or title)
     col.markdown(
         f"""
-        <div class='decision-kpi' title='{html.escape(help_text)}'>
-          <div class='decision-kpi-top'><span>{html.escape(icon)} {html.escape(title)}</span><span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></div>
-          <div class='decision-kpi-value'>{html.escape(str(value))}</div>
-          <div>{delta_html}</div>
+        <div class='decision-kpi' title='{title_attr}'>
+          <div class='decision-kpi-header'>
+            <div class='decision-kpi-title'><span class='decision-kpi-icon'>{html.escape(icon)}</span><span>{html.escape(title)}</span></div>
+            {render_status_badge(status)}
+          </div>
+          <div class='decision-kpi-value'>{html.escape(dashboard_display(value))}</div>
+          <div class='decision-delta {delta_class}'>{html.escape(delta_label)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -764,6 +844,7 @@ def render_decision_kpi_cards(registry_df: pd.DataFrame) -> None:
     if registry_df.empty:
         st.info("No project folders were detected yet. Add project folders under projects, or under projects/<sector>/<project>.")
         return
+    st.markdown("<div class='decision-section-title'>Executive KPI Cards</div>", unsafe_allow_html=True)
     total_value = registry_df["Contract Value"].fillna(0).sum()
     total_paid = registry_df["Paid"].fillna(0).sum()
     remaining = registry_df["Remaining"].fillna(0).sum()
@@ -774,23 +855,24 @@ def render_decision_kpi_cards(registry_df: pd.DataFrame) -> None:
     avg_risk = registry_df["Risk Score"].replace(0, pd.NA).dropna().mean()
     decisions_required = int(registry_df["Required Decision"].astype(str).ne("Monitor").sum())
     cards = [
-        ("📁", "Total Projects", len(registry_df), "Neutral", "Total discovered project folders in the selected portfolio scope."),
-        ("💼", "Total Contract Value", egp(total_value), "Neutral", "Sum of selected projects contract value or BAC when available."),
-        ("💳", "Total Paid", egp(total_paid), "Neutral", "Payments paid from project payment records."),
-        ("📌", "Remaining Value", egp(remaining), "Neutral", "Contract value less paid value where both are available."),
-        ("📈", "Average Progress", pct(registry_df["Progress"].mean()), "Healthy" if registry_df["Progress"].mean() >= registry_df["Planned Progress"].mean() else "Watchlist", "Average actual progress for selected projects."),
-        ("⏱", "Delayed Projects", delayed_projects, "Critical" if delayed_projects else "Healthy", "Projects with delay days in delay event records."),
-        ("⚠", "High-Risk Projects", high_risk_projects, "Critical" if high_risk_projects else "Healthy", "Projects with normalized risk score >= 70."),
-        ("📊", "Average SPI", f"{avg_spi:.2f}" if pd.notna(avg_spi) else "N/A", "On Track" if pd.notna(avg_spi) and avg_spi >= 1 else ("Watchlist" if pd.notna(avg_spi) and avg_spi >= 0.9 else "Critical"), "Schedule Performance Index: EV / PV."),
-        ("💰", "Average CPI", f"{avg_cpi:.2f}" if pd.notna(avg_cpi) else "N/A", "Cost Efficient" if pd.notna(avg_cpi) and avg_cpi >= 1 else ("Cost Watch" if pd.notna(avg_cpi) and avg_cpi >= 0.9 else "Cost Critical"), "Cost Performance Index: EV / AC."),
-        ("🛡", "Average Risk Score", f"{avg_risk:.1f}" if pd.notna(avg_risk) else "N/A", "Critical" if pd.notna(avg_risk) and avg_risk >= 70 else ("Watchlist" if pd.notna(avg_risk) and avg_risk >= 35 else "Healthy"), "Normalized 0-100 risk score from available risk data."),
-        ("📑", "Claims / EOT Exposure", f"{registry_df['Claims / EOT Exposure'].fillna(0).sum():,.0f}", "Watchlist" if registry_df["Claims / EOT Exposure"].fillna(0).sum() else "Neutral", "Sum of available claim amount, EOT days, or delay impact fields."),
-        ("🧭", "Decisions Required", decisions_required, "Critical" if decisions_required else "Healthy", "Triggered by SPI/CPI/risk/delay thresholds."),
+        ("Total Projects", len(registry_df), "📁", "Neutral", "Total discovered project folders in the selected portfolio scope."),
+        ("Total Contract Value", egp(total_value), "💼", "Neutral", "Sum of selected projects contract value or BAC when available."),
+        ("Total Paid", egp(total_paid), "💳", "Neutral", "Payments paid from project payment records."),
+        ("Remaining Value", egp(remaining), "📌", "Neutral", "Contract value less paid value where both are available."),
+        ("Average Progress", pct(registry_df["Progress"].mean()), "📈", "Healthy" if registry_df["Progress"].mean() >= registry_df["Planned Progress"].mean() else "Watchlist", "Average actual progress for selected projects."),
+        ("Delayed Projects", delayed_projects, "⏱", "Critical" if delayed_projects else "Healthy", "Projects with delay days in delay event records."),
+        ("High-Risk Projects", high_risk_projects, "⚠", "Critical" if high_risk_projects else "Healthy", "Projects with normalized risk score >= 70."),
+        ("Average SPI", f"{avg_spi:.2f}" if pd.notna(avg_spi) else "N/A", "📊", "On Track" if pd.notna(avg_spi) and avg_spi >= 1 else ("Watchlist" if pd.notna(avg_spi) and avg_spi >= 0.9 else "Critical"), "Schedule Performance Index: EV / PV."),
+        ("Average CPI", f"{avg_cpi:.2f}" if pd.notna(avg_cpi) else "N/A", "💰", "Cost Efficient" if pd.notna(avg_cpi) and avg_cpi >= 1 else ("Cost Watch" if pd.notna(avg_cpi) and avg_cpi >= 0.9 else "Cost Critical"), "Cost Performance Index: EV / AC."),
+        ("Average Risk Score", f"{avg_risk:.1f}" if pd.notna(avg_risk) else "N/A", "🛡", "Critical" if pd.notna(avg_risk) and avg_risk >= 70 else ("Watchlist" if pd.notna(avg_risk) and avg_risk >= 35 else "Healthy"), "Normalized 0-100 risk score from available risk data."),
+        ("Claims / EOT Exposure", f"{registry_df['Claims / EOT Exposure'].fillna(0).sum():,.0f}", "📑", "Watchlist" if registry_df["Claims / EOT Exposure"].fillna(0).sum() else "Neutral", "Sum of available claim amount, EOT days, or delay impact fields."),
+        ("Decisions Required", decisions_required, "🧭", "Critical" if decisions_required else "Healthy", "Triggered by SPI/CPI/risk/delay thresholds."),
     ]
-    for chunk_start in (0, 6):
-        cols = st.columns(6)
+    for chunk_start in (0, 4, 8):
+        cols = st.columns(4, gap="medium")
         for col, card in zip(cols, cards[chunk_start:chunk_start + 6]):
-            render_decision_kpi_card(col, *card)
+            title, value, icon, status, help_text = card
+            render_executive_kpi_card(col, title, value, icon, status, delta_text="↔ Comparison unavailable", delta_direction="neutral", help_text=help_text)
 
 
 def render_decision_cards(registry_df: pd.DataFrame) -> None:
@@ -826,11 +908,67 @@ def render_decision_cards(registry_df: pd.DataFrame) -> None:
                   <p><b>Root cause:</b> {html.escape(root_cause)}</p>
                   <p><b>Financial exposure:</b> {egp(row['Remaining'])} remaining / {egp(row['Claims / EOT Exposure'])} claims-EOT signal</p>
                   <p><b>Schedule exposure:</b> {row['Delay Days']:.0f} days | SPI {row['SPI']:.2f}</p>
-                  <p><span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></p>
+                  <p><span class='decision-badge' style='background:{badge_bg};color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:900 !important;'>{html.escape(badge_text)}</span></p>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
+
+
+def render_management_decision_brief_once(registry_df: pd.DataFrame, quality: dict[str, Any]) -> None:
+    high_attention = int(registry_df["Status"].astype(str).eq("High Attention").sum())
+    watch_count = int(registry_df["Status"].astype(str).eq("Watch").sum())
+    avg_spi = registry_df["SPI"].replace(0, pd.NA).dropna().mean()
+    avg_cpi = registry_df["CPI"].replace(0, pd.NA).dropna().mean()
+    critical_sectors = registry_df[registry_df["Status"].astype(str).eq("High Attention")]["Sector"].dropna().astype(str).unique().tolist()
+    risk_source = registry_df.sort_values("Risk Score", ascending=False).head(1)
+    main_risk_driver = "N/A" if risk_source.empty else f"{risk_source.iloc[0]['Project']} ({risk_source.iloc[0]['Risk Score']:.1f})"
+    eot_exposure = registry_df["Claims / EOT Exposure"].fillna(0).sum()
+    portfolio_position = "Management attention required" if high_attention or watch_count else "Stable portfolio"
+    immediate_action = "Continue portfolio monitoring"
+    if high_attention:
+        immediate_action = "Review critical project recovery and commercial exposure"
+    elif watch_count:
+        immediate_action = "Review watchlist project controls actions"
+    if quality.get("status") != "Complete":
+        immediate_action = "Complete missing project controls data before executive decision"
+    evidence_status = "Partial" if quality.get("missing_fields") else "Available from project source files"
+    st.markdown("#### Management Decision Brief")
+    st.markdown(
+        f"""
+        <div class='decision-card' style='min-height:0'>
+          <h4>Executive Position</h4>
+          <p><b>Portfolio position:</b> {html.escape(portfolio_position)}</p>
+          <p><b>Projects requiring attention:</b> {high_attention + watch_count}</p>
+          <p><b>Critical sectors:</b> {html.escape(', '.join(critical_sectors) if critical_sectors else 'N/A')}</p>
+          <p><b>Average SPI:</b> {dashboard_display(f'{avg_spi:.2f}' if pd.notna(avg_spi) else None)} | <b>Average CPI:</b> {dashboard_display(f'{avg_cpi:.2f}' if pd.notna(avg_cpi) else None)}</p>
+          <p><b>Main risk driver:</b> {html.escape(main_risk_driver)}</p>
+          <p><b>Immediate management action:</b> {html.escape(immediate_action)}</p>
+          <p><b>Evidence availability:</b> {html.escape(evidence_status)} | <b>Claims / EOT signal:</b> {dashboard_display(f'{eot_exposure:,.0f}' if eot_exposure else None)}</p>
+          <p><b>Recommended next step:</b> Review the triggered decision cards below and open the relevant project deep dive from the transition dropdown.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    render_decision_cards(registry_df)
+
+
+def render_project_transition_dropdown_once(registry_df: pd.DataFrame) -> None:
+    project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in registry_df.iterrows()}
+    if not project_labels:
+        st.info("No project is available for deep-dive transition in the selected scope.")
+        return
+    placeholder = "Select project to open its deep dive"
+    selected_label = st.selectbox(
+        "Transition to Project Deep Dive",
+        [placeholder] + list(project_labels.keys()),
+        index=0,
+        key="decision_dashboard_transition_dropdown",
+    )
+    if selected_label != placeholder:
+        st.info("Preparing project deep dive...")
+        st.session_state["active_project_id"] = project_labels[selected_label]
+        st.rerun()
 
 
 def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
@@ -838,16 +976,36 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
     st.markdown(
         """
         <style>
-        .decision-dashboard-v2 .decision-kpi{background:linear-gradient(145deg,rgba(9,31,54,.94),rgba(16,52,82,.9));border:1px solid rgba(105,167,216,.22);border-left:4px solid #1A8A8F;border-radius:14px;padding:13px 14px;min-height:132px;box-shadow:0 16px 34px rgba(3,14,28,.22)}
-        .decision-dashboard-v2 .decision-kpi-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;color:#DDEAF6;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
-        .decision-dashboard-v2 .decision-kpi-value{font-size:23px;font-weight:900;color:#fff;margin:14px 0 9px;line-height:1.05}
-        .decision-dashboard-v2 .decision-badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;white-space:nowrap}
-        .decision-dashboard-v2 .decision-delta{font-size:11px;font-weight:750}
-        .decision-dashboard-v2 .decision-delta.good{color:#50D5B7}.decision-dashboard-v2 .decision-delta.bad{color:#F05D5E}.decision-dashboard-v2 .decision-delta.warn{color:#D4A017}.decision-dashboard-v2 .decision-delta.neutral{color:#9FB7CC}
-        .decision-dashboard-v2 .decision-updated{background:rgba(15,49,78,.78);border:1px solid rgba(105,167,216,.20);border-radius:999px;padding:8px 11px;color:#BDD2E5;font-size:12px;font-weight:700;margin-top:24px;text-align:center}
-        .decision-dashboard-v2 .decision-card{background:linear-gradient(145deg,rgba(8,28,49,.96),rgba(13,42,67,.88));border:1px solid rgba(105,167,216,.24);border-radius:14px;padding:14px 15px;min-height:168px;box-shadow:0 14px 28px rgba(3,14,28,.20)}
-        .decision-dashboard-v2 .decision-card h4{margin:0 0 8px;color:#fff;font-size:15px}.decision-dashboard-v2 .decision-card p{margin:4px 0;color:#BDD2E5;font-size:12px;line-height:1.35}
-        .decision-dashboard-v2 .decision-chart-note{background:rgba(15,49,78,.72);border:1px dashed rgba(159,183,204,.35);border-radius:12px;padding:13px 14px;color:#BDD2E5;font-size:13px}
+        .decision-dashboard-v2{background:linear-gradient(180deg,rgba(245,249,252,.98),rgba(236,244,248,.96));border:1px solid rgba(15,73,105,.16);border-radius:18px;padding:18px 18px 24px;margin:12px 0 22px;box-shadow:0 22px 46px rgba(3,14,28,.10)}
+        .section-header{background:#FFFFFF;border:1px solid rgba(15,73,105,.15);border-left:5px solid #1A8A8F;border-radius:14px;padding:16px 18px;margin-bottom:14px;box-shadow:0 10px 24px rgba(3,14,28,.06)}
+        .decision-section-title{margin:18px 0 10px;color:#0A3153;font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+        .decision-kpi{background:linear-gradient(145deg,#FFFFFF,#F5FAFC);border:1px solid rgba(15,73,105,.16);border-left:5px solid #1A8A8F;border-radius:14px;padding:15px 16px;height:154px;box-shadow:0 12px 26px rgba(3,14,28,.08);overflow:hidden;margin-bottom:12px}
+        .decision-kpi-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+        .decision-kpi-title{display:flex;gap:8px;align-items:flex-start;color:#0A3153;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.03em;line-height:1.25;min-width:0}
+        .decision-kpi-icon{flex:0 0 auto}
+        .decision-kpi-value{font-size:23px;font-weight:900;color:#061A2D;margin:16px 0 10px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .decision-badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:900!important;white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis;color:#FFFFFF!important;-webkit-text-fill-color:#FFFFFF!important;text-shadow:0 1px 1px rgba(0,0,0,.35)}
+        
+        /* DECISION_BADGE_WHITE_BOLD_FINAL_OVERRIDE */
+        .decision-badge,
+        .decision-badge *{
+            color:#FFFFFF!important;
+            -webkit-text-fill-color:#FFFFFF!important;
+            font-weight:900!important;
+            text-shadow:0 1px 1px rgba(0,0,0,.35);
+        }
+
+        .decision-delta{font-size:11px;font-weight:800}
+        .decision-delta.good{color:#15876F}.decision-delta.bad{color:#B73D45}.decision-delta.warn{color:#A77A00}.decision-delta.neutral{color:#607487}
+        .decision-filter-status{background:#FFFFFF;border:1px solid rgba(15,73,105,.14);border-radius:14px;padding:14px 15px;min-height:82px;box-shadow:0 10px 22px rgba(3,14,28,.06);display:flex;flex-direction:column;justify-content:center;gap:7px;color:#0A3153}
+        .decision-filter-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#607487;font-weight:900}
+        .decision-updated{background:#FFFFFF;border:1px solid rgba(15,73,105,.14);border-radius:999px;padding:8px 11px;color:#607487;font-size:12px;font-weight:700;margin-top:24px;text-align:center}
+        .decision-card{background:linear-gradient(145deg,#FFFFFF,#F5FAFC);border:1px solid rgba(15,73,105,.16);border-left:5px solid #1A8A8F;border-radius:14px;padding:18px 18px;min-height:184px;box-shadow:0 12px 26px rgba(3,14,28,.08);margin-bottom:12px}
+        .decision-card h4{margin:0 0 12px;color:#0A3153;font-size:16px;line-height:1.25}
+        .decision-card p{margin:7px 0;color:#263A4D;font-size:12px;line-height:1.45;background:#F7FAFC;border:1px solid rgba(15,73,105,.10);border-radius:9px;padding:7px 9px}
+        .decision-card p b{color:#061A2D}
+        .decision-chart-note{background:#FFFFFF;border:1px dashed rgba(96,116,135,.42);border-left:5px solid #D4A017;border-radius:14px;padding:15px 16px;color:#263A4D;font-size:13px;margin:10px 0;box-shadow:0 8px 18px rgba(3,14,28,.05)}
+        div[data-testid="stVerticalBlockBorderWrapper"]{background:#FFFFFF;border-color:rgba(15,73,105,.14)!important;border-radius:14px!important;box-shadow:0 10px 22px rgba(3,14,28,.06)}
         </style>
         <div class='decision-dashboard-v2'>
         """,
@@ -857,7 +1015,7 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
         """
         <div class='section-header'>
           <h3>Decision Making dashboard</h3>
-          <p style='margin:6px 0 0;color:#526276;font-size:13px'>Phase 1 - portfolio command view for top management decisions. Select a project below to move into Phase 2 project controls.</p>
+          <p style='margin:6px 0 0;color:#526276;font-size:13px'>Executive portfolio command center generated from project data, sector aggregation, and project controls indicators.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -868,89 +1026,40 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
         return
 
     quality = validate_decision_dashboard_data(registry_df)
-    render_decision_command_bar(registry_df, quality)
     scoped_registry_df = apply_decision_dashboard_filters(registry_df)
-    render_decision_kpi_cards(scoped_registry_df)
     if scoped_registry_df.empty:
-        st.warning("No projects match the selected Decision Making Dashboard filters.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
+        empty_scope_message = "No projects match the selected Decision Making Dashboard filters."
+    else:
+        empty_scope_message = ""
 
-    high_attention = int(scoped_registry_df["Status"].astype(str).eq("High Attention").sum())
-    watch_count = int(scoped_registry_df["Status"].astype(str).eq("Watch").sum())
-    avg_spi = scoped_registry_df["SPI"].replace(0, pd.NA).dropna().mean()
-    avg_cpi = scoped_registry_df["CPI"].replace(0, pd.NA).dropna().mean()
-    portfolio_position = "Stable portfolio" if high_attention == 0 and watch_count <= max(1, len(scoped_registry_df) // 4) else "Management attention required"
-    decision_notes = [
-        f"Portfolio position: {portfolio_position}",
-        f"Projects requiring attention: {high_attention + watch_count}",
-        f"Average SPI: {avg_spi:.2f}" if pd.notna(avg_spi) else "Average SPI: not available",
-        f"Average CPI: {avg_cpi:.2f}" if pd.notna(avg_cpi) else "Average CPI: not available",
-    ]
-    st.markdown(
-        "<div style='display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin:14px 0 16px'>"
-        "<div class='metric-card' style='border-left-color:#0B3A5B'><div class='metric-label'>Phase 1</div><div class='metric-value'>Portfolio Decision View</div><div class='metric-note'>Overall portfolio, sectors, priorities, EVM position, risk exposure, and management action points.</div></div>"
-        "<div class='metric-card' style='border-left-color:#D4A017'><div class='metric-label'>Phase 2</div><div class='metric-value'>Project Deep Dive</div><div class='metric-note'>Open one project to enter its isolated slides, reports, Delay TIA, claims, exports, and project controls workflow.</div></div>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<div class='panel-note'><b>Management Decision Brief</b><br>"
-        + "<br>".join(html.escape(note) for note in decision_notes)
-        + "</div>",
-        unsafe_allow_html=True,
-    )
-
-    open_col, open_button_col = st.columns([0.68, 0.32])
-    project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in scoped_registry_df.iterrows()}
-    with open_col:
-        target_label = st.selectbox("Phase 2 project transition", list(project_labels.keys()), key="decision_dashboard_open_project")
-    with open_button_col:
-        st.write("")
-        if st.button("Open project workspace", type="primary", use_container_width=True):
-            st.session_state["active_project_id"] = project_labels[target_label]
-            st.rerun()
-
-    preview_cols = st.columns(3)
-    preview_df = scoped_registry_df.sort_values(["Status", "Risk Score", "Progress"], ascending=[True, False, True]).head(6)
-    status_color = {"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"}
-    for idx, (_, row) in enumerate(preview_df.iterrows()):
-        color = status_color.get(str(row["Status"]), "#0B3A5B")
-        with preview_cols[idx % 3]:
-            st.markdown(
-                f"""
-                <div class='metric-card' style='min-height:150px;border-left-color:{color}'>
-                  <div class='metric-label'>{html.escape(str(row['Sector']))}</div>
-                  <div class='metric-value' style='font-size:18px'>{html.escape(str(row['Project']))}</div>
-                  <div class='metric-note'>Status: <b>{html.escape(str(row['Status']))}</b></div>
-                  <div class='metric-note'>Progress: {pct(row['Progress'])} | SPI: {float(row['SPI']):.2f} | CPI: {float(row['CPI']):.2f}</div>
-                  <div class='metric-note'>Contract: {egp(row['Contract Value'])} | Risks: {int(row['Risks'])}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    portfolio_tab, sector_tab, projects_tab = st.tabs(["Overall Portfolio", "Sector Analysis", "Projects Analysis"])
+    portfolio_tab, sector_tab, projects_tab = st.tabs(["📊 Overall Portfolio", "🏭 Sector Analysis", "📋 Projects Analysis"])
     with portfolio_tab:
+        render_decision_command_bar(registry_df, quality)
+        scoped_registry_df = apply_decision_dashboard_filters(registry_df)
+        render_decision_kpi_cards(scoped_registry_df)
+        if scoped_registry_df.empty:
+            st.warning(empty_scope_message or "No projects match the selected Decision Making Dashboard filters.")
+            st.markdown("</div>", unsafe_allow_html=True)
+            return
         left, right = st.columns([0.42, 0.58])
         sector_summary = scoped_registry_df.groupby("Sector", as_index=False).agg(projects=("project_id", "count"), budget=("Contract Value", "sum"), progress=("Progress", "mean"))
         with left:
             fig = px.pie(sector_summary, names="Sector", values="projects", hole=0.54, title="Sector Distribution", color_discrete_sequence=["#0B3A5B", "#1A8A8F", "#D4A017", "#617487", "#8D6E63"])
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
             status_summary = scoped_registry_df["Status"].value_counts().reset_index()
             status_summary.columns = ["Status", "Projects"]
             fig = px.bar(status_summary, x="Status", y="Projects", title="Status Breakdown", color="Status", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
-            st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 320), width="stretch")
         with right:
             fig = px.bar(sector_summary.sort_values("budget", ascending=True), x="budget", y="Sector", orientation="h", title="Budget Allocation by Sector", labels={"budget": "Contract Value"})
-            st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 320), width="stretch")
             fig = px.scatter(scoped_registry_df, x="Progress", y="Contract Value", size=scoped_registry_df["Contract Value"].clip(lower=1), color="Sector", hover_name="Project", title="Progress Overview")
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
         timeline_df = scoped_registry_df.dropna(subset=["Start", "Finish"]).copy()
         if not timeline_df.empty:
             fig = px.timeline(timeline_df, x_start="Start", x_end="Finish", y="Project", color="Sector", title="Project Schedules")
             fig.update_yaxes(autorange="reversed")
-            st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 390), width="stretch")
         charts_col1, charts_col2 = st.columns(2)
         with charts_col1:
             fig = px.scatter(scoped_registry_df, x="CPI", y="SPI", size=scoped_registry_df["Contract Value"].clip(lower=1), color="Status", hover_name="Project", hover_data=["Sector", "Progress", "Risk Score", "Delay Days", "Contract Value"], title="Portfolio Health Matrix - SPI vs CPI", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
@@ -960,10 +1069,10 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
             fig.add_annotation(x=.82, y=1.08, text="Cost Risk", showarrow=False, font=dict(color="#D4A017"))
             fig.add_annotation(x=1.08, y=.82, text="Schedule Risk", showarrow=False, font=dict(color="#D4A017"))
             fig.add_annotation(x=.82, y=.82, text="Critical", showarrow=False, font=dict(color="#F05D5E"))
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
             ev_long = scoped_registry_df[["Project", "BAC", "PV", "EV", "AC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
             fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="BAC / PV / EV / AC Comparison")
-            st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 390), width="stretch")
         with charts_col2:
             radar_values = [
                 scoped_registry_df["Progress"].mean(),
@@ -976,53 +1085,54 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
             radar_labels = ["Progress", "Schedule", "Cost", "Risk Control", "Quality", "Safety"]
             fig = go.Figure(data=go.Scatterpolar(r=radar_values, theta=radar_labels, fill="toself", line_color="#1A8A8F"))
             fig.update_layout(title="Quality & Safety Radar", polar=dict(radialaxis=dict(range=[0, 100])), showlegend=False)
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
             fig = px.line(scoped_registry_df.sort_values("Project"), x="Project", y=["SPI", "CPI"], markers=True, title="EVM Trend by Project")
-            st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 390), width="stretch")
         cash_long = scoped_registry_df[["Project", "Contract Value", "AC", "Paid", "Remaining"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
         fig = px.bar(cash_long, x="Project", y="Value", color="Metric", barmode="group", title="Portfolio Cash Flow - Budget / Spent / Paid / Remaining")
-        st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+        st.plotly_chart(style_plotly(fig, 390), width="stretch")
         progress_long = scoped_registry_df[["Project", "Planned Progress", "Progress"]].melt(id_vars="Project", var_name="Curve", value_name="Percent")
         fig = px.area(progress_long, x="Project", y="Percent", color="Curve", line_group="Curve", title="Portfolio S-Curve Proxy - Planned vs Actual Progress")
-        st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
+        st.plotly_chart(style_plotly(fig, 350), width="stretch")
         risk_heat = scoped_registry_df.assign(Risk_Band=pd.cut(scoped_registry_df["Risk Score"].fillna(0), bins=[-1, 34, 69, 100], labels=["Low", "Medium", "High"]))
         heat_df = pd.crosstab(risk_heat["Sector"], risk_heat["Risk_Band"])
         fig = px.imshow(heat_df, text_auto=True, title="Risk Assessment Matrix", color_continuous_scale=["#EAF3F4", "#D4A017", "#C94C4C"])
-        st.plotly_chart(style_plotly(fig, 340), use_container_width=True)
-        st.markdown("#### Management Decision Center")
-        render_decision_cards(scoped_registry_df)
+        st.plotly_chart(style_plotly(fig, 340), width="stretch")
         display_df = scoped_registry_df[["Sector", "Project", "Status", "Contract Value", "Paid", "Remaining", "Progress", "Planned Progress", "Progress Variance", "SPI", "CPI", "Risk Score", "Delay Days", "Required Decision", "Folder"]].copy()
-        st.dataframe(display_df, use_container_width=True, hide_index=True, height=dataframe_height(display_df, max_height=520))
+        st.dataframe(display_df, width="stretch", hide_index=True, height=dataframe_height(display_df, max_height=520))
 
     with sector_tab:
         sector_options = ["All sectors"] + sorted(scoped_registry_df["Sector"].dropna().unique())
-        sector_name = st.selectbox("Sector", sector_options, key="decision_sector_filter")
+        with st.container(border=True):
+            sector_name = st.selectbox("Sector", sector_options, key="decision_sector_filter")
         scoped = scoped_registry_df.copy() if sector_name == "All sectors" else scoped_registry_df[scoped_registry_df["Sector"].eq(sector_name)].copy()
-        render_decision_kpi_cards(scoped)
         health_spi = scoped["SPI"].replace(0, pd.NA).dropna().mean()
         health_cpi = scoped["CPI"].replace(0, pd.NA).dropna().mean()
         health_risk = scoped["Risk Score"].fillna(0).mean()
         health_status = "Healthy" if pd.notna(health_spi) and pd.notna(health_cpi) and health_spi >= 1 and health_cpi >= 1 and health_risk < 35 else ("Critical" if (pd.notna(health_spi) and health_spi < .9) or (pd.notna(health_cpi) and health_cpi < .9) or health_risk >= 70 else "Watchlist")
         badge_text, badge_bg, badge_fg = decision_status_badge(health_status)
+        spi_text = dashboard_display(f"{health_spi:.2f}" if pd.notna(health_spi) else None)
+        cpi_text = dashboard_display(f"{health_cpi:.2f}" if pd.notna(health_cpi) else None)
+        risk_text = dashboard_display(f"{health_risk:.1f}" if pd.notna(health_risk) else None)
         st.markdown(
-            f"<div class='decision-card'><h4>Sector Health Indicator</h4><p><b>Sector:</b> {html.escape(str(sector_name))}</p><p><b>Projects:</b> {len(scoped)}</p><p><b>Total value:</b> {egp(scoped['Contract Value'].sum())}</p><p><b>Average progress:</b> {pct(scoped['Progress'].mean())} | SPI {health_spi:.2f} | CPI {health_cpi:.2f}</p><p><b>Average risk score:</b> {health_risk:.1f}</p><p><span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></p></div>",
+            f"<div class='decision-card'><h4>Sector Health Indicator</h4><p><b>Sector:</b> {html.escape(str(sector_name))}</p><p><b>Projects:</b> {len(scoped)}</p><p><b>Total value:</b> {egp(scoped['Contract Value'].sum())}</p><p><b>Average progress:</b> {pct(scoped['Progress'].mean())} | <b>SPI:</b> {spi_text} | <b>CPI:</b> {cpi_text}</p><p><b>Average risk score:</b> {risk_text}</p><p><span class='decision-badge' style='background:{badge_bg};color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:900 !important;'>{html.escape(badge_text)}</span></p></div>",
             unsafe_allow_html=True,
         )
         c1, c2 = st.columns(2)
         with c1:
             fig = px.bar(scoped, x="Project", y=["Contract Value", "AC", "Paid", "Remaining"], barmode="group", title="Budget vs Spent / Paid / Remaining per Project")
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
             if scoped["Milestones"].fillna(0).sum():
                 fig = px.bar(scoped, x="Project", y="Milestones", color="Status", title="Milestone Completion Tracking")
-                st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+                st.plotly_chart(style_plotly(fig, 330), width="stretch")
             else:
                 st.markdown("<div class='decision-chart-note'>Milestone data is not available in the current project files.</div>", unsafe_allow_html=True)
             ev_long = scoped[["Project", "EV", "PV", "AC", "SV", "CV", "EAC", "VAC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
             fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="EV Metrics per Project")
-            st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 330), width="stretch")
         with c2:
             fig = px.bar(scoped, x="Project", y=["Progress", "Planned Progress"], color_discrete_sequence=["#50D5B7", "#D4A017"], barmode="group", title="Progress Gauges per Project", range_y=[0, 100])
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
             radar_metrics = {
                 "Progress": scoped["Progress"].mean(),
                 "SPI": min((scoped["SPI"].replace(0, pd.NA).dropna().mean() or 0) * 100, 100),
@@ -1035,35 +1145,39 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
                 radar_metrics["Safety"] = scoped["Safety"].mean()
             fig = go.Figure(data=go.Scatterpolar(r=list(radar_metrics.values()), theta=list(radar_metrics.keys()), fill="toself", line_color="#D4A017"))
             fig.update_layout(title="Performance Radar vs Benchmark", polar=dict(radialaxis=dict(range=[0, 100])), showlegend=False)
-            st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 330), width="stretch")
             fig = px.scatter(scoped, x="CPI", y="SPI", size=scoped["Contract Value"].clip(lower=1), color="Status", hover_name="Project", title="Sector SPI vs CPI Benchmark")
             fig.add_hline(y=1, line_dash="dash", line_color="#607080")
             fig.add_vline(x=1, line_dash="dash", line_color="#607080")
-            st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 330), width="stretch")
         st.markdown("<div class='decision-chart-note'>Resource allocation data is not available in the current project files.</div>", unsafe_allow_html=True)
-        st.dataframe(scoped[["Project", "Status", "Contract Value", "AC", "Paid", "Remaining", "Progress", "SPI", "CPI", "SV", "CV", "EAC", "VAC", "Risk Score"]], use_container_width=True, hide_index=True)
+        st.dataframe(scoped[["Project", "Status", "Contract Value", "AC", "Paid", "Remaining", "Progress", "SPI", "CPI", "SV", "CV", "EAC", "VAC", "Risk Score"]], width="stretch", hide_index=True)
 
     with projects_tab:
         default_projects = scoped_registry_df["Project"].head(8).tolist()
-        selected_projects = st.multiselect("Projects", scoped_registry_df["Project"].tolist(), default=default_projects, key="decision_projects_filter")
+        with st.container(border=True):
+            selected_projects = st.multiselect("Projects", scoped_registry_df["Project"].tolist(), default=default_projects, key="decision_projects_filter")
         scoped = scoped_registry_df[scoped_registry_df["Project"].isin(selected_projects)].copy()
         if scoped.empty:
             st.info("Select one or more projects to compare.")
         else:
-            render_decision_kpi_cards(scoped)
             card_cols = st.columns(3)
             for idx, (_, row) in enumerate(scoped.iterrows()):
                 badge_text, badge_bg, badge_fg = decision_status_badge(str(row["Status"]))
+                spi_text = dashboard_display(f"{row['SPI']:.2f}" if pd.notna(row["SPI"]) else None)
+                cpi_text = dashboard_display(f"{row['CPI']:.2f}" if pd.notna(row["CPI"]) else None)
+                risk_text = dashboard_display(f"{row['Risk Score']:.1f}" if pd.notna(row["Risk Score"]) else None)
                 with card_cols[idx % 3]:
                     st.markdown(
                         f"""
                         <div class='decision-card'>
                           <h4>{html.escape(str(row['Project']))}</h4>
-                          <p><b>Sector:</b> {html.escape(str(row['Sector']))} <span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></p>
+                          <p><b>Sector:</b> {html.escape(str(row['Sector']))}</p>
+                          <p><b>Status:</b> <span class='decision-badge' style='background:{badge_bg};color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:900 !important;'>{html.escape(badge_text)}</span></p>
                           <p><b>Contract:</b> {egp(row['Contract Value'])} | <b>Paid:</b> {egp(row['Paid'])}</p>
                           <p><b>Remaining:</b> {egp(row['Remaining'])}</p>
                           <p><b>Progress:</b> {pct(row['Progress'])} / planned {pct(row['Planned Progress'])}</p>
-                          <p><b>SPI:</b> {row['SPI']:.2f} | <b>CPI:</b> {row['CPI']:.2f} | <b>Risk:</b> {row['Risk Score']:.1f}</p>
+                          <p><b>SPI:</b> {spi_text} | <b>CPI:</b> {cpi_text} | <b>Risk:</b> {risk_text}</p>
                           <p><b>Decision:</b> {html.escape(str(row['Required Decision']))}</p>
                         </div>
                         """,
@@ -1072,11 +1186,11 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
             c1, c2 = st.columns(2)
             with c1:
                 fig = px.treemap(scoped, path=["Sector", "Project"], values="Contract Value", color="Status", title="Budget Distribution Comparison", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
-                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+                st.plotly_chart(style_plotly(fig, 360), width="stretch")
                 fig = px.scatter(scoped, x="CPI", y="SPI", color="Status", size=scoped["Contract Value"].clip(lower=1), hover_name="Project", hover_data=["Sector", "Progress", "Risk Score", "Delay Days"], title="SPI vs CPI Scatter Plot")
                 fig.add_hline(y=1, line_dash="dash", line_color="#607080")
                 fig.add_vline(x=1, line_dash="dash", line_color="#607080")
-                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+                st.plotly_chart(style_plotly(fig, 360), width="stretch")
             with c2:
                 trend_cols = ["Project", "Progress", "Planned Progress"]
                 if scoped["Quality"].fillna(0).sum():
@@ -1085,10 +1199,10 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
                     trend_cols.append("Safety")
                 trends = scoped[trend_cols].melt(id_vars="Project", var_name="Metric", value_name="Value")
                 fig = px.line(trends, x="Project", y="Value", color="Metric", markers=True, title="Progress / Quality / Safety Trends")
-                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+                st.plotly_chart(style_plotly(fig, 360), width="stretch")
                 ev_long = scoped[["Project", "PV", "EV", "AC", "SPI", "CPI", "SV", "CV", "EAC", "VAC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
                 fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="EV Metrics Comparison")
-                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+                st.plotly_chart(style_plotly(fig, 360), width="stretch")
             risk_distribution = scoped.assign(
                 Schedule_Risk=scoped["SPI"].apply(lambda value: "High" if value and value < .9 else ("Medium" if value and value < 1 else "Low")),
                 Cost_Risk=scoped["CPI"].apply(lambda value: "High" if value and value < .9 else ("Medium" if value and value < 1 else "Low")),
@@ -1097,10 +1211,12 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
             risk_long = risk_distribution[["Project", "Schedule_Risk", "Cost_Risk", "Portfolio_Risk"]].melt(id_vars="Project", var_name="Risk Type", value_name="Risk Level")
             risk_count = risk_long.groupby(["Project", "Risk Type", "Risk Level"], as_index=False).size()
             fig = px.bar(risk_count, x="Project", y="size", color="Risk Level", facet_col="Risk Type", title="Risk Distribution Stacked Bars", color_discrete_map={"Low": "#50D5B7", "Medium": "#D4A017", "High": "#F05D5E"})
-            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            st.plotly_chart(style_plotly(fig, 360), width="stretch")
             comparison = scoped[["Project", "Sector", "Status", "Contract Value", "Planned Progress", "Progress", "Progress Variance", "BAC", "AC", "Paid", "Remaining", "SPI", "CPI", "Risk Score", "Delay Days", "Milestones", "Claims / EOT Exposure", "Required Decision"]].copy()
             styler = comparison.style.map(lambda value: "background-color:#4B1D22;color:#fff" if isinstance(value, (int, float)) and value < .9 else "", subset=["SPI", "CPI"])
-            st.dataframe(styler, use_container_width=True, hide_index=True, height=dataframe_height(comparison, max_height=620))
+            st.dataframe(styler, width="stretch", hide_index=True, height=dataframe_height(comparison, max_height=620))
+    render_management_decision_brief_once(scoped_registry_df, quality)
+    render_project_transition_dropdown_once(scoped_registry_df)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -1162,8 +1278,8 @@ def build_overview_metrics():
         return {}
 
     if not selected_project_id():
-        valid_start = pd.to_datetime(projects_df.get("planned_start", pd.Series(dtype=object)), errors="coerce")
-        valid_finish = pd.to_datetime(projects_df.get("planned_finish", pd.Series(dtype=object)), errors="coerce")
+        valid_start = pd.to_datetime(projects_df.get("planned_start", pd.Series(dtype=object)), errors="coerce", dayfirst=True)
+        valid_finish = pd.to_datetime(projects_df.get("planned_finish", pd.Series(dtype=object)), errors="coerce", dayfirst=True)
         contract_values = projects_df.get("contract_value", pd.Series(0, index=projects_df.index)).apply(parse_numeric)
         planned_values = projects_df.get("planned_progress_percent", pd.Series(0, index=projects_df.index)).apply(parse_numeric)
         actual_values = projects_df.get("actual_progress_percent", pd.Series(0, index=projects_df.index)).apply(parse_numeric)
@@ -5087,7 +5203,7 @@ st.session_state["active_project_id"] = selected_project_option["project_id"]
 
 with project_cache_col:
     st.write("")
-    if st.button("Clear selected project cache", use_container_width=True):
+    if st.button("Clear selected project cache", width="stretch"):
         st.cache_data.clear()
         for key in list(st.session_state):
             if key.startswith(("tia_", "delay_tia_", "ccc_", "linked_exec_")):
@@ -5723,7 +5839,7 @@ def parse_delay_days_from_text(value) -> object:
     return pd.NA
 
 
-def extract_submission_reply_dates(value) -> tuple[pd.Timestamp, pd.Timestamp]:
+def extract_submission_reply_dates(value) -> tuple[object, object]:
     if value is None or pd.isna(value):
         return pd.NaT, pd.NaT
     text = str(value)
@@ -7993,13 +8109,13 @@ with tabs[0]:
     if wbs_costs:
         df_wbs = pd.DataFrame(wbs_costs)
         fig = px.bar(df_wbs, x="wbs_name", y=["budget", "actual"], title="Overall Cost by Discipline / WBS", barmode="group", color_discrete_map={"budget":"#245f95","actual":"#d9544d"})
-        st.plotly_chart(style_plotly(fig, 430), use_container_width=True)
+        st.plotly_chart(style_plotly(fig, 430), width="stretch")
 
     if letters:
         threads = letters.get("Issue Threads", pd.DataFrame())
         if not threads.empty:
             st.markdown("<div class='panel-note'><b>Live Alert Engine</b><br>Priority correspondence threads are linked to required follow-up and claim exposure.</div>", unsafe_allow_html=True)
-            st.dataframe(threads[["Thread", "Priority", "Next Action"]].head(8), use_container_width=True, hide_index=True)
+            st.dataframe(threads[["Thread", "Priority", "Next Action"]].head(8), width="stretch", hide_index=True)
 
 with tabs[2]:
     st.markdown("<div class='section-header'><h3>Activities Analysis</h3></div>", unsafe_allow_html=True)
@@ -8025,7 +8141,7 @@ with tabs[2]:
         if not critical_view.empty:
             critical_view["progress_variance"] = critical_view["progress_variance"].round(1)
             critical_view["finish_slip_days"] = critical_view["finish_slip_days"].astype(int)
-            st.dataframe(critical_view, use_container_width=True, hide_index=True, height=dataframe_height(critical_view))
+            st.dataframe(critical_view, width="stretch", hide_index=True, height=dataframe_height(critical_view))
         else:
             st.info("No critical path activities flagged in activities.csv.")
 
@@ -8036,7 +8152,7 @@ with tabs[2]:
         if not deviated_view.empty:
             deviated_view["progress_variance"] = deviated_view["progress_variance"].round(1)
             deviated_view["finish_slip_days"] = deviated_view["finish_slip_days"].astype(int)
-            st.dataframe(deviated_view, use_container_width=True, hide_index=True, height=dataframe_height(deviated_view))
+            st.dataframe(deviated_view, width="stretch", hide_index=True, height=dataframe_height(deviated_view))
         else:
             st.info("No deviated activities detected from planned vs actual progress or forecast finish slip.")
 
@@ -8047,7 +8163,7 @@ with tabs[2]:
         if not rft_view.empty:
             rft_view["progress_variance"] = rft_view["progress_variance"].round(1)
             rft_view["finish_slip_days"] = rft_view["finish_slip_days"].astype(int)
-            st.dataframe(rft_view, use_container_width=True, hide_index=True, height=dataframe_height(rft_view))
+            st.dataframe(rft_view, width="stretch", hide_index=True, height=dataframe_height(rft_view))
         else:
             st.info("No RFT activities found in activities.csv.")
     else:
@@ -8094,7 +8210,7 @@ with tabs[1]:
                         },
                     )
                     fig.update_yaxes(title_text="% Complete")
-                    st.plotly_chart(style_plotly(fig, 370), use_container_width=True)
+                    st.plotly_chart(style_plotly(fig, 370), width="stretch")
 
         st.markdown("#### WBS Analysis Table - CON Rows Only")
         if con_wbs_df.empty:
@@ -8102,7 +8218,7 @@ with tabs[1]:
         else:
             st.dataframe(
                 con_wbs_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height=dataframe_height(con_wbs_df, max_height=1200),
             )
@@ -8124,7 +8240,7 @@ with tabs[9]:
         st.markdown("#### Time Impact Engine Input Matrix")
         st.dataframe(
             time_impact_engine["input_matrix"],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             height=dataframe_height(time_impact_engine["input_matrix"], max_height=360),
         )
@@ -8132,7 +8248,7 @@ with tabs[9]:
         st.markdown("#### Causation and Responsibility Matrix")
         st.dataframe(
             time_impact_engine["causation_matrix"],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             height=dataframe_height(time_impact_engine["causation_matrix"], max_height=420),
         )
@@ -8178,7 +8294,7 @@ with tabs[9]:
         priority_view["Progress Variance"] = priority_view["Progress Variance"].round(1)
         priority_view["Finish Slip Days"] = priority_view["Finish Slip Days"].fillna(0).astype(int)
         st.markdown("#### Integrated Time Impact Event Register")
-        st.dataframe(priority_view, use_container_width=True, hide_index=True, height=dataframe_height(priority_view, max_height=950))
+        st.dataframe(priority_view, width="stretch", hide_index=True, height=dataframe_height(priority_view, max_height=950))
     else:
         st.info("No time impact data available.")
 
@@ -8201,7 +8317,7 @@ with tabs[4]:
             title="Cumulative Spend Curve",
             color_discrete_map={"Planned":"#245f95","Actual":"#168f8b","Invoiced":"#c98519"},
         )
-        st.plotly_chart(style_plotly(fig, 500), use_container_width=True)
+        st.plotly_chart(style_plotly(fig, 500), width="stretch")
 
         monthly_df = curve_df[["Month", "planned_value_num", "actual_cost_num", "invoice_amount_num"]].copy()
         monthly_df.columns = ["Month", "Monthly Planned", "Monthly Actual", "Monthly Invoiced"]
@@ -8213,8 +8329,8 @@ with tabs[4]:
             title="Monthly Spend Comparison",
             color_discrete_map={"Monthly Planned":"#245f95","Monthly Actual":"#168f8b","Monthly Invoiced":"#c98519"},
         )
-        st.plotly_chart(style_plotly(fig_monthly, 420), use_container_width=True)
-        st.dataframe(curve_df, use_container_width=True, hide_index=True)
+        st.plotly_chart(style_plotly(fig_monthly, 420), width="stretch")
+        st.dataframe(curve_df, width="stretch", hide_index=True)
     else:
         st.info("No S-curve data available.")
 
@@ -8230,7 +8346,7 @@ with tabs[5]:
     cols[3].metric("TCPI", f"{evm_metrics.get('tcpi'):.3f}" if evm_metrics.get("tcpi") is not None else "N/A")
     evm_table = filter_active_project(load_core_csv(EVM_CSV_PATH))
     if not evm_table.empty:
-        st.dataframe(evm_table, use_container_width=True, hide_index=True)
+        st.dataframe(evm_table, width="stretch", hide_index=True)
 
     st.markdown("### Earned Value Analysis Add-on")
     rootCauseDf = build_evm_root_cause_rows(delay_metrics, risk_metrics, contract_metrics)
@@ -8274,7 +8390,7 @@ with tabs[5]:
                 "SV Exposure": "#d9544d",
             },
         )
-        st.plotly_chart(style_plotly(chart_fig, 420), use_container_width=True)
+        st.plotly_chart(style_plotly(chart_fig, 420), width="stretch")
     with gauge_col:
         gauge_fig = go.Figure(
             go.Indicator(
@@ -8295,7 +8411,7 @@ with tabs[5]:
             )
         )
         gauge_fig.update_layout(height=420, paper_bgcolor="rgba(0,0,0,0)", margin=dict(l=10, r=10, t=50, b=10), font=dict(color="#172033"))
-        st.plotly_chart(gauge_fig, use_container_width=True)
+        st.plotly_chart(gauge_fig, width="stretch")
 
     st.markdown(f"<div class='panel-note'>{evmData['interpretation']}</div>", unsafe_allow_html=True)
     st.text_area(
@@ -8309,7 +8425,7 @@ with tabs[5]:
         st.rerun()
 
     st.markdown("#### Root Cause Linkage")
-    st.dataframe(rootCauseDf, use_container_width=True, hide_index=True, height=dataframe_height(rootCauseDf, max_height=420))
+    st.dataframe(rootCauseDf, width="stretch", hide_index=True, height=dataframe_height(rootCauseDf, max_height=420))
     st.markdown(
         "<div class='panel-note'>The negative schedule variance is not an isolated numerical deviation. It is directly linked to unresolved external and interface-driven constraints that prevented planned progress from being converted into earned value, mainly within construction and procurement work fronts.</div>",
         unsafe_allow_html=True,
@@ -8325,7 +8441,7 @@ with tabs[5]:
         st.rerun()
 
     st.markdown("#### Contractor Mitigation & Recovery Status")
-    st.dataframe(mitigationDf, use_container_width=True, hide_index=True, height=dataframe_height(mitigationDf, max_height=520))
+    st.dataframe(mitigationDf, width="stretch", hide_index=True, height=dataframe_height(mitigationDf, max_height=520))
     st.markdown(
         "<div class='panel-note'>Contractor mitigation is focused on protecting available work fronts, accelerating technical closures, maintaining commercial entitlement records, and recovering productivity once external constraints are removed. Recovery remains dependent on timely closure of outstanding Owner / Engineer-driven constraints.</div>",
         unsafe_allow_html=True,
@@ -8351,14 +8467,14 @@ with tabs[5]:
         data=evm_html.encode("utf-8"),
         file_name="earned_value_analysis.html",
         mime="text/html",
-        use_container_width=True,
+        width="stretch",
     )
     export_col2.download_button(
         "Download Earned Value Analysis PowerPoint",
         data=evm_ppt,
         file_name="earned_value_analysis.pptx",
         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        use_container_width=True,
+        width="stretch",
     )
     with st.expander("Preview print-ready HTML", expanded=False):
         st.components.v1.html(evm_html, height=1200, scrolling=True)
@@ -8396,13 +8512,13 @@ with tabs[6]:
                 "Total Paid": "#c98519",
             },
         )
-        st.plotly_chart(style_plotly(fig, 420), use_container_width=True)
+        st.plotly_chart(style_plotly(fig, 420), width="stretch")
 
         st.markdown("#### Contracts Table")
-        st.dataframe(contracts_df, use_container_width=True, hide_index=True, height=dataframe_height(contracts_df))
+        st.dataframe(contracts_df, width="stretch", hide_index=True, height=dataframe_height(contracts_df))
 
         st.markdown("#### Payments Table")
-        st.dataframe(payments_df, use_container_width=True, hide_index=True, height=dataframe_height(payments_df))
+        st.dataframe(payments_df, width="stretch", hide_index=True, height=dataframe_height(payments_df))
     else:
         st.info("No contract data available.")
 
@@ -8414,9 +8530,9 @@ def render_contract_clause_matching_engine():
         st.dataframe(
             pd.DataFrame({
                 "Required Project Input": ["Contract document or clause library", "Contract evidence register", "Project claims / delay events"],
-                "Project Folder": ["2-contracts/source", "2-contracts/evidence", "data/import_templates"],
+                "Project Folder": ["05-contracts/source", "06-evidence", "01-data/import_templates"],
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
         return
@@ -8461,7 +8577,7 @@ def render_contract_clause_matching_engine():
             """,
             unsafe_allow_html=True,
         )
-        st.dataframe(pd.DataFrame({"AI Recommended Next Actions": ai_brief["next_actions"]}), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame({"AI Recommended Next Actions": ai_brief["next_actions"]}), width="stretch", hide_index=True)
         for i, match in enumerate(matches, 1):
             clause = match["clause"]
             with st.expander(f"{i}. {clause.topic} - {match['relevance']}", expanded=i <= 3):
@@ -8501,10 +8617,10 @@ def render_contract_clause_matching_engine():
             f"<div class='panel-note'><b>AI Delay Assessment</b><br>Risk level: <b>{analysis['risk_level']}</b><br>Clause-based entitlement view: <b>{analysis['entitlement']}</b>.</div>",
             unsafe_allow_html=True,
         )
-        st.dataframe(pd.DataFrame({"Critical Actions": analysis["critical_actions"]}), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame({"Critical Actions": analysis["critical_actions"]}), width="stretch", hide_index=True)
     search_term = st.text_input("Search Clauses", placeholder="delay, payment, variation, notice, steel")
     clauses = search_clauses(search_term) if search_term else all_clauses
-    st.dataframe(pd.DataFrame([c.__dict__ for c in clauses]), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame([c.__dict__ for c in clauses]), width="stretch", hide_index=True)
 
 with tabs[7]:
     st.markdown("<div class='section-header'><h3>Letters Intelligence, Alerts Link & Issue Engine</h3></div>", unsafe_allow_html=True)
@@ -8521,7 +8637,7 @@ with tabs[7]:
         ingest_col2.metric("Added Automatically", int(auto_ingest_register["Status"].eq("Added Automatically").sum()))
         ingest_col3.metric("Needs Review", int(auto_ingest_register["Status"].isin(["Needs Review", "Read Error"]).sum()))
         with st.expander("Automatic ingest register", expanded=False):
-            st.dataframe(auto_ingest_register, use_container_width=True, hide_index=True, height=dataframe_height(auto_ingest_register))
+            st.dataframe(auto_ingest_register, width="stretch", hide_index=True, height=dataframe_height(auto_ingest_register))
     else:
         st.caption("The inbox is empty. Add PDF, DOCX, TXT, EML, CSV, XLSX, or XLS letters to one of the two direction folders.")
     if not letters:
@@ -8539,25 +8655,25 @@ with tabs[7]:
         c4.metric("Issue Threads", len(threads), delta="Alert engine")
         if not threads.empty:
             sorted_threads = threads.sort_values("Priority", key=lambda s: s.map(risk_rank), ascending=False)
-            st.dataframe(sorted_threads, use_container_width=True, hide_index=True, height=dataframe_height(sorted_threads))
+            st.dataframe(sorted_threads, width="stretch", hide_index=True, height=dataframe_height(sorted_threads))
         col1, col2 = st.columns(2)
         with col1:
             if not samco.empty:
                 counts = samco["Risk Type"].value_counts().reset_index()
                 counts.columns = ["Risk Type", "Count"]
-                st.plotly_chart(style_plotly(px.bar(counts, x="Risk Type", y="Count", title="Contractor Risk Subjects", color="Risk Type", color_discrete_sequence=px.colors.qualitative.Safe)), use_container_width=True)
+                st.plotly_chart(style_plotly(px.bar(counts, x="Risk Type", y="Count", title="Contractor Risk Subjects", color="Risk Type", color_discrete_sequence=px.colors.qualitative.Safe)), width="stretch")
                 samco_view = samco[["Ref No", "Date", "Type", "Subject", "Delay Risk", "EOT Potential", "Claim Strength", "Required Actions"]]
-                st.dataframe(samco_view, use_container_width=True, hide_index=True, height=dataframe_height(samco_view))
+                st.dataframe(samco_view, width="stretch", hide_index=True, height=dataframe_height(samco_view))
         with col2:
             if not ace.empty:
                 counts = ace["Delay Risk"].value_counts().reset_index()
                 counts.columns = ["Delay Risk", "Count"]
-                st.plotly_chart(style_plotly(px.bar(counts, x="Delay Risk", y="Count", title="ACE Delay Risk Alerts", color="Delay Risk", color_discrete_map={"High":"#d9544d","Medium":"#c98519","Low":"#168f8b"})), use_container_width=True)
+                st.plotly_chart(style_plotly(px.bar(counts, x="Delay Risk", y="Count", title="ACE Delay Risk Alerts", color="Delay Risk", color_discrete_map={"High":"#d9544d","Medium":"#c98519","Low":"#168f8b"})), width="stretch")
                 ace_view = ace[["Ref No", "Date", "Type", "Subject", "Delay Risk", "EOT Potential", "Claim Strength", "Required Actions"]]
-                st.dataframe(ace_view, use_container_width=True, hide_index=True, height=dataframe_height(ace_view))
+                st.dataframe(ace_view, width="stretch", hide_index=True, height=dataframe_height(ace_view))
         st.markdown("#### Linked Correspondence Engine")
-        st.dataframe(samco_links, use_container_width=True, hide_index=True, height=dataframe_height(samco_links))
-        st.dataframe(ace_links, use_container_width=True, hide_index=True, height=dataframe_height(ace_links))
+        st.dataframe(samco_links, width="stretch", hide_index=True, height=dataframe_height(samco_links))
+        st.dataframe(ace_links, width="stretch", hide_index=True, height=dataframe_height(ace_links))
 
 with tabs[8]:
     st.markdown("<div class='section-header'><h3>Delay Analysis</h3></div>", unsafe_allow_html=True)
@@ -8590,10 +8706,10 @@ with tabs[8]:
         )
         matrix_df.columns.name = None
         st.markdown("#### Delay Responsibility x Status Matrix")
-        st.dataframe(matrix_df, use_container_width=True, hide_index=True, height=dataframe_height(matrix_df, max_height=320))
+        st.dataframe(matrix_df, width="stretch", hide_index=True, height=dataframe_height(matrix_df, max_height=320))
 
         st.markdown("#### Delay Events Table")
-        st.dataframe(display_delays_df, use_container_width=True, hide_index=True, height=dataframe_height(display_delays_df))
+        st.dataframe(display_delays_df, width="stretch", hide_index=True, height=dataframe_height(display_delays_df))
     else:
         st.info("No delay data available.")
 
@@ -8616,31 +8732,31 @@ with tabs[10]:
         col1, col2 = st.columns(2)
         risk_status_counts = risks_df["status"].value_counts().reset_index()
         risk_status_counts.columns = ["Status", "Count"]
-        col1.plotly_chart(style_plotly(px.bar(risk_status_counts, x="Status", y="Count", title="Risk Status", color="Status", color_discrete_sequence=["#245f95", "#168f8b", "#c98519"])), use_container_width=True)
+        col1.plotly_chart(style_plotly(px.bar(risk_status_counts, x="Status", y="Count", title="Risk Status", color="Status", color_discrete_sequence=["#245f95", "#168f8b", "#c98519"])), width="stretch")
         risk_category_counts = risks_df["risk_category"].value_counts().reset_index()
         risk_category_counts.columns = ["Risk Category", "Count"]
-        col2.plotly_chart(style_plotly(px.bar(risk_category_counts, x="Risk Category", y="Count", title="Risk Category", color="Risk Category", color_discrete_sequence=px.colors.qualitative.Safe)), use_container_width=True)
-        st.dataframe(risks_df, use_container_width=True, hide_index=True, height=dataframe_height(risks_df))
+        col2.plotly_chart(style_plotly(px.bar(risk_category_counts, x="Risk Category", y="Count", title="Risk Category", color="Risk Category", color_discrete_sequence=px.colors.qualitative.Safe)), width="stretch")
+        st.dataframe(risks_df, width="stretch", hide_index=True, height=dataframe_height(risks_df))
     else:
         st.info("No main risk register data available.")
 
     if not steel_df.empty:
         st.markdown("#### Steel Delay Status - Employer Free Issue Material")
-        st.dataframe(steel_df, use_container_width=True, hide_index=True, height=dataframe_height(steel_df))
+        st.dataframe(steel_df, width="stretch", hide_index=True, height=dataframe_height(steel_df))
 
     if not rfi_df.empty:
         st.markdown("#### RFI Status")
-        st.dataframe(rfi_df, use_container_width=True, hide_index=True, height=dataframe_height(rfi_df))
+        st.dataframe(rfi_df, width="stretch", hide_index=True, height=dataframe_height(rfi_df))
 
     if not ifc_df.empty:
         st.markdown("#### IFC Conflict")
-        st.dataframe(ifc_df, use_container_width=True, hide_index=True, height=dataframe_height(ifc_df))
+        st.dataframe(ifc_df, width="stretch", hide_index=True, height=dataframe_height(ifc_df))
 
 with tabs[3]:
     st.markdown("<div class='section-header'><h3>Milestones & Change Orders</h3></div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
-    col1.dataframe(milestone_metrics["milestones_df"], use_container_width=True, hide_index=True)
-    col2.dataframe(milestone_metrics["change_orders_df"], use_container_width=True, hide_index=True)
+    col1.dataframe(milestone_metrics["milestones_df"], width="stretch", hide_index=True)
+    col2.dataframe(milestone_metrics["change_orders_df"], width="stretch", hide_index=True)
 
 with tabs[11]:
     tia_tabs = st.tabs(
@@ -8745,13 +8861,13 @@ with tabs[11]:
         ]
 
         st.markdown("#### Required Delay TIA Source Files")
-        st.caption(f"Source: projects/{active_project_context.project_folder_name}/delay_analysis/steel_delay_tia_templates")
+        st.caption(f"Source: projects/{active_project_context.project_folder_name}/02-delay_analysis/steel_delay_tia_templates")
         steel_template_inventory_df = build_steel_delay_template_inventory_df()
         if not steel_template_inventory_df.empty:
             st.markdown("#### Recognized Delay TIA Files")
             st.dataframe(
                 steel_template_inventory_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height=dataframe_height(steel_template_inventory_df, max_height=420),
             )
@@ -8789,7 +8905,7 @@ with tabs[11]:
                 for spec in delay_tia_file_specs
             ]
         )
-        st.dataframe(upload_status_df, use_container_width=True, hide_index=True)
+        st.dataframe(upload_status_df, width="stretch", hide_index=True)
         uploaded_improvement_frames = {}
         improvement_status_df = pd.DataFrame(
             [
@@ -8817,7 +8933,7 @@ with tabs[11]:
                 {"Delay Stream": "Contractor steel mitigation evidence", "Included": "Yes" if include_samco_delay else "No"},
             ]
         )
-        st.dataframe(included_delay_streams_df, use_container_width=True, hide_index=True)
+        st.dataframe(included_delay_streams_df, width="stretch", hide_index=True)
 
         bl_fixed_context = load_bl_fixed_context()
         bl_fixed_status_df = pd.DataFrame(
@@ -8844,8 +8960,8 @@ with tabs[11]:
                 },
             ]
         )
-        st.caption("Baseline comparison sources are loaded from the selected project's `bl` folder.")
-        st.dataframe(bl_fixed_status_df, use_container_width=True, hide_index=True)
+        st.caption("Baseline comparison sources are loaded from the selected project's `03-schedule` folder.")
+        st.dataframe(bl_fixed_status_df, width="stretch", hide_index=True)
 
         delay_tia_local_support = load_delay_tia_local_support_files()
 
@@ -8950,7 +9066,7 @@ with tabs[11]:
         st.caption("This slide reads the 11 Delay Analysis - Time Impact Analysis files from `steel_delay_tia_templates`, inspects their columns, and shows the calculated conclusion from the active TIA logic.")
         if not delay_tia_ready:
             st.warning("Tables and conclusion are blocked until all 11 required files are available.")
-            st.dataframe(upload_status_df, use_container_width=True, hide_index=True)
+            st.dataframe(upload_status_df, width="stretch", hide_index=True)
         else:
             inventory_rows = []
             for spec in delay_tia_file_specs:
@@ -8967,7 +9083,7 @@ with tabs[11]:
                 )
             inventory_df = pd.DataFrame(inventory_rows)
             st.markdown("##### Folder File Inventory")
-            st.dataframe(inventory_df, use_container_width=True, hide_index=True, height=dataframe_height(inventory_df, max_height=420))
+            st.dataframe(inventory_df, width="stretch", hide_index=True, height=dataframe_height(inventory_df, max_height=420))
 
             kpis_tia = active_delay_tia_analysis.get("kpis", {})
             conclusion_df = pd.DataFrame(
@@ -8981,7 +9097,7 @@ with tabs[11]:
                 ]
             )
             st.markdown("##### Calculated Conclusion")
-            st.dataframe(conclusion_df, use_container_width=True, hide_index=True, height=dataframe_height(conclusion_df, max_height=320))
+            st.dataframe(conclusion_df, width="stretch", hide_index=True, height=dataframe_height(conclusion_df, max_height=320))
 
             table_options = {
                 "Executive Summary": active_delay_tia_analysis.get("executive_summary_df", pd.DataFrame()),
@@ -8993,14 +9109,14 @@ with tabs[11]:
             selected_table_name = st.selectbox("Calculated table", list(table_options.keys()), key="delay_tia_tables_conclusion_table")
             selected_table_df = table_options[selected_table_name]
             if isinstance(selected_table_df, pd.DataFrame) and not selected_table_df.empty:
-                st.dataframe(selected_table_df, use_container_width=True, hide_index=True, height=dataframe_height(selected_table_df, max_height=620))
+                st.dataframe(selected_table_df, width="stretch", hide_index=True, height=dataframe_height(selected_table_df, max_height=620))
             else:
                 st.info(f"No rows are available for {selected_table_name}.")
 
     with tia_tabs[2]:
         st.markdown("#### MEP Activities")
         st.caption(
-            "This slide reads the selected project's `bl/MEP Activities.csv`. "
+            "This slide reads the selected project's `03-schedule/MEP Activities.csv`. "
             "The records are treated as MEP first-fix / embedded-interface constraints that were outside the original steel-only delay scope."
         )
         mep_activities_df = bl_fixed_context.get("mep_df", pd.DataFrame()).copy()
@@ -9009,7 +9125,7 @@ with tabs[11]:
         related_mep_letters_df = build_mep_related_letters_df(mep_activities_df)
 
         if mep_activities_df.empty:
-            st.warning("No MEP activity records were found in the selected project's `bl/MEP Activities.csv`.")
+            st.warning("No MEP activity records were found in the selected project's `03-schedule/MEP Activities.csv`.")
         else:
             mep_kpis = build_mep_activities_kpis(mep_activities_df)
             c1, c2, c3, c4 = st.columns(4)
@@ -9053,7 +9169,7 @@ with tabs[11]:
             ]
             st.dataframe(
                 mep_activities_df[mep_view_cols] if mep_view_cols else mep_activities_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height=dataframe_height(mep_activities_df, max_height=560),
             )
@@ -9069,12 +9185,12 @@ with tabs[11]:
                     .rename(columns={"Building / Zone": "Building / Zone", "Duration_Days": "Indicative Duration Days"})
                 )
                 st.markdown("##### Building / Zone Summary")
-                st.dataframe(mep_by_building_df, use_container_width=True, hide_index=True)
+                st.dataframe(mep_by_building_df, width="stretch", hide_index=True)
 
         st.markdown("##### MEP Schedule Insertions")
         st.caption("Engineering and procurement are matched from the baseline schedule. Construction is built from the MEP activity register and positioned against the related current civil activity dates.")
         if mep_schedule_df.empty:
-            st.info("No derived MEP schedule rows were found in the selected project's `bl/MEP Schedule.csv`.")
+            st.info("No derived MEP schedule rows were found in the selected project's `03-schedule/MEP Schedule.csv`.")
         else:
             schedule_view_cols = [
                 col
@@ -9105,7 +9221,7 @@ with tabs[11]:
             ]
             st.dataframe(
                 mep_schedule_df[schedule_view_cols] if schedule_view_cols else mep_schedule_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height=dataframe_height(mep_schedule_df, max_height=620),
             )
@@ -9113,7 +9229,7 @@ with tabs[11]:
         st.markdown("##### Civil Predecessor / Successor Logic")
         st.caption("This table shows the civil predecessor and successor activities that govern each MEP insertion point.")
         if mep_civil_logic_df.empty:
-            st.info("No derived civil predecessor/successor rows were found in the selected project's `bl/MEP Civil Logic.csv`.")
+            st.info("No derived civil predecessor/successor rows were found in the selected project's `03-schedule/MEP Civil Logic.csv`.")
         else:
             logic_view_cols = [
                 col
@@ -9135,7 +9251,7 @@ with tabs[11]:
             ]
             st.dataframe(
                 mep_civil_logic_df[logic_view_cols] if logic_view_cols else mep_civil_logic_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height=dataframe_height(mep_civil_logic_df, max_height=560),
             )
@@ -9147,7 +9263,7 @@ with tabs[11]:
         else:
             st.dataframe(
                 related_mep_letters_df,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 height=dataframe_height(related_mep_letters_df, max_height=520),
             )
@@ -9164,7 +9280,7 @@ with tabs[11]:
                 file_name="MEP_schedule_pack.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="download_mep_schedule_pack_xlsx",
-                use_container_width=True,
+                width="stretch",
             )
         elif not OPENPYXL_AVAILABLE:
             st.warning("Excel export is unavailable because openpyxl is not installed.")
@@ -9198,7 +9314,7 @@ with tabs[11]:
 
             executive_summary_df = active_delay_tia_analysis.get("executive_summary_df", pd.DataFrame())
             if not executive_summary_df.empty:
-                st.dataframe(executive_summary_df, use_container_width=True, hide_index=True)
+                st.dataframe(executive_summary_df, width="stretch", hide_index=True)
             else:
                 st.info("No Delay TIA executive summary is available from the folder source files.")
 
@@ -9232,7 +9348,7 @@ with tabs[11]:
                 {"Step": "7. Assess entitlement", "Method": "Apply contract support logic, notice / time bar context, and responsibility classification."},
             ]
         )
-        st.dataframe(tia_logic_df, use_container_width=True, hide_index=True)
+        st.dataframe(tia_logic_df, width="stretch", hide_index=True)
 
         st.markdown("#### Fragnet Structure Used Here")
         st.code(
@@ -9257,7 +9373,7 @@ with tabs[11]:
                 {"Rule": "Fragnet position", "Program logic": "Insert before the first affected RFT / reinforcement activity."},
             ]
         )
-        st.dataframe(steel_logic_df, use_container_width=True, hide_index=True)
+        st.dataframe(steel_logic_df, width="stretch", hide_index=True)
 
         st.markdown("#### Why the Program Compares BL Critical Path and Current Critical Path")
         st.markdown(
@@ -9317,7 +9433,7 @@ with tabs[11]:
         )
 
         dependency_df = upload_status_df[["File", "Required", "Fields used by TIA", "How the program uses it"]].copy()
-        st.dataframe(dependency_df, use_container_width=True, hide_index=True)
+        st.dataframe(dependency_df, width="stretch", hide_index=True)
 
     with tia_tabs[3]:
         st.markdown("#### Active File Priority Order")
@@ -9336,7 +9452,7 @@ with tabs[11]:
                 {"Priority": 11, "File / Source": "Letters workbook", "Why it matters": "Notice, correspondence, and issue-thread evidence linkage."},
             ]
         )
-        st.dataframe(priority_df, use_container_width=True, hide_index=True)
+        st.dataframe(priority_df, width="stretch", hide_index=True)
 
         st.markdown("#### Data Structure Rule")
         st.markdown(
@@ -9366,7 +9482,7 @@ with tabs[11]:
 
         st.markdown("#### Fixed BL Critical Path Register")
         if not active_bl_critical_path_fixed_df.empty:
-            st.dataframe(active_bl_critical_path_fixed_df, use_container_width=True, hide_index=True)
+            st.dataframe(active_bl_critical_path_fixed_df, width="stretch", hide_index=True)
         else:
             st.info("No rows are available in the automatic local `BL critical path.csv` source.")
 
@@ -9375,23 +9491,23 @@ with tabs[11]:
         with bl_src_col1:
             st.markdown("##### BL Schedule")
             if not bl_fixed_context["schedule_df"].empty:
-                st.dataframe(bl_fixed_context["schedule_df"], use_container_width=True, hide_index=True, height=dataframe_height(bl_fixed_context["schedule_df"], max_height=280))
+                st.dataframe(bl_fixed_context["schedule_df"], width="stretch", hide_index=True, height=dataframe_height(bl_fixed_context["schedule_df"], max_height=280))
             else:
                 st.info("BL Schedule source is empty.")
             st.markdown("##### BL Float Bath")
             if not bl_fixed_context["float_df"].empty:
-                st.dataframe(bl_fixed_context["float_df"], use_container_width=True, hide_index=True, height=dataframe_height(bl_fixed_context["float_df"], max_height=280))
+                st.dataframe(bl_fixed_context["float_df"], width="stretch", hide_index=True, height=dataframe_height(bl_fixed_context["float_df"], max_height=280))
             else:
                 st.info("BL float bath source is empty.")
         with bl_src_col2:
             st.markdown("##### BL Longest Bath")
             if not bl_fixed_context["longest_df"].empty:
-                st.dataframe(bl_fixed_context["longest_df"], use_container_width=True, hide_index=True, height=dataframe_height(bl_fixed_context["longest_df"], max_height=280))
+                st.dataframe(bl_fixed_context["longest_df"], width="stretch", hide_index=True, height=dataframe_height(bl_fixed_context["longest_df"], max_height=280))
             else:
                 st.info("BL longest bath source is empty.")
             st.markdown("##### BL Critical Path")
             if not bl_fixed_context["critical_df"].empty:
-                st.dataframe(bl_fixed_context["critical_df"], use_container_width=True, hide_index=True, height=dataframe_height(bl_fixed_context["critical_df"], max_height=280))
+                st.dataframe(bl_fixed_context["critical_df"], width="stretch", hide_index=True, height=dataframe_height(bl_fixed_context["critical_df"], max_height=280))
             else:
                 st.info("BL critical path source is empty.")
 
@@ -9419,7 +9535,7 @@ with tabs[11]:
             ].copy()
             if "activity_name" in comparison_view.columns and "Activity Name" not in comparison_view.columns:
                 comparison_view = comparison_view.rename(columns={"activity_name": "Activity Name"})
-            st.dataframe(comparison_view, use_container_width=True, hide_index=True)
+            st.dataframe(comparison_view, width="stretch", hide_index=True)
         else:
             st.info("No comparison rows are available between the uploaded BL critical path file and the Activities critical path analysis.")
 
@@ -9457,12 +9573,12 @@ with tabs[11]:
             st.info(answer_text)
 
             with st.expander("Column inventory inspected before answering", expanded=False):
-                st.dataframe(question_inventory_df, use_container_width=True, hide_index=True, height=dataframe_height(question_inventory_df, max_height=520))
+                st.dataframe(question_inventory_df, width="stretch", hide_index=True, height=dataframe_height(question_inventory_df, max_height=520))
 
             for table_title, table_df in answer_tables:
                 if isinstance(table_df, pd.DataFrame) and not table_df.empty:
                     st.markdown(f"##### {table_title}")
-                    st.dataframe(table_df, use_container_width=True, hide_index=True, height=dataframe_height(table_df, max_height=520))
+                    st.dataframe(table_df, width="stretch", hide_index=True, height=dataframe_height(table_df, max_height=520))
 
     with tia_tabs[5]:
         if not delay_tia_ready:
@@ -9480,7 +9596,7 @@ with tabs[11]:
             director_docx_bytes = generated_docx_path.read_bytes() if generated_docx_path else b""
 
             st.markdown("#### Delay TIA Output Pack")
-            st.dataframe(delay_report_df, use_container_width=True, hide_index=True)
+            st.dataframe(delay_report_df, width="stretch", hide_index=True)
 
             c1, c2, c3, c4, c5 = st.columns(5)
             c1.download_button(
@@ -9488,21 +9604,21 @@ with tabs[11]:
                 data=excel_report_bytes,
                 file_name="delay_tia_output_pack.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width="stretch",
             )
             c2.download_button(
                 "Download Detailed TIA Report (.html)",
                 data=detailed_report_html.encode("utf-8"),
                 file_name="delay_tia_detailed_report.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
             c3.download_button(
                 "Download Primavera Fragnet Sheet (.csv)",
                 data=primavera_fragnet_df.to_csv(index=False).encode("utf-8") if not primavera_fragnet_df.empty else b"",
                 file_name="primavera_fragnet_sheet.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
                 disabled=primavera_fragnet_df.empty,
             )
             c4.download_button(
@@ -9510,14 +9626,14 @@ with tabs[11]:
                 data=delay_report_df.to_csv(index=False).encode("utf-8"),
                 file_name="delay_tia_delay_report.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
             )
             c5.download_button(
                 "Download Time Impact Analysis Report | Director Pack (.docx)",
                 data=director_docx_bytes,
                 file_name=generated_docx_path.name if generated_docx_path else "TIA_Director_Level_Word_Report_Final.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(director_docx_bytes),
             )
             if director_docx_error:
@@ -9700,10 +9816,10 @@ with tabs[11]:
 
             status_df = build_data_source_status_df(report_source_frames)
             st.markdown("##### Data Source Status")
-            st.dataframe(status_df, use_container_width=True, hide_index=True)
+            st.dataframe(status_df, width="stretch", hide_index=True)
 
             st.markdown("##### Replacement Preview")
-            st.dataframe(build_replacement_preview_df(current_report_inputs), use_container_width=True, hide_index=True)
+            st.dataframe(build_replacement_preview_df(current_report_inputs), width="stretch", hide_index=True)
 
             if st.button("Generate Time Impact Analysis Report | Director Pack", key="generate_tia_director_pack"):
                 try:
@@ -9735,7 +9851,7 @@ with tabs[11]:
 
             st.markdown("#### Primavera Fragnet Sheet")
             if not primavera_fragnet_df.empty:
-                st.dataframe(primavera_fragnet_df, use_container_width=True, hide_index=True)
+                st.dataframe(primavera_fragnet_df, width="stretch", hide_index=True)
             else:
                 st.info("No Primavera fragnet rows were generated from the current uploaded Delay TIA analysis.")
 
@@ -9759,7 +9875,7 @@ with tabs[13]:
             if st.button(
                 "Sync",
                 key="repository_sync_once",
-                use_container_width=True,
+                width="stretch",
                 disabled=not sync_authorized,
             ):
                 sync_completed = False
@@ -9782,7 +9898,7 @@ with tabs[13]:
             if st.button(
                 "Start 30-minute auto sync",
                 key="repository_sync_watch",
-                use_container_width=True,
+                width="stretch",
                 disabled=not sync_authorized,
             ):
                 try:
@@ -9845,7 +9961,7 @@ with tabs[13]:
                 data=the_big_dashboard_html.encode("utf-8"),
                 file_name=f"{output_project_slug}_executive_dashboard.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
         elif output_mode == "Original presentation print-only":
             original_template_bytes, original_template_unresolved = build_original_template_presentation(
@@ -9864,7 +9980,7 @@ with tabs[13]:
                 data=original_template_bytes,
                 file_name=f"{output_project_slug}_presentation.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(original_template_bytes),
             )
             c2.download_button(
@@ -9872,14 +9988,14 @@ with tabs[13]:
                 data=original_template_bytes,
                 file_name=f"{output_project_slug}_presentation_print.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(original_template_bytes),
             )
             if original_template_unresolved:
                 st.markdown("#### Linking Items To Confirm")
                 st.dataframe(
                     pd.DataFrame({"Unresolved Template Mapping": original_template_unresolved}),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                     height=dataframe_height(pd.DataFrame({"Unresolved Template Mapping": original_template_unresolved}), max_height=320),
                 )
@@ -10020,14 +10136,14 @@ with tabs[13]:
                 data=executive_html.encode("utf-8"),
                 file_name=f"{output_project_slug}_linked_executive_dashboard.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
             linked_export_col2.download_button(
                 "Download Linked Executive Dashboard PowerPoint (.pptx) - Landscape",
                 data=linked_dashboard_ppt,
                 file_name=f"{output_project_slug}_linked_executive_dashboard_landscape.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                use_container_width=True,
+                width="stretch",
             )
             linked_export_col_summary_html, linked_export_col_summary, linked_export_col3, linked_export_col4 = st.columns(4)
             linked_export_col_summary_html.download_button(
@@ -10035,28 +10151,28 @@ with tabs[13]:
                 data=linked_dashboard_a3_summary_html.encode("utf-8"),
                 file_name=f"{output_project_slug}_linked_executive_dashboard_a3_landscape_one_page.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
             linked_export_col_summary.download_button(
                 "Download Summarized Linked Dashboard (.pptx) - A3 Landscape One Page",
                 data=linked_dashboard_a3_summary_ppt,
                 file_name=f"{output_project_slug}_linked_executive_dashboard_a3_landscape_one_page.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                use_container_width=True,
+                width="stretch",
             )
             linked_export_col3.download_button(
                 "Download EVM Add-on HTML",
                 data=evm_html.encode("utf-8"),
                 file_name=f"{output_project_slug}_linked_executive_dashboard_evm_analysis.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
             linked_export_col4.download_button(
                 "Download EVM Add-on PowerPoint",
                 data=evm_ppt,
                 file_name=f"{output_project_slug}_linked_executive_dashboard_evm_analysis.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                use_container_width=True,
+                width="stretch",
             )
             with st.expander("Preview summarized A3 linked executive dashboard", expanded=False):
                 st.components.v1.html(linked_dashboard_a3_summary_html, height=1600, scrolling=True)
@@ -10103,7 +10219,7 @@ with tabs[13]:
                 "99 Lists",
             ]
             st.markdown("#### Generated Tabs")
-            st.dataframe(pd.DataFrame({"Sheet Name": generated_tabs}), use_container_width=True, hide_index=True, height=dataframe_height(pd.DataFrame({"Sheet Name": generated_tabs}), max_height=760))
+            st.dataframe(pd.DataFrame({"Sheet Name": generated_tabs}), width="stretch", hide_index=True, height=dataframe_height(pd.DataFrame({"Sheet Name": generated_tabs}), max_height=760))
             st.markdown("#### Power BI Connection Steps")
             st.markdown(
                 """
@@ -10116,7 +10232,7 @@ with tabs[13]:
             )
             if report_assumptions:
                 st.markdown("#### Assumptions / Limitations")
-                st.dataframe(pd.DataFrame({"Assumption / Limitation": report_assumptions}), use_container_width=True, hide_index=True, height=dataframe_height(pd.DataFrame({"Assumption / Limitation": report_assumptions}), max_height=320))
+                st.dataframe(pd.DataFrame({"Assumption / Limitation": report_assumptions}), width="stretch", hide_index=True, height=dataframe_height(pd.DataFrame({"Assumption / Limitation": report_assumptions}), max_height=320))
             st.markdown("#### Validation Checks")
             validation_checks = pd.DataFrame(
                 {
@@ -10130,7 +10246,7 @@ with tabs[13]:
                     "Status": ["Passed", "Passed", "Passed", "Passed", "Passed"],
                 }
             )
-            st.dataframe(validation_checks, use_container_width=True, hide_index=True, height=dataframe_height(validation_checks, max_height=260))
+            st.dataframe(validation_checks, width="stretch", hide_index=True, height=dataframe_height(validation_checks, max_height=260))
             detailed_html = build_detailed_progress_report_html(
                 overview_metrics,
                 evm_metrics,
@@ -10167,28 +10283,28 @@ with tabs[13]:
                 data=workbook_bytes,
                 file_name=f"{output_project_slug}_Detailed_Progress_Report.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width="stretch",
             )
             c2.download_button(
                 "Download Detailed Progress Report (.html)",
                 data=detailed_html.encode("utf-8"),
                 file_name=f"{output_project_slug}_Detailed_Progress_Report.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
             c3.download_button(
                 "Download Detailed Progress Report (.docx)",
                 data=detailed_docx,
                 file_name=f"{output_project_slug}_Detailed_Progress_Report.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
+                width="stretch",
             )
             c4.download_button(
                 "Download Power BI Style Dashboard (.html)",
                 data=power_bi_style_html.encode("utf-8"),
                 file_name=f"{output_project_slug}_Detailed_Progress_Report_PowerBI_Style.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
             )
             with st.expander("README / Power BI governance notes", expanded=False):
                 st.markdown(report_readme)
@@ -10329,7 +10445,7 @@ with tabs[12]:
                 if detected_files_df.empty:
                     st.warning("No contract files are currently detected in the repository folder.")
                 else:
-                    st.dataframe(detected_files_df, use_container_width=True, hide_index=True)
+                    st.dataframe(detected_files_df, width="stretch", hide_index=True)
             with repo_col2:
                 st.markdown(
                     f"""
@@ -10365,10 +10481,10 @@ with tabs[12]:
 
             if not contract_versions_df.empty:
                 st.markdown("#### Contract Version Register")
-                st.dataframe(contract_versions_df, use_container_width=True, hide_index=True, height=dataframe_height(contract_versions_df, max_height=320))
+                st.dataframe(contract_versions_df, width="stretch", hide_index=True, height=dataframe_height(contract_versions_df, max_height=320))
             if not contract_analysis_status_df.empty:
                 st.markdown("#### Analysis Status Log")
-                st.dataframe(contract_analysis_status_df, use_container_width=True, hide_index=True, height=dataframe_height(contract_analysis_status_df, max_height=320))
+                st.dataframe(contract_analysis_status_df, width="stretch", hide_index=True, height=dataframe_height(contract_analysis_status_df, max_height=320))
 
         with contract_tabs[1]:
             st.markdown("#### Searchable Contract Claims Library")
@@ -10409,7 +10525,7 @@ with tabs[12]:
                         "recommended_action",
                     ]
                 ].copy() if not filtered_library_df.empty else pd.DataFrame()
-                st.dataframe(library_view, use_container_width=True, hide_index=True, height=dataframe_height(library_view, max_height=720))
+                st.dataframe(library_view, width="stretch", hide_index=True, height=dataframe_height(library_view, max_height=720))
 
                 with st.expander("Clause Details", expanded=False):
                     detail_cols = [
@@ -10417,7 +10533,7 @@ with tabs[12]:
                         "plain_english_meaning", "required_evidence", "possible_client_rejection",
                         "contractor_counterargument", "recommended_action", "related_project_records_needed",
                     ]
-                    st.dataframe(filtered_library_df[[col for col in detail_cols if col in filtered_library_df.columns]], use_container_width=True, hide_index=True, height=dataframe_height(filtered_library_df, max_height=1000))
+                    st.dataframe(filtered_library_df[[col for col in detail_cols if col in filtered_library_df.columns]], width="stretch", hide_index=True, height=dataframe_height(filtered_library_df, max_height=1000))
 
         with contract_tabs[2]:
             st.markdown("#### Ask Contract AI")
@@ -10436,7 +10552,7 @@ with tabs[12]:
 
             with st.expander("Built-in Contract AI Test Cases", expanded=False):
                 test_cases_df = ccc.get_contract_ai_test_cases()
-                st.dataframe(test_cases_df, use_container_width=True, hide_index=True, height=dataframe_height(test_cases_df, max_height=320))
+                st.dataframe(test_cases_df, width="stretch", hide_index=True, height=dataframe_height(test_cases_df, max_height=320))
 
             last_answer = st.session_state.get("ccc_last_answer")
             if last_answer:
@@ -10499,10 +10615,10 @@ with tabs[12]:
                 predicted_rebuttals_df = last_answer.get("predicted_rebuttals_df", pd.DataFrame())
                 if isinstance(predicted_rebuttals_df, pd.DataFrame) and not predicted_rebuttals_df.empty:
                     st.markdown("#### Predicted Client Defenses and Rebuttals")
-                    st.dataframe(predicted_rebuttals_df, use_container_width=True, hide_index=True, height=dataframe_height(predicted_rebuttals_df, max_height=520))
+                    st.dataframe(predicted_rebuttals_df, width="stretch", hide_index=True, height=dataframe_height(predicted_rebuttals_df, max_height=520))
                 if isinstance(last_answer["relevant_clauses_df"], pd.DataFrame) and not last_answer["relevant_clauses_df"].empty:
                     st.markdown("#### Relevant Clauses")
-                    st.dataframe(last_answer["relevant_clauses_df"], use_container_width=True, hide_index=True, height=dataframe_height(last_answer["relevant_clauses_df"], max_height=600))
+                    st.dataframe(last_answer["relevant_clauses_df"], width="stretch", hide_index=True, height=dataframe_height(last_answer["relevant_clauses_df"], max_height=600))
 
         with contract_tabs[3]:
             st.markdown("#### Evidence Mapping Engine")
@@ -10547,13 +10663,13 @@ with tabs[12]:
             if contract_evidence_df.empty:
                 st.info("No evidence files are stored yet.")
             else:
-                st.dataframe(contract_evidence_df, use_container_width=True, hide_index=True, height=dataframe_height(contract_evidence_df, max_height=420))
+                st.dataframe(contract_evidence_df, width="stretch", hide_index=True, height=dataframe_height(contract_evidence_df, max_height=420))
 
             st.markdown("#### Evidence-to-Clause Mapping")
             if contract_evidence_mappings_df.empty:
                 st.info("No evidence mappings are stored yet.")
             else:
-                st.dataframe(contract_evidence_mappings_df, use_container_width=True, hide_index=True, height=dataframe_height(contract_evidence_mappings_df, max_height=640))
+                st.dataframe(contract_evidence_mappings_df, width="stretch", hide_index=True, height=dataframe_height(contract_evidence_mappings_df, max_height=640))
 
         with contract_tabs[4]:
             st.markdown("#### Client Rebuttal Engine")
@@ -10605,10 +10721,10 @@ with tabs[12]:
                 detected_defenses_df = rebuttal_result.get("detected_defenses_df", pd.DataFrame())
                 if isinstance(detected_defenses_df, pd.DataFrame) and not detected_defenses_df.empty:
                     st.markdown("#### Detected Client Defenses")
-                    st.dataframe(detected_defenses_df, use_container_width=True, hide_index=True, height=dataframe_height(detected_defenses_df, max_height=560))
+                    st.dataframe(detected_defenses_df, width="stretch", hide_index=True, height=dataframe_height(detected_defenses_df, max_height=560))
                 if not rebuttal_result["relevant_clauses_df"].empty:
                     st.markdown("#### Supporting Clauses")
-                    st.dataframe(rebuttal_result["relevant_clauses_df"], use_container_width=True, hide_index=True, height=dataframe_height(rebuttal_result["relevant_clauses_df"], max_height=520))
+                    st.dataframe(rebuttal_result["relevant_clauses_df"], width="stretch", hide_index=True, height=dataframe_height(rebuttal_result["relevant_clauses_df"], max_height=520))
 
         with contract_tabs[5]:
             st.markdown("#### Claim Builder")
@@ -10669,7 +10785,7 @@ with tabs[12]:
 
             if not contract_claim_drafts_df.empty:
                 st.markdown("#### Stored Claim Drafts")
-                st.dataframe(contract_claim_drafts_df, use_container_width=True, hide_index=True, height=dataframe_height(contract_claim_drafts_df, max_height=420))
+                st.dataframe(contract_claim_drafts_df, width="stretch", hide_index=True, height=dataframe_height(contract_claim_drafts_df, max_height=420))
 
         with contract_tabs[6]:
             st.markdown("#### Export Center")
@@ -10725,7 +10841,7 @@ with tabs[12]:
                 data=contract_library_excel,
                 file_name="contract_claims_library.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(contract_library_excel),
             )
             export_col2.download_button(
@@ -10733,7 +10849,7 @@ with tabs[12]:
                 data=contract_library_json,
                 file_name="contract_knowledge_base.json",
                 mime="application/json",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(contract_library_json),
             )
             export_col3.download_button(
@@ -10741,7 +10857,7 @@ with tabs[12]:
                 data=evidence_matrix_csv,
                 file_name="contract_evidence_matrix.csv",
                 mime="text/csv",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(evidence_matrix_csv),
             )
 
@@ -10751,7 +10867,7 @@ with tabs[12]:
                 data=claim_docx_bytes,
                 file_name="contract_claim_draft.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(claim_docx_bytes),
             )
             export_col5.download_button(
@@ -10759,7 +10875,7 @@ with tabs[12]:
                 data=claim_pdf_bytes,
                 file_name="contract_claim_summary.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(claim_pdf_bytes),
             )
             export_col6.download_button(
@@ -10767,7 +10883,7 @@ with tabs[12]:
                 data=(claim_html or contract_library_html).encode("utf-8") if (claim_html or contract_library_html) else b"",
                 file_name="contract_claims_report.html",
                 mime="text/html",
-                use_container_width=True,
+                width="stretch",
                 disabled=not bool(claim_html or contract_library_html),
             )
 
