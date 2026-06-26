@@ -539,12 +539,33 @@ def _project_first_value(df: pd.DataFrame, project_id: str, candidates: list[str
     return default if pd.isna(value) else value
 
 
+def safe_divide(numerator: Any, denominator: Any) -> float | None:
+    """Return a ratio only when both values are usable and the denominator is non-zero."""
+    num = parse_numeric(numerator)
+    den = parse_numeric(denominator)
+    if den in (None, 0) or pd.isna(den):
+        return None
+    return float(num or 0) / float(den)
+
+
+def normalize_to_100(value: Any, max_value: float = 100.0, invert: bool = False) -> float | None:
+    numeric_value = parse_numeric(value)
+    if numeric_value is None or pd.isna(numeric_value):
+        return None
+    bounded = max(0.0, min(float(numeric_value), max_value))
+    score = (bounded / max_value) * 100.0 if max_value else bounded
+    return 100.0 - score if invert else score
+
+
 def build_decision_dashboard_registry(projects_catalog_df: pd.DataFrame) -> pd.DataFrame:
     if projects_catalog_df.empty:
         return pd.DataFrame()
     projects_df = load_core_csv(PROJECTS_CSV_PATH)
     activities_df = load_core_csv(ACTIVITIES_CSV_PATH)
     evm_df = load_core_csv(EVM_CSV_PATH)
+    contracts_df = load_core_csv(CONTRACTS_CSV_PATH)
+    payments_df = load_core_csv(PAYMENTS_CSV_PATH)
+    delays_df = load_core_csv(DELAYS_CSV_PATH)
     risks_df = load_core_csv(RISKS_CSV_PATH)
     milestones_df = load_core_csv(MILESTONES_CSV_PATH)
     rows = []
@@ -561,41 +582,81 @@ def build_decision_dashboard_registry(projects_catalog_df: pd.DataFrame) -> pd.D
             actual_progress = _project_group_value(activities_df, project_id, ["actual_progress", "Physical % Complete", "physical_percent_complete", "progress"], agg="mean")
         start_date = pd.to_datetime(_project_first_value(projects_df, project_id, ["project_start", "start_date", "Project Start Date", "baseline_start"], ""), errors="coerce")
         finish_date = pd.to_datetime(_project_first_value(projects_df, project_id, ["project_finish", "finish_date", "Project Finish Date", "baseline_finish"], ""), errors="coerce")
+        paid_value = _project_group_value(payments_df, project_id, ["paid_amount", "Paid Amount", "paid", "actual_paid", "Actual Paid"])
+        spent_value = _project_group_value(evm_df, project_id, ["AC", "ac", "actual_cost", "Actual Cost"])
+        if spent_value == 0:
+            spent_value = _project_group_value(contracts_df, project_id, ["actual_cost", "Actual Cost", "spent", "Spent", "certified_amount"])
         bac = _project_group_value(evm_df, project_id, ["BAC", "bac", "budget_at_completion", "Budget at Completion"])
+        if bac == 0:
+            bac = parse_numeric(contract_value) or 0
         pv = _project_group_value(evm_df, project_id, ["PV", "pv", "planned_value", "Planned Value"])
         ev = _project_group_value(evm_df, project_id, ["EV", "ev", "earned_value", "Earned Value"])
-        ac = _project_group_value(evm_df, project_id, ["AC", "ac", "actual_cost", "Actual Cost"])
+        ac = spent_value
+        # Derive PV/EV only when BAC and progress percentages are available. These formulas preserve traceability and avoid fake values.
+        if pv == 0 and bac and parse_numeric(planned_progress) is not None:
+            pv = bac * (float(parse_numeric(planned_progress) or 0) / 100.0)
+        if ev == 0 and bac and parse_numeric(actual_progress) is not None:
+            ev = bac * (float(parse_numeric(actual_progress) or 0) / 100.0)
         spi = _project_first_value(evm_df, project_id, ["SPI", "spi"], 0)
         cpi = _project_first_value(evm_df, project_id, ["CPI", "cpi"], 0)
-        spi = parse_numeric(spi) or ((ev / pv) if pv else 0)
-        cpi = parse_numeric(cpi) or ((ev / ac) if ac else 0)
+        spi = parse_numeric(spi) or safe_divide(ev, pv) or 0
+        cpi = parse_numeric(cpi) or safe_divide(ev, ac) or 0
+        eac = (bac / cpi) if cpi else 0
+        etc = eac - ac if eac else 0
+        vac = bac - eac if eac else 0
+        sv = ev - pv
+        cv = ev - ac
         risk_count = _project_group_count(risks_df, project_id)
+        risk_score = _project_group_value(risks_df, project_id, ["risk_score", "Risk Score", "risk_rating", "score"], agg="mean")
+        if risk_score == 0 and risk_count:
+            risk_score = min(100.0, float(risk_count) * 20.0)
         milestone_count = _project_group_count(milestones_df, project_id)
+        delay_days = _project_group_value(delays_df, project_id, ["delay_days", "Delay Days", "estimated_delay_days", "time_impact_days"], agg="sum")
+        claims_exposure = _project_group_value(delays_df, project_id, ["claim_amount", "Claim Amount", "eot_days", "EOT Days", "time_impact_days"], agg="sum")
         progress_value = parse_numeric(actual_progress)
         planned_value = parse_numeric(planned_progress)
         status = "On Track"
-        if risk_count >= 5 or (planned_value and progress_value < planned_value - 10) or (spi and spi < 0.9):
+        if risk_score >= 70 or risk_count >= 5 or delay_days > 0 or (planned_value and progress_value < planned_value - 10) or (spi and spi < 0.9) or (cpi and cpi < 0.9):
             status = "High Attention"
-        elif risk_count or (planned_value and progress_value < planned_value - 3) or (spi and spi < 1):
+        elif risk_score >= 35 or risk_count or (planned_value and progress_value < planned_value - 3) or (spi and spi < 1) or (cpi and cpi < 1):
             status = "Watch"
+        required_decision = "Monitor"
+        if spi and spi < 0.9:
+            required_decision = "Approve recovery plan"
+        if cpi and cpi < 0.9:
+            required_decision = "Review cost recovery"
+        if delay_days > 0:
+            required_decision = "Resolve delay exposure"
         rows.append({
             "project_id": project_id,
             "Project": str(catalog_row.get("project_name") or catalog_row.get("project_display_name") or project_id),
             "Sector": str(catalog_row.get("sector_name") or "Unassigned"),
             "Folder": str(catalog_row.get("project_relative_path") or catalog_row.get("project_folder_name") or ""),
             "Contract Value": parse_numeric(contract_value),
+            "Paid": paid_value,
+            "Remaining": max(0.0, float(parse_numeric(contract_value) or 0) - paid_value),
             "BAC": bac,
             "PV": pv,
             "EV": ev,
             "AC": ac,
+            "SV": sv,
+            "CV": cv,
+            "EAC": eac,
+            "ETC": etc,
+            "VAC": vac,
             "SPI": float(spi or 0),
             "CPI": float(cpi or 0),
             "Progress": float(progress_value or 0),
             "Planned Progress": float(planned_value or 0),
+            "Progress Variance": float((progress_value or 0) - (planned_value or 0)),
             "Quality": float(parse_numeric(_project_first_value(projects_df, project_id, ["quality_score", "Quality Score", "quality"], 0)) or 0),
             "Safety": float(parse_numeric(_project_first_value(projects_df, project_id, ["safety_score", "Safety Score", "safety"], 0)) or 0),
             "Risks": risk_count,
+            "Risk Score": risk_score,
+            "Delay Days": delay_days,
+            "Claims / EOT Exposure": claims_exposure,
             "Milestones": milestone_count,
+            "Required Decision": required_decision,
             "Start": start_date,
             "Finish": finish_date,
             "Status": status,
@@ -603,37 +664,195 @@ def build_decision_dashboard_registry(projects_catalog_df: pd.DataFrame) -> pd.D
     return pd.DataFrame(rows)
 
 
+def decision_status_badge(value: str) -> tuple[str, str, str]:
+    status = str(value or "Neutral")
+    if status in {"On Track", "Healthy", "Cost Efficient", "Complete"}:
+        return status, "#123F3D", "#50D5B7"
+    if status in {"Watch", "Watchlist", "Cost Watch", "Partial"}:
+        return status, "#4E3D12", "#D4A017"
+    if status in {"High Attention", "Critical", "Cost Critical", "Missing critical fields"}:
+        return status, "#4B1D22", "#F05D5E"
+    return status, "#173B63", "#69A7D8"
+
+
+def validate_decision_dashboard_data(registry_df: pd.DataFrame) -> dict[str, Any]:
+    required = ["Project", "Sector", "Contract Value", "Progress", "Planned Progress", "PV", "EV", "AC", "Risk Score", "Milestones"]
+    missing = [column for column in required if column not in registry_df.columns or registry_df[column].isna().all()]
+    if not missing:
+        status = "Complete"
+    elif {"Project", "Sector", "Contract Value", "Progress"} - set(missing):
+        status = "Partial"
+    else:
+        status = "Missing critical fields"
+    return {
+        "status": status,
+        "missing_fields": missing,
+        "last_updated": pd.Timestamp.now().strftime("%d-%b-%Y %H:%M"),
+    }
+
+
+def apply_decision_dashboard_filters(registry_df: pd.DataFrame) -> pd.DataFrame:
+    filtered = registry_df.copy()
+    selected_sectors = st.session_state.get("decision_filter_sectors", [])
+    selected_statuses = st.session_state.get("decision_filter_statuses", [])
+    selected_projects = st.session_state.get("decision_filter_projects", [])
+    progress_range = st.session_state.get("decision_filter_progress", (0, 100))
+    if selected_sectors:
+        filtered = filtered[filtered["Sector"].isin(selected_sectors)]
+    if selected_statuses:
+        filtered = filtered[filtered["Status"].isin(selected_statuses)]
+    if selected_projects:
+        filtered = filtered[filtered["Project"].isin(selected_projects)]
+    filtered = filtered[
+        filtered["Progress"].fillna(0).between(float(progress_range[0]), float(progress_range[1]))
+    ]
+    return filtered.copy()
+
+
+def render_decision_command_bar(registry_df: pd.DataFrame, quality: dict[str, Any]) -> None:
+    if st.button("Reset Decision Dashboard filters", key="decision_reset_filters", use_container_width=False):
+        for key in ["decision_filter_sectors", "decision_filter_statuses", "decision_filter_projects", "decision_filter_progress", "decision_chart_section"]:
+            st.session_state.pop(key, None)
+        st.rerun()
+    sectors = sorted(registry_df["Sector"].dropna().astype(str).unique().tolist())
+    statuses = sorted(registry_df["Status"].dropna().astype(str).unique().tolist())
+    projects = sorted(registry_df["Project"].dropna().astype(str).unique().tolist())
+    col1, col2, col3, col4 = st.columns([0.23, 0.2, 0.22, 0.35])
+    with col1:
+        st.multiselect("Sector filter", sectors, key="decision_filter_sectors")
+    with col2:
+        st.multiselect("Status filter", statuses, key="decision_filter_statuses")
+    with col3:
+        st.slider("Progress range", 0, 100, key="decision_filter_progress", value=st.session_state.get("decision_filter_progress", (0, 100)))
+    with col4:
+        st.multiselect("Project filter", projects, key="decision_filter_projects")
+    col5, col6, col7 = st.columns([0.34, 0.33, 0.33])
+    with col5:
+        st.selectbox("Chart section", ["All sections", "Health and EVM", "Cash flow", "Risks and decisions"], key="decision_chart_section")
+    badge_text, badge_bg, badge_fg = decision_status_badge(str(quality["status"]))
+    with col6:
+        st.markdown(f"<div class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>Data quality: {html.escape(badge_text)}</div>", unsafe_allow_html=True)
+    with col7:
+        st.markdown(f"<div class='decision-updated'>Last updated: {html.escape(str(quality['last_updated']))}</div>", unsafe_allow_html=True)
+    if quality["missing_fields"]:
+        st.caption("Missing fields: " + ", ".join(quality["missing_fields"]))
+
+
+def render_decision_kpi_card(col, icon: str, title: str, value: Any, status: str, help_text: str, delta: float | None = None) -> None:
+    badge_text, badge_bg, badge_fg = decision_status_badge(status)
+    if delta is None:
+        delta_html = "<span class='decision-delta neutral'>Baseline comparison unavailable</span>"
+    elif delta > 0:
+        delta_html = f"<span class='decision-delta good'>▲ {delta:.1f}%</span>"
+    elif delta < 0:
+        delta_html = f"<span class='decision-delta bad'>▼ {abs(delta):.1f}%</span>"
+    else:
+        delta_html = "<span class='decision-delta warn'>■ no major change</span>"
+    col.markdown(
+        f"""
+        <div class='decision-kpi' title='{html.escape(help_text)}'>
+          <div class='decision-kpi-top'><span>{html.escape(icon)} {html.escape(title)}</span><span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></div>
+          <div class='decision-kpi-value'>{html.escape(str(value))}</div>
+          <div>{delta_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_decision_kpi_cards(registry_df: pd.DataFrame) -> None:
     if registry_df.empty:
         st.info("No project folders were detected yet. Add project folders under projects, or under projects/<sector>/<project>.")
         return
     total_value = registry_df["Contract Value"].fillna(0).sum()
-    total_bac = registry_df["BAC"].fillna(0).sum()
-    total_ev = registry_df["EV"].fillna(0).sum()
-    total_ac = registry_df["AC"].fillna(0).sum()
+    total_paid = registry_df["Paid"].fillna(0).sum()
+    remaining = registry_df["Remaining"].fillna(0).sum()
+    delayed_projects = int((registry_df["Delay Days"].fillna(0) > 0).sum())
+    high_risk_projects = int((registry_df["Risk Score"].fillna(0) >= 70).sum())
+    avg_spi = registry_df["SPI"].replace(0, pd.NA).dropna().mean()
+    avg_cpi = registry_df["CPI"].replace(0, pd.NA).dropna().mean()
+    avg_risk = registry_df["Risk Score"].replace(0, pd.NA).dropna().mean()
+    decisions_required = int(registry_df["Required Decision"].astype(str).ne("Monitor").sum())
     cards = [
-        ("Projects", len(registry_df), "Detected folders"),
-        ("Sectors", registry_df["Sector"].nunique(), "Portfolio groups"),
-        ("Contract Value", egp(total_value), "Project budgets"),
-        ("BAC", egp(total_bac), "Budget at completion"),
-        ("Actual Cost", egp(total_ac), "Cost to date"),
-        ("Earned Value", egp(total_ev), "Value earned"),
-        ("Avg Progress", pct(registry_df["Progress"].mean()), "Physical progress"),
-        ("Avg SPI", f"{registry_df['SPI'].replace(0, pd.NA).dropna().mean():.2f}" if not registry_df["SPI"].replace(0, pd.NA).dropna().empty else "N/A", "Schedule index"),
-        ("Avg CPI", f"{registry_df['CPI'].replace(0, pd.NA).dropna().mean():.2f}" if not registry_df["CPI"].replace(0, pd.NA).dropna().empty else "N/A", "Cost index"),
-        ("Open Risks", int(registry_df["Risks"].fillna(0).sum()), "Risk records"),
+        ("📁", "Total Projects", len(registry_df), "Neutral", "Total discovered project folders in the selected portfolio scope."),
+        ("💼", "Total Contract Value", egp(total_value), "Neutral", "Sum of selected projects contract value or BAC when available."),
+        ("💳", "Total Paid", egp(total_paid), "Neutral", "Payments paid from project payment records."),
+        ("📌", "Remaining Value", egp(remaining), "Neutral", "Contract value less paid value where both are available."),
+        ("📈", "Average Progress", pct(registry_df["Progress"].mean()), "Healthy" if registry_df["Progress"].mean() >= registry_df["Planned Progress"].mean() else "Watchlist", "Average actual progress for selected projects."),
+        ("⏱", "Delayed Projects", delayed_projects, "Critical" if delayed_projects else "Healthy", "Projects with delay days in delay event records."),
+        ("⚠", "High-Risk Projects", high_risk_projects, "Critical" if high_risk_projects else "Healthy", "Projects with normalized risk score >= 70."),
+        ("📊", "Average SPI", f"{avg_spi:.2f}" if pd.notna(avg_spi) else "N/A", "On Track" if pd.notna(avg_spi) and avg_spi >= 1 else ("Watchlist" if pd.notna(avg_spi) and avg_spi >= 0.9 else "Critical"), "Schedule Performance Index: EV / PV."),
+        ("💰", "Average CPI", f"{avg_cpi:.2f}" if pd.notna(avg_cpi) else "N/A", "Cost Efficient" if pd.notna(avg_cpi) and avg_cpi >= 1 else ("Cost Watch" if pd.notna(avg_cpi) and avg_cpi >= 0.9 else "Cost Critical"), "Cost Performance Index: EV / AC."),
+        ("🛡", "Average Risk Score", f"{avg_risk:.1f}" if pd.notna(avg_risk) else "N/A", "Critical" if pd.notna(avg_risk) and avg_risk >= 70 else ("Watchlist" if pd.notna(avg_risk) and avg_risk >= 35 else "Healthy"), "Normalized 0-100 risk score from available risk data."),
+        ("📑", "Claims / EOT Exposure", f"{registry_df['Claims / EOT Exposure'].fillna(0).sum():,.0f}", "Watchlist" if registry_df["Claims / EOT Exposure"].fillna(0).sum() else "Neutral", "Sum of available claim amount, EOT days, or delay impact fields."),
+        ("🧭", "Decisions Required", decisions_required, "Critical" if decisions_required else "Healthy", "Triggered by SPI/CPI/risk/delay thresholds."),
     ]
-    for chunk_start in (0, 5):
-        cols = st.columns(5)
-        for col, (label, value, note) in zip(cols, cards[chunk_start:chunk_start + 5]):
-            col.markdown(
-                f"<div class='metric-card'><div class='metric-label'>{html.escape(str(label))}</div><div class='metric-value'>{html.escape(str(value))}</div><div class='metric-note'>{html.escape(str(note))}</div></div>",
+    for chunk_start in (0, 6):
+        cols = st.columns(6)
+        for col, card in zip(cols, cards[chunk_start:chunk_start + 6]):
+            render_decision_kpi_card(col, *card)
+
+
+def render_decision_cards(registry_df: pd.DataFrame) -> None:
+    decision_df = registry_df[
+        registry_df["Required Decision"].astype(str).ne("Monitor")
+        | registry_df["Status"].astype(str).isin(["Watch", "High Attention"])
+    ].copy()
+    if decision_df.empty:
+        st.markdown("<div class='decision-chart-note'>No management decision triggers are active in the selected dashboard scope.</div>", unsafe_allow_html=True)
+        return
+    decision_df = decision_df.sort_values(["Status", "Risk Score", "Delay Days", "Contract Value"], ascending=[True, False, False, False]).head(6)
+    cols = st.columns(3)
+    for idx, (_, row) in enumerate(decision_df.iterrows()):
+        urgency = "Critical" if row["Status"] == "High Attention" else "Watchlist"
+        badge_text, badge_bg, badge_fg = decision_status_badge(urgency)
+        impact = []
+        if row["SPI"] and row["SPI"] < 0.9:
+            impact.append("Schedule performance below threshold")
+        if row["CPI"] and row["CPI"] < 0.9:
+            impact.append("Cost performance below threshold")
+        if row["Delay Days"]:
+            impact.append(f"{row['Delay Days']:.0f} delay days recorded")
+        if row["Risk Score"] >= 70:
+            impact.append("High risk score")
+        root_cause = "; ".join(impact) if impact else "Portfolio threshold watch item"
+        with cols[idx % 3]:
+            st.markdown(
+                f"""
+                <div class='decision-card'>
+                  <h4>{html.escape(str(row['Required Decision']))}</h4>
+                  <p><b>Project:</b> {html.escape(str(row['Project']))}</p>
+                  <p><b>Sector:</b> {html.escape(str(row['Sector']))}</p>
+                  <p><b>Root cause:</b> {html.escape(root_cause)}</p>
+                  <p><b>Financial exposure:</b> {egp(row['Remaining'])} remaining / {egp(row['Claims / EOT Exposure'])} claims-EOT signal</p>
+                  <p><b>Schedule exposure:</b> {row['Delay Days']:.0f} days | SPI {row['SPI']:.2f}</p>
+                  <p><span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></p>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
 
 def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
     registry_df = build_decision_dashboard_registry(projects_catalog_df)
+    st.markdown(
+        """
+        <style>
+        .decision-dashboard-v2 .decision-kpi{background:linear-gradient(145deg,rgba(9,31,54,.94),rgba(16,52,82,.9));border:1px solid rgba(105,167,216,.22);border-left:4px solid #1A8A8F;border-radius:14px;padding:13px 14px;min-height:132px;box-shadow:0 16px 34px rgba(3,14,28,.22)}
+        .decision-dashboard-v2 .decision-kpi-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;color:#DDEAF6;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+        .decision-dashboard-v2 .decision-kpi-value{font-size:23px;font-weight:900;color:#fff;margin:14px 0 9px;line-height:1.05}
+        .decision-dashboard-v2 .decision-badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;white-space:nowrap}
+        .decision-dashboard-v2 .decision-delta{font-size:11px;font-weight:750}
+        .decision-dashboard-v2 .decision-delta.good{color:#50D5B7}.decision-dashboard-v2 .decision-delta.bad{color:#F05D5E}.decision-dashboard-v2 .decision-delta.warn{color:#D4A017}.decision-dashboard-v2 .decision-delta.neutral{color:#9FB7CC}
+        .decision-dashboard-v2 .decision-updated{background:rgba(15,49,78,.78);border:1px solid rgba(105,167,216,.20);border-radius:999px;padding:8px 11px;color:#BDD2E5;font-size:12px;font-weight:700;margin-top:24px;text-align:center}
+        .decision-dashboard-v2 .decision-card{background:linear-gradient(145deg,rgba(8,28,49,.96),rgba(13,42,67,.88));border:1px solid rgba(105,167,216,.24);border-radius:14px;padding:14px 15px;min-height:168px;box-shadow:0 14px 28px rgba(3,14,28,.20)}
+        .decision-dashboard-v2 .decision-card h4{margin:0 0 8px;color:#fff;font-size:15px}.decision-dashboard-v2 .decision-card p{margin:4px 0;color:#BDD2E5;font-size:12px;line-height:1.35}
+        .decision-dashboard-v2 .decision-chart-note{background:rgba(15,49,78,.72);border:1px dashed rgba(159,183,204,.35);border-radius:12px;padding:13px 14px;color:#BDD2E5;font-size:13px}
+        </style>
+        <div class='decision-dashboard-v2'>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown(
         """
         <div class='section-header'>
@@ -643,15 +862,25 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
         """,
         unsafe_allow_html=True,
     )
-    render_decision_kpi_cards(registry_df)
     if registry_df.empty:
+        render_decision_kpi_cards(registry_df)
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
-    high_attention = int(registry_df["Status"].astype(str).eq("High Attention").sum())
-    watch_count = int(registry_df["Status"].astype(str).eq("Watch").sum())
-    avg_spi = registry_df["SPI"].replace(0, pd.NA).dropna().mean()
-    avg_cpi = registry_df["CPI"].replace(0, pd.NA).dropna().mean()
-    portfolio_position = "Stable portfolio" if high_attention == 0 and watch_count <= max(1, len(registry_df) // 4) else "Management attention required"
+    quality = validate_decision_dashboard_data(registry_df)
+    render_decision_command_bar(registry_df, quality)
+    scoped_registry_df = apply_decision_dashboard_filters(registry_df)
+    render_decision_kpi_cards(scoped_registry_df)
+    if scoped_registry_df.empty:
+        st.warning("No projects match the selected Decision Making Dashboard filters.")
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    high_attention = int(scoped_registry_df["Status"].astype(str).eq("High Attention").sum())
+    watch_count = int(scoped_registry_df["Status"].astype(str).eq("Watch").sum())
+    avg_spi = scoped_registry_df["SPI"].replace(0, pd.NA).dropna().mean()
+    avg_cpi = scoped_registry_df["CPI"].replace(0, pd.NA).dropna().mean()
+    portfolio_position = "Stable portfolio" if high_attention == 0 and watch_count <= max(1, len(scoped_registry_df) // 4) else "Management attention required"
     decision_notes = [
         f"Portfolio position: {portfolio_position}",
         f"Projects requiring attention: {high_attention + watch_count}",
@@ -673,7 +902,7 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
     )
 
     open_col, open_button_col = st.columns([0.68, 0.32])
-    project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in registry_df.iterrows()}
+    project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in scoped_registry_df.iterrows()}
     with open_col:
         target_label = st.selectbox("Phase 2 project transition", list(project_labels.keys()), key="decision_dashboard_open_project")
     with open_button_col:
@@ -683,7 +912,7 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
             st.rerun()
 
     preview_cols = st.columns(3)
-    preview_df = registry_df.sort_values(["Status", "Risks", "Progress"], ascending=[True, False, True]).head(6)
+    preview_df = scoped_registry_df.sort_values(["Status", "Risk Score", "Progress"], ascending=[True, False, True]).head(6)
     status_color = {"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"}
     for idx, (_, row) in enumerate(preview_df.iterrows()):
         color = status_color.get(str(row["Status"]), "#0B3A5B")
@@ -704,101 +933,175 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
     portfolio_tab, sector_tab, projects_tab = st.tabs(["Overall Portfolio", "Sector Analysis", "Projects Analysis"])
     with portfolio_tab:
         left, right = st.columns([0.42, 0.58])
-        sector_summary = registry_df.groupby("Sector", as_index=False).agg(projects=("project_id", "count"), budget=("Contract Value", "sum"), progress=("Progress", "mean"))
+        sector_summary = scoped_registry_df.groupby("Sector", as_index=False).agg(projects=("project_id", "count"), budget=("Contract Value", "sum"), progress=("Progress", "mean"))
         with left:
             fig = px.pie(sector_summary, names="Sector", values="projects", hole=0.54, title="Sector Distribution", color_discrete_sequence=["#0B3A5B", "#1A8A8F", "#D4A017", "#617487", "#8D6E63"])
             st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
-            status_summary = registry_df["Status"].value_counts().reset_index()
+            status_summary = scoped_registry_df["Status"].value_counts().reset_index()
             status_summary.columns = ["Status", "Projects"]
             fig = px.bar(status_summary, x="Status", y="Projects", title="Status Breakdown", color="Status", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
             st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
         with right:
             fig = px.bar(sector_summary.sort_values("budget", ascending=True), x="budget", y="Sector", orientation="h", title="Budget Allocation by Sector", labels={"budget": "Contract Value"})
             st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
-            fig = px.scatter(registry_df, x="Progress", y="Contract Value", size=registry_df["Contract Value"].clip(lower=1), color="Sector", hover_name="Project", title="Progress Overview")
+            fig = px.scatter(scoped_registry_df, x="Progress", y="Contract Value", size=scoped_registry_df["Contract Value"].clip(lower=1), color="Sector", hover_name="Project", title="Progress Overview")
             st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
-        timeline_df = registry_df.dropna(subset=["Start", "Finish"]).copy()
+        timeline_df = scoped_registry_df.dropna(subset=["Start", "Finish"]).copy()
         if not timeline_df.empty:
             fig = px.timeline(timeline_df, x_start="Start", x_end="Finish", y="Project", color="Sector", title="Project Schedules")
             fig.update_yaxes(autorange="reversed")
             st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
         charts_col1, charts_col2 = st.columns(2)
         with charts_col1:
-            fig = px.scatter(registry_df, x="SPI", y="CPI", color="Status", hover_name="Project", title="SPI vs CPI Quadrant", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
+            fig = px.scatter(scoped_registry_df, x="CPI", y="SPI", size=scoped_registry_df["Contract Value"].clip(lower=1), color="Status", hover_name="Project", hover_data=["Sector", "Progress", "Risk Score", "Delay Days", "Contract Value"], title="Portfolio Health Matrix - SPI vs CPI", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
             fig.add_hline(y=1, line_dash="dash", line_color="#607080")
             fig.add_vline(x=1, line_dash="dash", line_color="#607080")
+            fig.add_annotation(x=1.08, y=1.08, text="Healthy", showarrow=False, font=dict(color="#50D5B7"))
+            fig.add_annotation(x=.82, y=1.08, text="Cost Risk", showarrow=False, font=dict(color="#D4A017"))
+            fig.add_annotation(x=1.08, y=.82, text="Schedule Risk", showarrow=False, font=dict(color="#D4A017"))
+            fig.add_annotation(x=.82, y=.82, text="Critical", showarrow=False, font=dict(color="#F05D5E"))
             st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
-            ev_long = registry_df[["Project", "BAC", "PV", "EV", "AC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+            ev_long = scoped_registry_df[["Project", "BAC", "PV", "EV", "AC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
             fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="BAC / PV / EV / AC Comparison")
             st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
         with charts_col2:
             radar_values = [
-                registry_df["Progress"].mean(),
-                max(min(registry_df["SPI"].replace(0, pd.NA).dropna().mean() * 100 if not registry_df["SPI"].replace(0, pd.NA).dropna().empty else 0, 100), 0),
-                max(min(registry_df["CPI"].replace(0, pd.NA).dropna().mean() * 100 if not registry_df["CPI"].replace(0, pd.NA).dropna().empty else 0, 100), 0),
-                registry_df["Quality"].mean(),
-                registry_df["Safety"].mean(),
+                scoped_registry_df["Progress"].mean(),
+                max(min(scoped_registry_df["SPI"].replace(0, pd.NA).dropna().mean() * 100 if not scoped_registry_df["SPI"].replace(0, pd.NA).dropna().empty else 0, 100), 0),
+                max(min(scoped_registry_df["CPI"].replace(0, pd.NA).dropna().mean() * 100 if not scoped_registry_df["CPI"].replace(0, pd.NA).dropna().empty else 0, 100), 0),
+                100 - min(scoped_registry_df["Risk Score"].fillna(0).mean(), 100),
+                scoped_registry_df["Quality"].mean() if scoped_registry_df["Quality"].fillna(0).sum() else 0,
+                scoped_registry_df["Safety"].mean() if scoped_registry_df["Safety"].fillna(0).sum() else 0,
             ]
-            radar_labels = ["Progress", "Schedule", "Cost", "Quality", "Safety"]
+            radar_labels = ["Progress", "Schedule", "Cost", "Risk Control", "Quality", "Safety"]
             fig = go.Figure(data=go.Scatterpolar(r=radar_values, theta=radar_labels, fill="toself", line_color="#1A8A8F"))
             fig.update_layout(title="Quality & Safety Radar", polar=dict(radialaxis=dict(range=[0, 100])), showlegend=False)
             st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
-            fig = px.line(registry_df.sort_values("Project"), x="Project", y=["SPI", "CPI"], markers=True, title="EVM Trend by Project")
+            fig = px.line(scoped_registry_df.sort_values("Project"), x="Project", y=["SPI", "CPI"], markers=True, title="EVM Trend by Project")
             st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
-        risk_heat = registry_df.assign(Risk_Band=pd.cut(registry_df["Risks"], bins=[-1, 0, 3, 999], labels=["Low", "Medium", "High"]))
+        cash_long = scoped_registry_df[["Project", "Contract Value", "AC", "Paid", "Remaining"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+        fig = px.bar(cash_long, x="Project", y="Value", color="Metric", barmode="group", title="Portfolio Cash Flow - Budget / Spent / Paid / Remaining")
+        st.plotly_chart(style_plotly(fig, 390), use_container_width=True)
+        progress_long = scoped_registry_df[["Project", "Planned Progress", "Progress"]].melt(id_vars="Project", var_name="Curve", value_name="Percent")
+        fig = px.area(progress_long, x="Project", y="Percent", color="Curve", line_group="Curve", title="Portfolio S-Curve Proxy - Planned vs Actual Progress")
+        st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
+        risk_heat = scoped_registry_df.assign(Risk_Band=pd.cut(scoped_registry_df["Risk Score"].fillna(0), bins=[-1, 34, 69, 100], labels=["Low", "Medium", "High"]))
         heat_df = pd.crosstab(risk_heat["Sector"], risk_heat["Risk_Band"])
         fig = px.imshow(heat_df, text_auto=True, title="Risk Assessment Matrix", color_continuous_scale=["#EAF3F4", "#D4A017", "#C94C4C"])
         st.plotly_chart(style_plotly(fig, 340), use_container_width=True)
-        display_df = registry_df[["Sector", "Project", "Status", "Contract Value", "Progress", "Planned Progress", "SPI", "CPI", "Risks", "Milestones", "Folder"]].copy()
+        st.markdown("#### Management Decision Center")
+        render_decision_cards(scoped_registry_df)
+        display_df = scoped_registry_df[["Sector", "Project", "Status", "Contract Value", "Paid", "Remaining", "Progress", "Planned Progress", "Progress Variance", "SPI", "CPI", "Risk Score", "Delay Days", "Required Decision", "Folder"]].copy()
         st.dataframe(display_df, use_container_width=True, hide_index=True, height=dataframe_height(display_df, max_height=520))
 
     with sector_tab:
-        sector_name = st.selectbox("Sector", sorted(registry_df["Sector"].dropna().unique()), key="decision_sector_filter")
-        scoped = registry_df[registry_df["Sector"].eq(sector_name)].copy()
+        sector_options = ["All sectors"] + sorted(scoped_registry_df["Sector"].dropna().unique())
+        sector_name = st.selectbox("Sector", sector_options, key="decision_sector_filter")
+        scoped = scoped_registry_df.copy() if sector_name == "All sectors" else scoped_registry_df[scoped_registry_df["Sector"].eq(sector_name)].copy()
         render_decision_kpi_cards(scoped)
+        health_spi = scoped["SPI"].replace(0, pd.NA).dropna().mean()
+        health_cpi = scoped["CPI"].replace(0, pd.NA).dropna().mean()
+        health_risk = scoped["Risk Score"].fillna(0).mean()
+        health_status = "Healthy" if pd.notna(health_spi) and pd.notna(health_cpi) and health_spi >= 1 and health_cpi >= 1 and health_risk < 35 else ("Critical" if (pd.notna(health_spi) and health_spi < .9) or (pd.notna(health_cpi) and health_cpi < .9) or health_risk >= 70 else "Watchlist")
+        badge_text, badge_bg, badge_fg = decision_status_badge(health_status)
+        st.markdown(
+            f"<div class='decision-card'><h4>Sector Health Indicator</h4><p><b>Sector:</b> {html.escape(str(sector_name))}</p><p><b>Projects:</b> {len(scoped)}</p><p><b>Total value:</b> {egp(scoped['Contract Value'].sum())}</p><p><b>Average progress:</b> {pct(scoped['Progress'].mean())} | SPI {health_spi:.2f} | CPI {health_cpi:.2f}</p><p><b>Average risk score:</b> {health_risk:.1f}</p><p><span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></p></div>",
+            unsafe_allow_html=True,
+        )
         c1, c2 = st.columns(2)
         with c1:
-            fig = px.bar(scoped, x="Project", y=["Contract Value", "AC"], barmode="group", title="Budget vs Spent per Project")
+            fig = px.bar(scoped, x="Project", y=["Contract Value", "AC", "Paid", "Remaining"], barmode="group", title="Budget vs Spent / Paid / Remaining per Project")
             st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
-            fig = px.bar(scoped, x="Project", y="Milestones", color="Status", title="Milestone Completion Tracking")
+            if scoped["Milestones"].fillna(0).sum():
+                fig = px.bar(scoped, x="Project", y="Milestones", color="Status", title="Milestone Completion Tracking")
+                st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+            else:
+                st.markdown("<div class='decision-chart-note'>Milestone data is not available in the current project files.</div>", unsafe_allow_html=True)
+            ev_long = scoped[["Project", "EV", "PV", "AC", "SV", "CV", "EAC", "VAC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+            fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="EV Metrics per Project")
             st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
         with c2:
-            fig = px.bar(scoped, x="Project", y="Progress", color="Status", title="Progress Gauges per Project", range_y=[0, 100])
+            fig = px.bar(scoped, x="Project", y=["Progress", "Planned Progress"], color_discrete_sequence=["#50D5B7", "#D4A017"], barmode="group", title="Progress Gauges per Project", range_y=[0, 100])
             st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
-            fig = px.scatter(scoped, x="SPI", y="CPI", size=scoped["Risks"].clip(lower=1), hover_name="Project", title="Performance Radar vs Benchmark")
+            radar_metrics = {
+                "Progress": scoped["Progress"].mean(),
+                "SPI": min((scoped["SPI"].replace(0, pd.NA).dropna().mean() or 0) * 100, 100),
+                "CPI": min((scoped["CPI"].replace(0, pd.NA).dropna().mean() or 0) * 100, 100),
+                "Risk Control": 100 - min(scoped["Risk Score"].fillna(0).mean(), 100),
+            }
+            if scoped["Quality"].fillna(0).sum():
+                radar_metrics["Quality"] = scoped["Quality"].mean()
+            if scoped["Safety"].fillna(0).sum():
+                radar_metrics["Safety"] = scoped["Safety"].mean()
+            fig = go.Figure(data=go.Scatterpolar(r=list(radar_metrics.values()), theta=list(radar_metrics.keys()), fill="toself", line_color="#D4A017"))
+            fig.update_layout(title="Performance Radar vs Benchmark", polar=dict(radialaxis=dict(range=[0, 100])), showlegend=False)
+            st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
+            fig = px.scatter(scoped, x="CPI", y="SPI", size=scoped["Contract Value"].clip(lower=1), color="Status", hover_name="Project", title="Sector SPI vs CPI Benchmark")
             fig.add_hline(y=1, line_dash="dash", line_color="#607080")
             fig.add_vline(x=1, line_dash="dash", line_color="#607080")
             st.plotly_chart(style_plotly(fig, 330), use_container_width=True)
-        resource_df = scoped[["Project", "Milestones", "Risks"]].rename(columns={"Milestones": "Team / Work Packages", "Risks": "Equipment / Risk Load"})
-        st.dataframe(resource_df, use_container_width=True, hide_index=True)
+        st.markdown("<div class='decision-chart-note'>Resource allocation data is not available in the current project files.</div>", unsafe_allow_html=True)
+        st.dataframe(scoped[["Project", "Status", "Contract Value", "AC", "Paid", "Remaining", "Progress", "SPI", "CPI", "SV", "CV", "EAC", "VAC", "Risk Score"]], use_container_width=True, hide_index=True)
 
     with projects_tab:
-        default_projects = registry_df["Project"].head(5).tolist()
-        selected_projects = st.multiselect("Projects", registry_df["Project"].tolist(), default=default_projects, key="decision_projects_filter")
-        scoped = registry_df[registry_df["Project"].isin(selected_projects)].copy()
+        default_projects = scoped_registry_df["Project"].head(8).tolist()
+        selected_projects = st.multiselect("Projects", scoped_registry_df["Project"].tolist(), default=default_projects, key="decision_projects_filter")
+        scoped = scoped_registry_df[scoped_registry_df["Project"].isin(selected_projects)].copy()
         if scoped.empty:
             st.info("Select one or more projects to compare.")
-            return
-        render_decision_kpi_cards(scoped)
-        c1, c2 = st.columns(2)
-        with c1:
-            fig = px.pie(scoped, names="Project", values="Contract Value", hole=0.45, title="Budget Distribution Comparison")
-            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
-            fig = px.scatter(scoped, x="SPI", y="CPI", color="Status", size=scoped["Contract Value"].clip(lower=1), hover_name="Project", title="SPI vs CPI Scatter")
-            fig.add_hline(y=1, line_dash="dash", line_color="#607080")
-            fig.add_vline(x=1, line_dash="dash", line_color="#607080")
-            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
-        with c2:
-            trends = scoped[["Project", "Progress", "Quality", "Safety"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
-            fig = px.line(trends, x="Project", y="Value", color="Metric", markers=True, title="Progress / Quality / Safety Trends")
-            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
-            ev_long = scoped[["Project", "BAC", "PV", "EV", "AC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
-            fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="EV Metrics Comparison")
-            st.plotly_chart(style_plotly(fig, 350), use_container_width=True)
-        risk_stack = scoped[["Project", "Risks", "Status"]].copy()
-        fig = px.bar(risk_stack, x="Project", y="Risks", color="Status", title="Risk Distribution")
-        st.plotly_chart(style_plotly(fig, 320), use_container_width=True)
-        st.dataframe(scoped[["Sector", "Project", "Status", "Contract Value", "Progress", "SPI", "CPI", "Risks", "Milestones"]], use_container_width=True, hide_index=True)
+        else:
+            render_decision_kpi_cards(scoped)
+            card_cols = st.columns(3)
+            for idx, (_, row) in enumerate(scoped.iterrows()):
+                badge_text, badge_bg, badge_fg = decision_status_badge(str(row["Status"]))
+                with card_cols[idx % 3]:
+                    st.markdown(
+                        f"""
+                        <div class='decision-card'>
+                          <h4>{html.escape(str(row['Project']))}</h4>
+                          <p><b>Sector:</b> {html.escape(str(row['Sector']))} <span class='decision-badge' style='background:{badge_bg};color:{badge_fg}'>{html.escape(badge_text)}</span></p>
+                          <p><b>Contract:</b> {egp(row['Contract Value'])} | <b>Paid:</b> {egp(row['Paid'])}</p>
+                          <p><b>Remaining:</b> {egp(row['Remaining'])}</p>
+                          <p><b>Progress:</b> {pct(row['Progress'])} / planned {pct(row['Planned Progress'])}</p>
+                          <p><b>SPI:</b> {row['SPI']:.2f} | <b>CPI:</b> {row['CPI']:.2f} | <b>Risk:</b> {row['Risk Score']:.1f}</p>
+                          <p><b>Decision:</b> {html.escape(str(row['Required Decision']))}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            c1, c2 = st.columns(2)
+            with c1:
+                fig = px.treemap(scoped, path=["Sector", "Project"], values="Contract Value", color="Status", title="Budget Distribution Comparison", color_discrete_map={"On Track": "#1A8A8F", "Watch": "#D4A017", "High Attention": "#C94C4C"})
+                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+                fig = px.scatter(scoped, x="CPI", y="SPI", color="Status", size=scoped["Contract Value"].clip(lower=1), hover_name="Project", hover_data=["Sector", "Progress", "Risk Score", "Delay Days"], title="SPI vs CPI Scatter Plot")
+                fig.add_hline(y=1, line_dash="dash", line_color="#607080")
+                fig.add_vline(x=1, line_dash="dash", line_color="#607080")
+                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            with c2:
+                trend_cols = ["Project", "Progress", "Planned Progress"]
+                if scoped["Quality"].fillna(0).sum():
+                    trend_cols.append("Quality")
+                if scoped["Safety"].fillna(0).sum():
+                    trend_cols.append("Safety")
+                trends = scoped[trend_cols].melt(id_vars="Project", var_name="Metric", value_name="Value")
+                fig = px.line(trends, x="Project", y="Value", color="Metric", markers=True, title="Progress / Quality / Safety Trends")
+                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+                ev_long = scoped[["Project", "PV", "EV", "AC", "SPI", "CPI", "SV", "CV", "EAC", "VAC"]].melt(id_vars="Project", var_name="Metric", value_name="Value")
+                fig = px.bar(ev_long, x="Project", y="Value", color="Metric", barmode="group", title="EV Metrics Comparison")
+                st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            risk_distribution = scoped.assign(
+                Schedule_Risk=scoped["SPI"].apply(lambda value: "High" if value and value < .9 else ("Medium" if value and value < 1 else "Low")),
+                Cost_Risk=scoped["CPI"].apply(lambda value: "High" if value and value < .9 else ("Medium" if value and value < 1 else "Low")),
+                Portfolio_Risk=scoped["Risk Score"].apply(lambda value: "High" if value >= 70 else ("Medium" if value >= 35 else "Low")),
+            )
+            risk_long = risk_distribution[["Project", "Schedule_Risk", "Cost_Risk", "Portfolio_Risk"]].melt(id_vars="Project", var_name="Risk Type", value_name="Risk Level")
+            risk_count = risk_long.groupby(["Project", "Risk Type", "Risk Level"], as_index=False).size()
+            fig = px.bar(risk_count, x="Project", y="size", color="Risk Level", facet_col="Risk Type", title="Risk Distribution Stacked Bars", color_discrete_map={"Low": "#50D5B7", "Medium": "#D4A017", "High": "#F05D5E"})
+            st.plotly_chart(style_plotly(fig, 360), use_container_width=True)
+            comparison = scoped[["Project", "Sector", "Status", "Contract Value", "Planned Progress", "Progress", "Progress Variance", "BAC", "AC", "Paid", "Remaining", "SPI", "CPI", "Risk Score", "Delay Days", "Milestones", "Claims / EOT Exposure", "Required Decision"]].copy()
+            styler = comparison.style.map(lambda value: "background-color:#4B1D22;color:#fff" if isinstance(value, (int, float)) and value < .9 else "", subset=["SPI", "CPI"])
+            st.dataframe(styler, use_container_width=True, hide_index=True, height=dataframe_height(comparison, max_height=620))
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def selected_project_id() -> str:
