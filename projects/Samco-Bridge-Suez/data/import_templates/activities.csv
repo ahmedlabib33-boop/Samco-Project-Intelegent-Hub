@@ -1,5 +1,0 @@
-﻿project_id,wbs_id,activity_id,activity_name,planned_start,planned_finish,actual_start,actual_finish,forecast_start,forecast_finish,planned_weight,planned_progress,actual_progress,total_float_days,is_critical,responsible_party
-Bridge-02,engineering1,eng-foot-1,sub,6/10/2026,6/20/2026,6/15/2026,6/25/2026,6/15/2026,6/25/2026,0.2,10,5,-5,no,contractor
-Bridge-02,proc2,proc-foot-1,del,6/11/2026,6/21/2026,6/16/2026,6/26/2026,6/16/2026,6/26/2026,0.3,5,2.5,-5,yes,contractor
-Bridge-02,const3,const-foot-1,const,6/12/2026,6/22/2026,6/17/2026,6/27/2026,6/17/2026,6/27/2026,0.3,2,1,-5,yes,contractor
-Bridge-02,hand4,hand-foot-1,hand,6/13/2026,6/23/2026,6/18/2026,6/28/2026,6/18/2026,6/28/2026,0.2,0,,-5,yes,contractor

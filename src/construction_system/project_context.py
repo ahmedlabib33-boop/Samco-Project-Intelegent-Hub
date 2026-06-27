@@ -46,7 +46,7 @@ class ProjectContext:
 
 def build_project_context(record: dict[str, Any] | None, projects_root: Path) -> ProjectContext:
     if not record:
-        portfolio_root = projects_root.parent / "generated_outputs" / "portfolio_scope"
+        portfolio_root = projects_root.parent / "11-outputs" / "portfolio_scope"
         return ProjectContext(
             project_id="",
             project_key="portfolio",

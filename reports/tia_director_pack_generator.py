@@ -11,7 +11,7 @@ from typing import Any
 
 import pandas as pd
 
-from exports.word_template_exporter import (
+from reports.word_template_exporter import (
     find_table_by_headers,
     replace_text_preserve_format,
     sanitize_filename,
@@ -33,8 +33,8 @@ except ModuleNotFoundError:
 
 
 APP_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_TEMPLATE_PATH = APP_DIR / "templates" / "time_impact_analysis_report_director_pack.docx"
-DEFAULT_OUTPUT_DIR = APP_DIR / "generated_outputs"
+DEFAULT_TEMPLATE_PATH = APP_DIR / "reports" / "templates" / "time_impact_analysis_report_director_pack.docx"
+DEFAULT_OUTPUT_DIR = APP_DIR / "11-outputs"
 DEFAULT_DB_PATH = APP_DIR / "construction_system.db"
 REPORT_TYPE_TIA_DIRECTOR_PACK = "Time Impact Analysis Report | Director Pack"
 

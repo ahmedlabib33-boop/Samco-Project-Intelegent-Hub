@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $configPath = Join-Path $PSScriptRoot "github_sync_config.json"
-$logPath = Join-Path $root "logs\github_sync.log"
+$logPath = Join-Path $root "11-outputs\logs\github_sync.log"
 $statePath = Join-Path $root ".sync_state\local_manifest.json"
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath -Parent), (Split-Path $statePath -Parent) | Out-Null
 
@@ -265,11 +265,28 @@ function Invoke-SyncCycle {
         Write-SyncLog "No remote changes required."
         return
     }
-    $newTree = Invoke-GitHubApi "Post" "$apiBase/git/trees" @{ base_tree = $baseTreeSha; tree = $treeEntries }
-    $commit = Invoke-GitHubApi "Post" "$apiBase/git/commits" @{ message = "$Message - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"; tree = $newTree.sha; parents = @($baseCommitSha) }
-    Invoke-GitHubApi "Patch" "$apiBase/git/refs/heads/$($config.branch)" @{ sha = $commit.sha; force = $false } | Out-Null
-    Write-LocalManifest $current $changed $deleted "synced:$($commit.sha)"
-    Write-SyncLog "Synchronization complete: $($commit.sha)"
+    $batchSize = 200
+    $latestCommitSha = $baseCommitSha
+    for ($offset = 0; $offset -lt $treeEntries.Count; $offset += $batchSize) {
+        $batch = @($treeEntries | Select-Object -Skip $offset -First $batchSize)
+        $latestRef = Invoke-GitHubApi "Get" "$apiBase/git/ref/heads/$($config.branch)"
+        $latestCommitSha = $latestRef.object.sha
+        $latestCommit = Invoke-GitHubApi "Get" "$apiBase/git/commits/$latestCommitSha"
+        $latestTreeSha = $latestCommit.tree.sha
+        $newTree = Invoke-GitHubApi "Post" "$apiBase/git/trees" @{ base_tree = $latestTreeSha; tree = $batch }
+        $batchNumber = [int]([math]::Floor($offset / $batchSize) + 1)
+        $batchTotal = [int]([math]::Ceiling($treeEntries.Count / $batchSize))
+        $commit = Invoke-GitHubApi "Post" "$apiBase/git/commits" @{
+            message = "$Message batch $batchNumber/$batchTotal - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+            tree = $newTree.sha
+            parents = @($latestCommitSha)
+        }
+        Invoke-GitHubApi "Patch" "$apiBase/git/refs/heads/$($config.branch)" @{ sha = $commit.sha; force = $false } | Out-Null
+        $latestCommitSha = $commit.sha
+        Write-SyncLog "Synchronization batch $batchNumber/$batchTotal complete: $($commit.sha)"
+    }
+    Write-LocalManifest $current $changed $deleted "synced:$latestCommitSha"
+    Write-SyncLog "Synchronization complete: $latestCommitSha"
 }
 
 Write-SyncLog "Started mode=$Mode intervalSeconds=$IntervalSeconds root=$root target=$($config.owner)/$($config.repository):$($config.branch) deletionSync=$($config.sync_deletions)"

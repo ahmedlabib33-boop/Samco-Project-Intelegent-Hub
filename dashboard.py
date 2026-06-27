@@ -155,7 +155,7 @@ IFC_CONFLICT_CSV_PATH = IMPORT_TEMPLATES_DIR / "ifc_conflict.csv"
 S_CURVE_CSV_PATH = IMPORT_TEMPLATES_DIR / "s_curve.csv"
 WBS_CSV_PATH = IMPORT_TEMPLATES_DIR / "wbs.csv"
 EVM_COMMENTS_PATH = APP_DIR / "data" / "evm_comments.json"
-TIA_DIRECTOR_WORD_TEMPLATE_PATH = APP_DIR / "templates" / "time_impact_analysis_report_director_pack.docx"
+TIA_DIRECTOR_WORD_TEMPLATE_PATH = APP_DIR / "reports" / "templates" / "time_impact_analysis_report_director_pack.docx"
 
 st.set_page_config(page_title="Project Intelligence Hub", layout="wide", initial_sidebar_state="collapsed")
 
@@ -226,7 +226,7 @@ def start_repository_sync_watch() -> None:
 
 
 def repository_sync_log_tail(max_lines: int = 8) -> str:
-    log_path = APP_DIR / "logs" / "github_sync.log"
+    log_path = APP_DIR / "11-outputs" / "logs" / "github_sync.log"
     if not log_path.exists():
         return "No synchronization run has been recorded."
     return "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:])

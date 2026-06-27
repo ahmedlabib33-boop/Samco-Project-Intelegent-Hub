@@ -22,7 +22,7 @@
       "problemMatcher": []
     },
     {
-      "label": "PIH: Watch repository every 30 minutes",
+      "label": "PIH: Watch repository every 30 seconds",
       "type": "shell",
       "command": "${workspaceFolder}\\RUN_FULL_PROJECT_NO_GIT_SYNC.bat",
       "args": ["Watch", "30"],

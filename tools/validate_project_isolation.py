@@ -147,7 +147,7 @@ def main() -> int:
     results.check("12. project_manifest.json exists", not missing_manifests, ", ".join(missing_manifests))
     results.check("13. data_to_program.md exists", (ROOT / "data_to_program.md").stat().st_size > 1000)
     results.check("14. RUN_FULL_PROJECT_NO_GIT_SYNC.bat exists", (ROOT / "RUN_FULL_PROJECT_NO_GIT_SYNC.bat").exists())
-    sync_files = [ROOT / "tools/github_no_git_sync.ps1", ROOT / "tools/github_sync_config.json", ROOT / "logs/github_sync.log", ROOT / ".sync_state/local_manifest.json"]
+    sync_files = [ROOT / "tools/github_no_git_sync.ps1", ROOT / "tools/github_sync_config.json", ROOT / "11-outputs/logs/github_sync.log", ROOT / ".sync_state/local_manifest.json"]
     results.check("15. Synchronization configuration exists", all(path.exists() for path in sync_files))
     sync_text = (ROOT / "tools/github_no_git_sync.ps1").read_text(encoding="utf-8") + (ROOT / "RUN_FULL_PROJECT_NO_GIT_SYNC.bat").read_text(encoding="utf-8")
     forbidden_git_cli = any(token in sync_text.lower() for token in ["git add", "git commit", "git push", "git status", "git.exe"])
