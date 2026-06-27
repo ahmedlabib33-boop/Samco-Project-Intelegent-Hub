@@ -160,7 +160,7 @@ TIA_DIRECTOR_WORD_TEMPLATE_PATH = APP_DIR / "templates" / "time_impact_analysis_
 st.set_page_config(page_title="Project Intelligence Hub", layout="wide", initial_sidebar_state="collapsed")
 
 
-def _github_sync_command(mode: str, interval_minutes: int = 30) -> list[str]:
+def _github_sync_command(mode: str, interval_seconds: int = 30) -> list[str]:
     powershell = shutil.which("powershell.exe") or shutil.which("pwsh") or shutil.which("powershell")
     if not powershell:
         raise RuntimeError("PowerShell is not available on this server.")
@@ -173,8 +173,8 @@ def _github_sync_command(mode: str, interval_minutes: int = 30) -> list[str]:
         str(APP_DIR / "tools" / "github_no_git_sync.ps1"),
         "-Mode",
         mode,
-        "-IntervalMinutes",
-        str(interval_minutes),
+        "-IntervalSeconds",
+        str(interval_seconds),
     ]
 
 

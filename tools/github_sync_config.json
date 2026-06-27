@@ -3,6 +3,7 @@
     "repository":  "Samco-Project-Intelegent-Hub",
     "branch":  "main",
     "interval_minutes":  30,
+    "interval_seconds":  30,
     "sync_deletions":  false,
     "prune_legacy_project_folders":  true,
     "max_file_size_mb":  95,

@@ -2,6 +2,7 @@ param(
     [ValidateSet("Watch", "Once", "DryRun")]
     [string]$Mode = "Watch",
     [int]$IntervalMinutes = 0,
+    [int]$IntervalSeconds = 0,
     [string]$Message = "Synchronize Project Intelligence Hub workspace"
 )
 
@@ -14,8 +15,13 @@ New-Item -ItemType Directory -Force -Path (Split-Path $logPath -Parent), (Split-
 
 if (-not (Test-Path -LiteralPath $configPath)) { throw "Missing synchronization configuration: $configPath" }
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
-if ($IntervalMinutes -le 0) { $IntervalMinutes = [int]$config.interval_minutes }
-if ($IntervalMinutes -le 0) { $IntervalMinutes = 30 }
+if ($IntervalSeconds -le 0 -and $null -ne $config.interval_seconds) { $IntervalSeconds = [int]$config.interval_seconds }
+if ($IntervalSeconds -le 0) {
+    if ($IntervalMinutes -le 0) { $IntervalMinutes = [int]$config.interval_minutes }
+    if ($IntervalMinutes -le 0) { $IntervalMinutes = 30 }
+    $IntervalSeconds = $IntervalMinutes * 60
+}
+if ($IntervalSeconds -lt 10) { $IntervalSeconds = 10 }
 
 $script:WatchMutex = $null
 if ($Mode -eq "Watch") {
@@ -248,7 +254,7 @@ function Invoke-SyncCycle {
     Write-SyncLog "Synchronization complete: $($commit.sha)"
 }
 
-Write-SyncLog "Started mode=$Mode interval=$IntervalMinutes root=$root target=$($config.owner)/$($config.repository):$($config.branch) deletionSync=$($config.sync_deletions)"
+Write-SyncLog "Started mode=$Mode intervalSeconds=$IntervalSeconds root=$root target=$($config.owner)/$($config.repository):$($config.branch) deletionSync=$($config.sync_deletions)"
 if ($Mode -in @("Once", "DryRun")) {
     try {
         Invoke-SyncCycle
@@ -261,5 +267,5 @@ if ($Mode -in @("Once", "DryRun")) {
 while ($true) {
     try { Invoke-SyncCycle }
     catch { Write-SyncLog "Synchronization failed at line $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.Message)" }
-    Start-Sleep -Seconds ($IntervalMinutes * 60)
+    Start-Sleep -Seconds $IntervalSeconds
 }
