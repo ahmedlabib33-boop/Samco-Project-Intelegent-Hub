@@ -949,30 +949,12 @@ def render_management_decision_brief_once(registry_df: pd.DataFrame, quality: di
           <p><b>Main risk driver:</b> {html.escape(main_risk_driver)}</p>
           <p><b>Immediate management action:</b> {html.escape(immediate_action)}</p>
           <p><b>Evidence availability:</b> {html.escape(evidence_status)} | <b>Claims / EOT signal:</b> {dashboard_display(f'{eot_exposure:,.0f}' if eot_exposure else None)}</p>
-          <p><b>Recommended next step:</b> Review the triggered decision cards below and open the relevant project deep dive from the transition dropdown.</p>
+          <p><b>Recommended next step:</b> Review the triggered decision cards and use the main project selector when project-level follow-up is required.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
     render_decision_cards(registry_df)
-
-
-def render_project_transition_dropdown_once(registry_df: pd.DataFrame) -> None:
-    project_labels = {f"{row['Sector']} / {row['Project']}": row["project_id"] for _, row in registry_df.iterrows()}
-    if not project_labels:
-        st.info("No project is available for deep-dive transition in the selected scope.")
-        return
-    placeholder = "Select project to open its deep dive"
-    selected_label = st.selectbox(
-        "Transition to Project Deep Dive",
-        [placeholder] + list(project_labels.keys()),
-        index=0,
-        key="decision_dashboard_transition_dropdown",
-    )
-    if selected_label != placeholder:
-        st.info("Preparing project deep dive...")
-        st.session_state["active_project_id"] = project_labels[selected_label]
-        st.rerun()
 
 
 def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
@@ -1224,7 +1206,6 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
             styler = comparison.style.map(lambda value: "background-color:#4B1D22;color:#fff" if isinstance(value, (int, float)) and value < .9 else "", subset=["SPI", "CPI"])
             st.dataframe(styler, width="stretch", hide_index=True, height=dataframe_height(comparison, max_height=620))
     render_management_decision_brief_once(scoped_registry_df, quality)
-    render_project_transition_dropdown_once(scoped_registry_df)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -10413,6 +10394,14 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
             )
             st.code(f"Source folder: {CONTRACT_REPOSITORY_DIR}\nDatabase: {CONTRACT_CLAIMS_DB_PATH}", language="text")
         contract_repo_status = ccc.persist_contract_analysis(CONTRACT_CLAIMS_DB_PATH, CONTRACT_REPOSITORY_DIR, rebuild=rebuild_contract_library)
+        auto_library_status = contract_repo_status.get("auto_library_status", {})
+        if auto_library_status.get("generated"):
+            st.success(
+                f"{auto_library_status.get('message', 'Contract clause library generated.')} "
+                f"Rows: {auto_library_status.get('row_count', 0)}"
+            )
+        elif auto_library_status.get("message"):
+            st.caption(str(auto_library_status.get("message")))
         stale_documents_removed = int(contract_repo_status.get("stale_documents_removed") or 0)
         if stale_documents_removed:
             st.warning(

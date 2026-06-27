@@ -686,6 +686,116 @@ def is_curated_contract_library_file(path: Path) -> bool:
     return path.suffix.lower() in {".csv", ".xls", ".xlsx"} and ("clause_library" in name or "contract_library" in name)
 
 
+def contract_source_files_for_library(contracts_dir: Path) -> list[Path]:
+    return [
+        path
+        for path in contract_file_list(contracts_dir)
+        if not is_curated_contract_library_file(path)
+    ]
+
+
+def build_curated_clause_library_rows(source_files: list[Path]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for source_file in source_files:
+        content_text = extract_text_for_clause_library_generation(source_file)
+        clause_records = extract_clauses_from_text(content_text, document_id=0)
+        for sequence, clause in enumerate(clause_records, start=1):
+            rows.append(
+                {
+                    "Clause / Topic": clause.get("clause_title") or clause.get("clause_number") or f"{source_file.stem} Clause {sequence}",
+                    "Location": clause.get("clause_number") or f"{source_file.name} / Extract {sequence}",
+                    "Plain English Meaning": clause.get("plain_english_meaning") or normalize_text(clause.get("exact_clause_text", ""))[:500],
+                    "Beneath the Lines": clause.get("contractor_counterargument") or "",
+                    "Who Holds Leverage": "Contractor"
+                    if str(clause.get("contractor_right", "")).strip()
+                    else "Employer"
+                    if str(clause.get("employer_obligation", "")).strip()
+                    else "Engineer"
+                    if str(clause.get("engineer_obligation", "")).strip()
+                    else "Shared",
+                    "Notice / Time Bar": clause.get("notice_required") or "",
+                    "Money Impact": clause.get("cost_impact") or "",
+                    "Schedule Impact": clause.get("time_impact") or "",
+                    "Practical Action / Evidence": clause.get("required_evidence") or clause.get("recommended_action") or "",
+                    "Source File": source_file.name,
+                    "Claim Type": clause.get("claim_type") or "",
+                    "Risk Level": clause.get("risk_level") or "",
+                    "Claim Strength": clause.get("claim_strength") or "",
+                    "Exact Clause Text": clause.get("exact_clause_text") or "",
+                }
+            )
+    return rows
+
+
+def extract_text_for_clause_library_generation(path: Path) -> str:
+    """Use bounded extraction for automatic library generation so the UI never hangs."""
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        for module_name in ["pypdf", "PyPDF2"]:
+            try:
+                module = importlib.import_module(module_name)
+                reader_cls = getattr(module, "PdfReader", None)
+                if reader_cls is None:
+                    continue
+                reader = reader_cls(str(path))
+                pages = []
+                for page in list(reader.pages)[:120]:
+                    try:
+                        pages.append(page.extract_text() or "")
+                    except Exception:
+                        pages.append("")
+                return "\n".join(pages)
+            except Exception:
+                continue
+        return ""
+    return extract_text_from_path(path)
+
+
+def ensure_auto_contract_clause_library(contracts_dir: Path, rebuild: bool = False) -> dict[str, Any]:
+    contracts_dir.mkdir(parents=True, exist_ok=True)
+    library_path = contracts_dir / "Overall_Contract_clause_library.xlsx"
+    source_files = contract_source_files_for_library(contracts_dir)
+    status = {
+        "library_path": library_path,
+        "generated": False,
+        "source_files": [path.name for path in source_files],
+        "row_count": 0,
+        "message": "",
+    }
+    if not source_files:
+        status["message"] = "No source contract file found for automatic clause-library generation."
+        return status
+    source_newer_than_library = (
+        not library_path.exists()
+        or any(path.stat().st_mtime > library_path.stat().st_mtime for path in source_files)
+    )
+    if library_path.exists() and not rebuild and not source_newer_than_library:
+        status["message"] = "Existing clause library is current."
+        return status
+    rows = build_curated_clause_library_rows(source_files)
+    if not rows:
+        status["message"] = "No extractable contract clauses were found. Existing library was preserved." if library_path.exists() else "No extractable contract clauses were found."
+        return status
+    output_df = pd.DataFrame(rows)
+    with pd.ExcelWriter(library_path, engine="openpyxl") as writer:
+        output_df.to_excel(writer, sheet_name="Contract Clause Library", index=False)
+        workbook = writer.book
+        worksheet = writer.sheets["Contract Clause Library"]
+        for column_cells in worksheet.columns:
+            header = str(column_cells[0].value or "")
+            max_length = max([len(str(cell.value or "")) for cell in column_cells[:200]] + [len(header)])
+            worksheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 14), 48)
+        worksheet.freeze_panes = "A2"
+    status.update(
+        {
+            "generated": True,
+            "row_count": int(len(output_df)),
+            "message": f"Generated {library_path.name} from {len(source_files)} source contract file(s).",
+        }
+    )
+    return status
+
+
 def evidence_file_list(evidence_dir: Path) -> list[Path]:
     if not evidence_dir.exists():
         return []
@@ -1195,6 +1305,7 @@ def upsert_contract_document(cur: sqlite3.Cursor, path: Path, file_hash: str, co
 def persist_contract_analysis(db_path: Path, contracts_dir: Path, rebuild: bool = False) -> dict[str, Any]:
     init_contract_claims_db(db_path)
     contracts_dir = contracts_dir.resolve()
+    auto_library_status = ensure_auto_contract_clause_library(contracts_dir, rebuild=rebuild)
     stale_documents_removed = prune_contract_documents_outside_scope(db_path, contracts_dir)
     files = contract_file_list(contracts_dir)
     analysis_files = [path for path in files if is_curated_contract_library_file(path)] or files
@@ -1225,6 +1336,7 @@ def persist_contract_analysis(db_path: Path, contracts_dir: Path, rebuild: bool 
         "source_warnings": source_warnings,
         "extraction_issue": "",
         "stale_documents_removed": stale_documents_removed,
+        "auto_library_status": auto_library_status,
     }
     if not files:
         cur.execute(
@@ -1351,6 +1463,7 @@ def persist_contract_analysis(db_path: Path, contracts_dir: Path, rebuild: bool 
             "source_warnings": source_warnings,
             "supporting_files": [path.name for path in supporting_files],
             "extraction_issue": contract_status.get("extraction_issue") or "; ".join(source_warnings),
+            "auto_library_status": auto_library_status,
         }
     )
     conn.close()
