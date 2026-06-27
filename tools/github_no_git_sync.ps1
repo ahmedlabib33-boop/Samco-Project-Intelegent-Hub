@@ -235,7 +235,8 @@ function Invoke-SyncCycle {
     $remote = @{}
     foreach ($item in $remoteTree.tree) { if ($item.type -eq "blob") { $remote[$item.path] = $item.sha } }
 
-    $treeEntries = @()
+    $uploadEntries = @()
+    $deleteEntries = @()
     $maxBytes = [int64]$config.max_file_size_mb * 1MB
     foreach ($path in $current.Keys) {
         $fullName = Join-Path $root ($path -replace "/", "\")
@@ -245,14 +246,14 @@ function Invoke-SyncCycle {
         $localBlobSha = Get-GitBlobSha $bytes
         if ($remote.ContainsKey($path) -and $remote[$path] -eq $localBlobSha) { continue }
         $blob = Invoke-GitHubApi "Post" "$apiBase/git/blobs" @{ content = [Convert]::ToBase64String($bytes); encoding = "base64" }
-        $treeEntries += @{ path = $path; mode = "100644"; type = "blob"; sha = $blob.sha }
+        $uploadEntries += @{ path = $path; mode = "100644"; type = "blob"; sha = $blob.sha }
     }
     if ([bool]$config.sync_deletions -or [bool]$config.prune_legacy_project_folders) {
         foreach ($path in $remote.Keys) {
             $globalDeletionAllowed = [bool]$config.sync_deletions
             $legacyDeletionAllowed = [bool]$config.prune_legacy_project_folders -and (Test-LegacyProjectRepositoryPath $path)
             if (($globalDeletionAllowed -or $legacyDeletionAllowed) -and -not $current.Contains($path) -and -not (Test-Excluded (Join-Path $root ($path -replace "/", "\")))) {
-                $treeEntries += @{ path = $path; mode = "100644"; type = "blob"; sha = $null }
+                $deleteEntries += @{ path = $path; mode = "100644"; type = "blob"; sha = $null }
                 if ($legacyDeletionAllowed -and -not $globalDeletionAllowed) { Write-SyncLog "Pruning legacy project path: $path" }
             }
         }
@@ -260,31 +261,41 @@ function Invoke-SyncCycle {
         Write-SyncLog "General deletion synchronization is disabled; remote files were not deleted."
     }
 
-    if ($treeEntries.Count -eq 0) {
+    if (($uploadEntries.Count + $deleteEntries.Count) -eq 0) {
         Write-LocalManifest $current $changed $deleted "no-remote-change"
         Write-SyncLog "No remote changes required."
         return
     }
-    $batchSize = 200
-    $latestCommitSha = $baseCommitSha
-    for ($offset = 0; $offset -lt $treeEntries.Count; $offset += $batchSize) {
-        $batch = @($treeEntries | Select-Object -Skip $offset -First $batchSize)
-        $latestRef = Invoke-GitHubApi "Get" "$apiBase/git/ref/heads/$($config.branch)"
-        $latestCommitSha = $latestRef.object.sha
-        $latestCommit = Invoke-GitHubApi "Get" "$apiBase/git/commits/$latestCommitSha"
-        $latestTreeSha = $latestCommit.tree.sha
-        $newTree = Invoke-GitHubApi "Post" "$apiBase/git/trees" @{ base_tree = $latestTreeSha; tree = $batch }
-        $batchNumber = [int]([math]::Floor($offset / $batchSize) + 1)
-        $batchTotal = [int]([math]::Ceiling($treeEntries.Count / $batchSize))
-        $commit = Invoke-GitHubApi "Post" "$apiBase/git/commits" @{
-            message = "$Message batch $batchNumber/$batchTotal - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-            tree = $newTree.sha
-            parents = @($latestCommitSha)
+
+    function Invoke-TreeEntryBatches([array]$Entries, [string]$PhaseName, [string]$StartingCommitSha) {
+        if ($Entries.Count -eq 0) { return $StartingCommitSha }
+        $batchSize = 200
+        $latestCommitSha = $StartingCommitSha
+        for ($offset = 0; $offset -lt $Entries.Count; $offset += $batchSize) {
+            $end = [math]::Min($offset + $batchSize - 1, $Entries.Count - 1)
+            $batch = @($Entries[$offset..$end])
+            $latestRef = Invoke-GitHubApi "Get" "$apiBase/git/ref/heads/$($config.branch)"
+            $latestCommitSha = $latestRef.object.sha
+            $latestCommit = Invoke-GitHubApi "Get" "$apiBase/git/commits/$latestCommitSha"
+            $latestTreeSha = $latestCommit.tree.sha
+            $newTree = Invoke-GitHubApi "Post" "$apiBase/git/trees" @{ base_tree = $latestTreeSha; tree = $batch }
+            $batchNumber = [int]([math]::Floor($offset / $batchSize) + 1)
+            $batchTotal = [int]([math]::Ceiling($Entries.Count / $batchSize))
+            $commit = Invoke-GitHubApi "Post" "$apiBase/git/commits" @{
+                message = "$Message $PhaseName batch $batchNumber/$batchTotal - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+                tree = $newTree.sha
+                parents = @($latestCommitSha)
+            }
+            Invoke-GitHubApi "Patch" "$apiBase/git/refs/heads/$($config.branch)" @{ sha = $commit.sha; force = $false } | Out-Null
+            $latestCommitSha = $commit.sha
+            Write-SyncLog "Synchronization $PhaseName batch $batchNumber/$batchTotal complete: $($commit.sha)"
         }
-        Invoke-GitHubApi "Patch" "$apiBase/git/refs/heads/$($config.branch)" @{ sha = $commit.sha; force = $false } | Out-Null
-        $latestCommitSha = $commit.sha
-        Write-SyncLog "Synchronization batch $batchNumber/$batchTotal complete: $($commit.sha)"
+        return $latestCommitSha
     }
+
+    $latestCommitSha = $baseCommitSha
+    $latestCommitSha = Invoke-TreeEntryBatches $uploadEntries "upload" $latestCommitSha
+    $latestCommitSha = Invoke-TreeEntryBatches $deleteEntries "delete" $latestCommitSha
     Write-LocalManifest $current $changed $deleted "synced:$latestCommitSha"
     Write-SyncLog "Synchronization complete: $latestCommitSha"
 }
