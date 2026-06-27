@@ -1036,8 +1036,12 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
     else:
         empty_scope_message = ""
 
-    portfolio_tab, sector_tab, projects_tab = st.tabs(["📊 Overall Portfolio", "🏭 Sector Analysis", "📋 Projects Analysis"])
-    with portfolio_tab:
+    decision_view = st.selectbox(
+        "Decision dashboard view",
+        ["📊 Overall Portfolio", "🏭 Sector Analysis", "📋 Projects Analysis"],
+        key="decision_dashboard_active_view",
+    )
+    if decision_view == "📊 Overall Portfolio":
         render_decision_command_bar(registry_df, quality)
         scoped_registry_df = apply_decision_dashboard_filters(registry_df)
         render_decision_kpi_cards(scoped_registry_df)
@@ -1105,7 +1109,7 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
         display_df = scoped_registry_df[["Sector", "Project", "Status", "Contract Value", "Paid", "Remaining", "Progress", "Planned Progress", "Progress Variance", "SPI", "CPI", "Risk Score", "Delay Days", "Required Decision", "Folder"]].copy()
         st.dataframe(display_df, width="stretch", hide_index=True, height=dataframe_height(display_df, max_height=520))
 
-    with sector_tab:
+    if decision_view == "🏭 Sector Analysis":
         sector_options = ["All sectors"] + sorted(scoped_registry_df["Sector"].dropna().unique())
         with st.container(border=True):
             sector_name = st.selectbox("Sector", sector_options, key="decision_sector_filter")
@@ -1157,7 +1161,7 @@ def render_decision_making_dashboard(projects_catalog_df: pd.DataFrame) -> None:
         st.markdown("<div class='decision-chart-note'>Resource allocation data is not available in the current project files.</div>", unsafe_allow_html=True)
         st.dataframe(scoped[["Project", "Status", "Contract Value", "AC", "Paid", "Remaining", "Progress", "SPI", "CPI", "SV", "CV", "EAC", "VAC", "Risk Score"]], width="stretch", hide_index=True)
 
-    with projects_tab:
+    if decision_view == "📋 Projects Analysis":
         default_projects = scoped_registry_df["Project"].head(8).tolist()
         with st.container(border=True):
             selected_projects = st.multiselect("Projects", scoped_registry_df["Project"].tolist(), default=default_projects, key="decision_projects_filter")
@@ -2192,7 +2196,7 @@ def style_plotly(fig, height=390):
     return fig
 
 
-def dataframe_height(df: pd.DataFrame, max_height: int = 900, row_height: int = 35, base: int = 35) -> int:
+def dataframe_height(df: pd.DataFrame, max_height: int = 620, row_height: int = 31, base: int = 35) -> int:
     return min(base + (len(df) * row_height), max_height)
 
 
@@ -5193,6 +5197,36 @@ st.markdown(
     table{color:var(--ink)!important}
     @media(max-width:1200px){.overview-shell{grid-template-columns:1fr}.executive-footer{grid-template-columns:repeat(2,minmax(0,1fr))}.claims-workflow{grid-template-columns:repeat(3,minmax(0,1fr))}.claims-dual-grid,.claims-export-grid{grid-template-columns:1fr}}
     @media(max-width:900px){.samco-contract-info{grid-template-columns:repeat(2,1fr)}.samco-headline{grid-template-columns:88px minmax(0,1fr);align-items:flex-start}.samco-title{font-size:24px}}
+    @media(max-width:640px){
+      .block-container{padding:.7rem .55rem 1.4rem!important}
+      .samco-header{padding:14px!important;border-radius:12px!important;margin-bottom:8px!important}
+      .samco-headline{grid-template-columns:68px minmax(0,1fr)!important;column-gap:10px!important}
+      .samco-headline img{width:62px!important;height:44px!important;padding:5px!important}
+      .samco-title{font-size:19px!important;line-height:1.16!important}
+      .samco-subtitle{font-size:12px!important}
+      .samco-contract-info{grid-template-columns:1fr!important;gap:8px!important;margin-top:12px!important}
+      .samco-info-item{min-height:58px!important;padding:8px 10px!important}
+      .section-header{padding:11px 12px!important;margin:8px 0!important;border-radius:10px!important}
+      .section-header h3{font-size:18px!important;line-height:1.2!important}
+      .panel-note,.executive-panel,.claims-surface,.claims-answer-panel{padding:11px!important;border-radius:10px!important}
+      [data-testid="stMetric"]{min-height:72px!important;padding:8px 10px!important;border-radius:10px!important}
+      [data-testid="stMetricValue"]{font-size:18px!important;line-height:1.1!important}
+      [data-testid="stMetricLabel"]{font-size:11px!important;line-height:1.2!important}
+      .kpi-box{min-height:70px!important;padding:10px 12px!important;border-radius:10px!important}
+      .kpi-box-title{font-size:11px!important}
+      .kpi-box-value{font-size:22px!important}
+      .claims-kpi-card{min-height:86px!important;padding:10px 12px!important;border-radius:10px!important}
+      .claims-kpi-title{font-size:10px!important}
+      .claims-kpi-value{font-size:22px!important}
+      .claims-workflow{grid-template-columns:1fr!important}
+      .executive-topbar,.topbar-right{display:block!important}
+      .executive-title{font-size:21px!important}
+      .executive-footer{grid-template-columns:1fr!important}
+      div[data-testid="stPlotlyChart"],.stDataFrame{overflow-x:auto!important}
+      .stDataFrame div[data-testid="stDataFrameResizable"] *{font-size:10px!important}
+      .stButton button,.stDownloadButton button{min-height:34px!important;padding:6px 10px!important;font-size:12px!important}
+      div[data-baseweb="select"]{font-size:12px!important}
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -8105,9 +8139,20 @@ if st.session_state.get("project_meeting_active", False):
         scrolling=False,
     )
 
-tabs = st.tabs(PROJECT_HUB_SLIDE_NAMES)
+VISIBLE_PROJECT_SLIDE_NAMES = [
+    slide_name
+    for slide_name in PROJECT_HUB_SLIDE_NAMES
+    if slide_name not in {"Delays", "Time Impact"}
+]
+if st.session_state.get("active_project_slide_name") not in VISIBLE_PROJECT_SLIDE_NAMES:
+    st.session_state["active_project_slide_name"] = VISIBLE_PROJECT_SLIDE_NAMES[0]
+active_slide_name = st.selectbox(
+    "Project slide",
+    VISIBLE_PROJECT_SLIDE_NAMES,
+    key="active_project_slide_name",
+)
 
-with tabs[0]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[0]:
     st.markdown("<div class='section-header'><h3>Project Overview</h3></div>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Project Start Date", format_project_date(overview_metrics.get("project_start")))
@@ -8137,7 +8182,7 @@ with tabs[0]:
             st.markdown("<div class='panel-note'><b>Live Alert Engine</b><br>Priority correspondence threads are linked to required follow-up and claim exposure.</div>", unsafe_allow_html=True)
             st.dataframe(threads[["Thread", "Priority", "Next Action"]].head(8), width="stretch", hide_index=True)
 
-with tabs[2]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[2]:
     st.markdown("<div class='section-header'><h3>Activities Analysis</h3></div>", unsafe_allow_html=True)
     activities_df = activity_metrics["activities_df"]
     critical_df = activity_metrics["critical_df"]
@@ -8189,7 +8234,7 @@ with tabs[2]:
     else:
         st.info("No activities data available.")
 
-with tabs[1]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[1]:
     st.markdown("<div class='section-header'><h3>WBS Analysis</h3></div>", unsafe_allow_html=True)
     wbs_df = wbs_metrics["wbs_df"]
     con_wbs_df = wbs_metrics["con_wbs_df"]
@@ -8243,7 +8288,7 @@ with tabs[1]:
                 height=dataframe_height(con_wbs_df, max_height=1200),
             )
 
-with tabs[9]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[9]:
     st.markdown("<div class='section-header'><h3>Time Impact Analysis</h3></div>", unsafe_allow_html=True)
     engine_df = time_impact_engine["time_impact_df"]
     if not engine_df.empty:
@@ -8318,7 +8363,7 @@ with tabs[9]:
     else:
         st.info("No time impact data available.")
 
-with tabs[4]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[4]:
     st.markdown("<div class='section-header'><h3>S-Curve Analysis</h3></div>", unsafe_allow_html=True)
     curve_df = s_curve_metrics["curve_df"]
     if not curve_df.empty:
@@ -8354,7 +8399,7 @@ with tabs[4]:
     else:
         st.info("No S-curve data available.")
 
-with tabs[5]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[5]:
     st.markdown("<div class='section-header'><h3>Earned Value Management</h3></div>", unsafe_allow_html=True)
     cols = st.columns(4)
     for col, label, key in zip(cols, ["BAC", "AC", "EV", "PV"], ["bac", "ac", "ev", "pv"]):
@@ -8499,7 +8544,7 @@ with tabs[5]:
     with st.expander("Preview print-ready HTML", expanded=False):
         st.components.v1.html(evm_html, height=1200, scrolling=True)
 
-with tabs[6]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[6]:
     st.markdown("<div class='section-header'><h3>Contract Management</h3></div>", unsafe_allow_html=True)
     contracts_df = contract_metrics["contracts_df"]
     payments_df = contract_metrics["payments_df"]
@@ -8642,7 +8687,7 @@ def render_contract_clause_matching_engine():
     clauses = search_clauses(search_term) if search_term else all_clauses
     st.dataframe(pd.DataFrame([c.__dict__ for c in clauses]), width="stretch", hide_index=True)
 
-with tabs[7]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[7]:
     st.markdown("<div class='section-header'><h3>Letters Intelligence, Alerts Link & Issue Engine</h3></div>", unsafe_allow_html=True)
     active_letters_inbox = letters_inbox_dir()
     auto_ingest_register = letters.get("Auto Ingest Register", pd.DataFrame()) if letters else pd.DataFrame()
@@ -8695,7 +8740,7 @@ with tabs[7]:
         st.dataframe(samco_links, width="stretch", hide_index=True, height=dataframe_height(samco_links))
         st.dataframe(ace_links, width="stretch", hide_index=True, height=dataframe_height(ace_links))
 
-with tabs[8]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[8]:
     st.markdown("<div class='section-header'><h3>Delay Analysis</h3></div>", unsafe_allow_html=True)
     delays_df = delay_metrics["delays_df"]
     display_delays_df = delay_metrics["display_delays_df"]
@@ -8733,7 +8778,7 @@ with tabs[8]:
     else:
         st.info("No delay data available.")
 
-with tabs[10]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[10]:
     st.markdown("<div class='section-header'><h3>Risk Analysis</h3></div>", unsafe_allow_html=True)
     risks_df = risk_metrics["risks_df"]
     steel_df = risk_metrics["steel_df"]
@@ -8772,14 +8817,15 @@ with tabs[10]:
         st.markdown("#### IFC Conflict")
         st.dataframe(ifc_df, width="stretch", hide_index=True, height=dataframe_height(ifc_df))
 
-with tabs[3]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[3]:
     st.markdown("<div class='section-header'><h3>Milestones & Change Orders</h3></div>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     col1.dataframe(milestone_metrics["milestones_df"], width="stretch", hide_index=True)
     col2.dataframe(milestone_metrics["change_orders_df"], width="stretch", hide_index=True)
 
-with tabs[11]:
-    tia_tabs = st.tabs(
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[11]:
+    tia_view = st.selectbox(
+        "Delay Analysis view",
         [
             "Uploads",
             "Tables & Conclusion",
@@ -8787,10 +8833,11 @@ with tabs[11]:
             "AI - TIA",
             "question",
             "Download Reports",
-        ]
+        ],
+        key="delay_tia_active_view",
     )
 
-    with tia_tabs[0]:
+    if tia_view == "Uploads":
         st.markdown("<div class='section-header'><h3>Delay Analyzer & TIA Fragnet Recommender</h3></div>", unsafe_allow_html=True)
         st.markdown(
             "<div class='panel-note'><b>Employer-only calculation rule</b><br>"
@@ -9081,7 +9128,7 @@ with tabs[11]:
                 "current_only_count": 0,
             }
 
-    with tia_tabs[1]:
+    if tia_view == "Tables & Conclusion":
         st.markdown("#### Source Tables & Calculated Conclusion")
         st.caption("This slide reads the 11 Delay Analysis - Time Impact Analysis files from `steel_delay_tia_templates`, inspects their columns, and shows the calculated conclusion from the active TIA logic.")
         if not delay_tia_ready:
@@ -9133,7 +9180,7 @@ with tabs[11]:
             else:
                 st.info(f"No rows are available for {selected_table_name}.")
 
-    with tia_tabs[2]:
+    if tia_view == "MEP Activities":
         st.markdown("#### MEP Activities")
         st.caption(
             "This slide reads the selected project's `03-schedule/MEP Activities.csv`. "
@@ -9305,7 +9352,7 @@ with tabs[11]:
         elif not OPENPYXL_AVAILABLE:
             st.warning("Excel export is unavailable because openpyxl is not installed.")
 
-    with tia_tabs[3]:
+    if tia_view == "AI - TIA":
         st.markdown("#### Executive Dashboard / TIA Methodology / Dependency Schema / File Priority / BL Critical Path Comparison")
         st.caption("This combined Delay TIA slide consolidates the former first five analysis slides into one review surface.")
         if not delay_tia_ready:
@@ -9338,7 +9385,7 @@ with tabs[11]:
             else:
                 st.info("No Delay TIA executive summary is available from the folder source files.")
 
-    with tia_tabs[3]:
+    if tia_view == "AI - TIA":
         st.markdown("#### Time Impact Analysis Methodology")
         st.markdown(
             """
@@ -9426,7 +9473,7 @@ with tabs[11]:
             """
         )
 
-    with tia_tabs[3]:
+    if tia_view == "AI - TIA":
         st.markdown("#### Steel Delay Analysis Dependency Schema")
         st.markdown(
             """
@@ -9455,7 +9502,7 @@ with tabs[11]:
         dependency_df = upload_status_df[["File", "Required", "Fields used by TIA", "How the program uses it"]].copy()
         st.dataframe(dependency_df, width="stretch", hide_index=True)
 
-    with tia_tabs[3]:
+    if tia_view == "AI - TIA":
         st.markdown("#### Active File Priority Order")
         priority_df = pd.DataFrame(
             [
@@ -9492,7 +9539,7 @@ with tabs[11]:
             """
         )
 
-    with tia_tabs[3]:
+    if tia_view == "AI - TIA":
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("BL Critical Path Rows", active_bl_critical_path_summary["bl_count"])
         c2.metric("Current Critical Path Rows", active_bl_critical_path_summary["current_count"])
@@ -9559,7 +9606,7 @@ with tabs[11]:
         else:
             st.info("No comparison rows are available between the uploaded BL critical path file and the Activities critical path analysis.")
 
-    with tia_tabs[4]:
+    if tia_view == "question":
         st.markdown("#### question")
         st.caption("Ask any Delay Analysis - Time Impact Analysis question. The slide inspects loaded columns first, then answers from the 11 steel delay template files.")
         question_frames = load_delay_tia_question_frames()
@@ -9600,7 +9647,7 @@ with tabs[11]:
                     st.markdown(f"##### {table_title}")
                     st.dataframe(table_df, width="stretch", hide_index=True, height=dataframe_height(table_df, max_height=520))
 
-    with tia_tabs[5]:
+    if tia_view == "Download Reports":
         if not delay_tia_ready:
             st.warning("Delay TIA report outputs are blocked until all required Delay TIA files exist in `steel_delay_tia_templates`.")
         else:
@@ -9875,7 +9922,7 @@ with tabs[11]:
             else:
                 st.info("No Primavera fragnet rows were generated from the current uploaded Delay TIA analysis.")
 
-with tabs[13]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[13]:
     st.markdown("<div class='section-header'><h3>Output Studio</h3></div>", unsafe_allow_html=True)
     with st.expander("Sync repository", expanded=True):
         sync_notice = st.session_state.pop("repository_sync_notice", "")
@@ -10329,7 +10376,7 @@ with tabs[13]:
             with st.expander("README / Power BI governance notes", expanded=False):
                 st.markdown(report_readme)
 
-with tabs[12]:
+if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
     render_claims_header(
         "Contract & Claims Intelligence Center",
         "AI-powered contract library, entitlement engine, evidence mapper, and client rebuttal system for contractor claims.",
@@ -10338,11 +10385,15 @@ with tabs[12]:
     if active_project_context.is_all_projects:
         st.info("Select one project to use Contract & Claims Intelligence Center. Portfolio mode does not load project claims, evidence, or contract databases.")
         st.stop()
-    contract_center_tabs = st.tabs(["Contract Clauses", "Claims Intelligence Center"])
-    with contract_center_tabs[0]:
+    contract_center_view = st.selectbox(
+        "Contract center view",
+        ["Contract Clauses", "Claims Intelligence Center"],
+        key="contract_center_active_view",
+    )
+    if contract_center_view == "Contract Clauses":
         render_contract_clause_matching_engine()
 
-    with contract_center_tabs[1]:
+    if contract_center_view == "Claims Intelligence Center":
         contract_repo_readme = CONTRACT_REPOSITORY_DIR / "README.md"
         if not contract_repo_readme.exists():
             contract_repo_readme.write_text(
@@ -10431,7 +10482,8 @@ with tabs[12]:
         with kpi_row_2[3]:
             render_claims_kpi_card("Draft Claims Generated", draft_claims_generated, "blue", f"Last analysis {delay_tia_docx_text(contract_center_kpis['last_analysis_date'], 'Not analyzed yet')}")
 
-        contract_tabs = st.tabs(
+        contract_view = st.selectbox(
+            "Claims Intelligence view",
             [
                 "Upload & Extract",
                 "Contract Library",
@@ -10440,10 +10492,11 @@ with tabs[12]:
                 "Client Rebuttal Engine",
                 "Claim Builder",
                 "Export Center",
-            ]
+            ],
+            key="claims_intelligence_active_view",
         )
 
-        with contract_tabs[0]:
+        if contract_view == "Upload & Extract":
             st.markdown("#### Upload & Extract")
             repo_col1, repo_col2 = st.columns([1.2, 1])
             with repo_col1:
@@ -10506,7 +10559,7 @@ with tabs[12]:
                 st.markdown("#### Analysis Status Log")
                 st.dataframe(contract_analysis_status_df, width="stretch", hide_index=True, height=dataframe_height(contract_analysis_status_df, max_height=320))
 
-        with contract_tabs[1]:
+        if contract_view == "Contract Library":
             st.markdown("#### Searchable Contract Claims Library")
             if contract_clauses_df.empty:
                 st.info("No contract clauses are stored yet. Add contract files to the repository folder, then rebuild the contract library.")
@@ -10555,7 +10608,7 @@ with tabs[12]:
                     ]
                     st.dataframe(filtered_library_df[[col for col in detail_cols if col in filtered_library_df.columns]], width="stretch", hide_index=True, height=dataframe_height(filtered_library_df, max_height=1000))
 
-        with contract_tabs[2]:
+        if contract_view == "Ask Contract AI":
             st.markdown("#### Ask Contract AI")
             ask_query = st.text_area(
                 "Ask a contract / claims question",
@@ -10640,7 +10693,7 @@ with tabs[12]:
                     st.markdown("#### Relevant Clauses")
                     st.dataframe(last_answer["relevant_clauses_df"], width="stretch", hide_index=True, height=dataframe_height(last_answer["relevant_clauses_df"], max_height=600))
 
-        with contract_tabs[3]:
+        if contract_view == "Evidence Mapping":
             st.markdown("#### Evidence Mapping Engine")
             evidence_source_stream = st.selectbox(
                 "Evidence source stream",
@@ -10691,7 +10744,7 @@ with tabs[12]:
             else:
                 st.dataframe(contract_evidence_mappings_df, width="stretch", hide_index=True, height=dataframe_height(contract_evidence_mappings_df, max_height=640))
 
-        with contract_tabs[4]:
+        if contract_view == "Client Rebuttal Engine":
             st.markdown("#### Client Rebuttal Engine")
             rebuttal_upload = st.file_uploader(
                 "Optional client rejection file",
@@ -10746,7 +10799,7 @@ with tabs[12]:
                     st.markdown("#### Supporting Clauses")
                     st.dataframe(rebuttal_result["relevant_clauses_df"], width="stretch", hide_index=True, height=dataframe_height(rebuttal_result["relevant_clauses_df"], max_height=520))
 
-        with contract_tabs[5]:
+        if contract_view == "Claim Builder":
             st.markdown("#### Claim Builder")
             available_claim_types = sorted(set(ccc.CLAIM_CATEGORIES) | set(contract_clauses_df["claim_type"].dropna().astype(str).tolist())) if not contract_clauses_df.empty else ccc.CLAIM_CATEGORIES
             delay_event_options = delay_metrics["delays_df"]["delay_title"].dropna().astype(str).tolist() if "delay_title" in delay_metrics.get("delays_df", pd.DataFrame()).columns else []
@@ -10807,7 +10860,7 @@ with tabs[12]:
                 st.markdown("#### Stored Claim Drafts")
                 st.dataframe(contract_claim_drafts_df, width="stretch", hide_index=True, height=dataframe_height(contract_claim_drafts_df, max_height=420))
 
-        with contract_tabs[6]:
+        if contract_view == "Export Center":
             st.markdown("#### Export Center")
             st.markdown(
                 "<div class='claims-surface'><div class='claims-surface-title'>Export Outputs</div><div class='claims-surface-body'>Export the stored contract knowledge base, mapped evidence, and the generated claim draft into management-ready and claim-ready formats.</div></div>",
