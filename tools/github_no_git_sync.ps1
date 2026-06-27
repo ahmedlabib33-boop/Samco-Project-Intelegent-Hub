@@ -274,6 +274,10 @@ function Invoke-SyncCycle {
         for ($offset = 0; $offset -lt $Entries.Count; $offset += $batchSize) {
             $end = [math]::Min($offset + $batchSize - 1, $Entries.Count - 1)
             $batch = @($Entries[$offset..$end])
+            if ($PhaseName -eq "delete") {
+                $previewPaths = @($batch | Select-Object -First 5 | ForEach-Object { [string]$_['path'] })
+                Write-SyncLog "Delete batch preview $([int]([math]::Floor($offset / $batchSize) + 1)): count=$($batch.Count) first=$($previewPaths -join ' | ')"
+            }
             $latestRef = Invoke-GitHubApi "Get" "$apiBase/git/ref/heads/$($config.branch)"
             $latestCommitSha = $latestRef.object.sha
             $latestCommit = Invoke-GitHubApi "Get" "$apiBase/git/commits/$latestCommitSha"
