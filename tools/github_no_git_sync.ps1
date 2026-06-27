@@ -291,7 +291,7 @@ function Invoke-SyncCycle {
                 tree = $newTree.sha
                 parents = @($latestCommitSha)
             }
-            Invoke-GitHubApi "Patch" "$apiBase/git/refs/heads/$($config.branch)" @{ sha = $commit.sha; force = $false } | Out-Null
+            Invoke-GitHubApi "Patch" "$apiBase/git/refs/heads/$($config.branch)" @{ sha = $commit.sha; force = $true } | Out-Null
             $latestCommitSha = $commit.sha
             Write-SyncLog "Synchronization $PhaseName batch $batchNumber/$batchTotal complete: $($commit.sha)"
         }
