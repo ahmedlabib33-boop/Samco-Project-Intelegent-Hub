@@ -187,7 +187,8 @@ function Invoke-GitHubApi([string]$Method, [string]$Uri, [object]$Body = $null) 
     }
     $params = @{ Method = $Method; Uri = $Uri; Headers = $headers }
     if ($null -ne $Body) {
-        $params.Body = $Body | ConvertTo-Json -Depth 20 -Compress
+        $jsonBody = $Body | ConvertTo-Json -Depth 20 -Compress
+        $params.Body = [System.Text.Encoding]::UTF8.GetBytes($jsonBody)
         $params.ContentType = "application/json"
     }
     try {
