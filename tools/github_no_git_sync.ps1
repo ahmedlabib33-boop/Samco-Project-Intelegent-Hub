@@ -66,6 +66,23 @@ function Test-LegacyProjectRepositoryPath([string]$RelativePath) {
     return $RelativePath -match '^projects/[^/]+/(branding|contracts|evidence|notes)(/|$)'
 }
 
+function Ensure-EmptyDirectoryPlaceholders {
+    $directories = Get-ChildItem -LiteralPath $root -Recurse -Directory -Force -ErrorAction SilentlyContinue |
+        Where-Object { -not (Test-Excluded $_.FullName) } |
+        Sort-Object FullName
+    foreach ($directory in $directories) {
+        $children = Get-ChildItem -LiteralPath $directory.FullName -Force -ErrorAction SilentlyContinue |
+            Where-Object { -not (Test-Excluded $_.FullName) }
+        if (@($children).Count -eq 0) {
+            $placeholder = Join-Path $directory.FullName ".gitkeep"
+            if (-not (Test-Path -LiteralPath $placeholder)) {
+                New-Item -ItemType File -Path $placeholder -Force | Out-Null
+                Write-SyncLog "Created placeholder for empty folder: $(Convert-ToRelativePath $placeholder)"
+            }
+        }
+    }
+}
+
 function Get-Sha256([string]$Path) {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
@@ -192,6 +209,7 @@ function Invoke-GitHubApi([string]$Method, [string]$Uri, [object]$Body = $null) 
 }
 
 function Invoke-SyncCycle {
+    Ensure-EmptyDirectoryPlaceholders
     $current = Get-WorkspaceManifest
     $previous = Read-PreviousManifest
     $changed = @($current.Keys | Where-Object { -not $previous.ContainsKey($_) -or $previous[$_].sha256 -ne $current[$_].sha256 } | Sort-Object)
