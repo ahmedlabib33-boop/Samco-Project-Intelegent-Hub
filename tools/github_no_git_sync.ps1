@@ -294,8 +294,8 @@ function Invoke-SyncCycle {
     }
 
     $latestCommitSha = $baseCommitSha
-    $latestCommitSha = Invoke-TreeEntryBatches $uploadEntries "upload" $latestCommitSha
-    $latestCommitSha = Invoke-TreeEntryBatches $deleteEntries "delete" $latestCommitSha
+    $latestCommitSha = Invoke-TreeEntryBatches -Entries ([array]$uploadEntries) -PhaseName "upload" -StartingCommitSha $latestCommitSha
+    $latestCommitSha = Invoke-TreeEntryBatches -Entries ([array]$deleteEntries) -PhaseName "delete" -StartingCommitSha $latestCommitSha
     Write-LocalManifest $current $changed $deleted "synced:$latestCommitSha"
     Write-SyncLog "Synchronization complete: $latestCommitSha"
 }
