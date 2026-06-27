@@ -44,6 +44,33 @@ def safe_sector_name(value: Any) -> str:
     return text or DEFAULT_SECTOR_NAME
 
 
+def _read_project_csv_identity(project_dir: Path) -> dict[str, str]:
+    """Read the user-maintained project identity from projects.csv when present."""
+    for project_csv in (
+        project_dir / "01-data" / "import_templates" / "projects.csv",
+        project_dir / "data" / "import_templates" / "projects.csv",
+    ):
+        if not project_csv.exists():
+            continue
+        try:
+            project_rows = pd.read_csv(project_csv, nrows=1).fillna("")
+        except (OSError, UnicodeDecodeError, pd.errors.ParserError):
+            continue
+        if project_rows.empty:
+            continue
+        row = project_rows.iloc[0]
+        return {
+            "project_id": safe_project_id(row.get("project_id")),
+            "project_name": str(row.get("project_name", "") or "").strip(),
+            "client_name": str(row.get("client_name", "") or "").strip(),
+            "contractor": str(row.get("contractor", "") or "").strip(),
+            "currency": str(row.get("currency", "") or "").strip(),
+            "status": str(row.get("status", "") or "").strip(),
+            "sector_name": str(row.get("sector_name", "") or "").strip(),
+        }
+    return {}
+
+
 def read_project_metadata(project_dir: Path, sector_dir: Path | None = None) -> dict[str, Any]:
     manifest_path = project_dir / PROJECT_MANIFEST_FILE
     metadata_path = project_dir / PROJECT_METADATA_FILE
@@ -64,20 +91,15 @@ def read_project_metadata(project_dir: Path, sector_dir: Path | None = None) -> 
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             metadata = {}
 
-    project_id = safe_project_id(metadata.get("project_id")) or project_dir.name
-    csv_project_name = ""
-    project_csv = project_dir / "01-data" / "import_templates" / "projects.csv"
-    if not project_csv.exists():
-        project_csv = project_dir / "data" / "import_templates" / "projects.csv"
-    if project_csv.exists():
-        try:
-            project_rows = pd.read_csv(project_csv, nrows=1).fillna("")
-            if not project_rows.empty:
-                csv_project_name = str(project_rows.iloc[0].get("project_name", "")).strip()
-        except (OSError, UnicodeDecodeError, pd.errors.ParserError):
-            csv_project_name = ""
-    project_name = str(csv_project_name or metadata.get("project_display_name") or metadata.get("project_name") or project_dir.name).strip()
-    sector_name = safe_sector_name(metadata.get("sector_name") or (sector_dir.name if sector_dir else DEFAULT_SECTOR_NAME))
+    csv_identity = _read_project_csv_identity(project_dir)
+    project_id = safe_project_id(csv_identity.get("project_id") or metadata.get("project_id")) or project_dir.name
+    project_name = str(
+        csv_identity.get("project_name")
+        or metadata.get("project_display_name")
+        or metadata.get("project_name")
+        or project_dir.name
+    ).strip()
+    sector_name = safe_sector_name(csv_identity.get("sector_name") or metadata.get("sector_name") or (sector_dir.name if sector_dir else DEFAULT_SECTOR_NAME))
     sector_id = safe_project_id(metadata.get("sector_id") or sector_name) or DEFAULT_SECTOR_NAME
     relative_label = f"{sector_dir.name}/{project_dir.name}" if sector_dir else project_dir.name
     return {
@@ -246,20 +268,33 @@ def ensure_project_manifest(project_dir: Path) -> Path:
                 legacy = loaded
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             legacy = {}
-    project_id = safe_project_id(existing.get("project_id") or legacy.get("project_id") or project_dir.name)
+    csv_identity = _read_project_csv_identity(project_dir)
+    project_id = safe_project_id(csv_identity.get("project_id") or existing.get("project_id") or legacy.get("project_id") or project_dir.name)
     folder_changed = (
         str(existing.get("project_folder_name", "")) != project_dir.name
         or str(existing.get("project_folder_path", "")) != str(project_dir.resolve())
     )
+    display_name = str(
+        csv_identity.get("project_name")
+        or existing.get("project_display_name")
+        or legacy.get("project_name")
+        or project_dir.name
+    )
+    status = str(csv_identity.get("status") or existing.get("status") or legacy.get("status") or "Setup")
+    identity_changed = (
+        str(existing.get("project_id", "")) != project_id
+        or str(existing.get("project_display_name", "")) != display_name
+        or str(existing.get("status", "")) != status
+    )
     manifest = {
         **existing,
         "project_id": project_id,
-        "project_display_name": str(existing.get("project_display_name") or legacy.get("project_name") or project_dir.name),
+        "project_display_name": display_name,
         "project_folder_name": project_dir.name,
         "project_folder_path": str(project_dir.resolve()),
         "created_at": existing.get("created_at") or now,
-        "updated_at": now if folder_changed or not existing else existing.get("updated_at", now),
-        "status": existing.get("status") or legacy.get("status") or "Setup",
+        "updated_at": now if folder_changed or identity_changed or not existing else existing.get("updated_at", now),
+        "status": status,
     }
     if manifest != existing:
         manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -278,7 +313,9 @@ def aggregate_project_csvs(paths: Iterable[tuple[str, Path]]) -> pd.DataFrame:
         if "project_id" not in frame.columns:
             frame.insert(0, "project_id", project_id)
         else:
-            blank = frame["project_id"].astype(str).str.strip().eq("")
-            frame.loc[blank, "project_id"] = project_id
+            source_ids = frame["project_id"].astype(str).str.strip()
+            if "source_project_id" not in frame.columns:
+                frame.insert(1, "source_project_id", source_ids)
+            frame["project_id"] = project_id
         frames.append(frame)
     return pd.concat(frames, ignore_index=True, sort=False) if frames else pd.DataFrame()

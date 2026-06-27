@@ -334,7 +334,11 @@ def parse_numeric(value, default=0.0):
         negative = True
         text = text[1:-1]
 
-    cleaned = re.sub(r"[^0-9.\-]", "", text)
+    numeric_match = re.search(r"-?\d+(?:\.\d+)?", text.replace(",", ""))
+    if numeric_match is None:
+        return default
+
+    cleaned = numeric_match.group(0)
 
     if cleaned in {"", "-", ".", "-.", ".-", "--"}:
         return default
@@ -2036,6 +2040,11 @@ def load_letters_workbook():
             scoped = frame.copy()
             if "project_id" not in scoped.columns:
                 scoped.insert(0, "project_id", project_id)
+            else:
+                source_ids = scoped["project_id"].astype(str).str.strip()
+                if "source_project_id" not in scoped.columns:
+                    scoped.insert(1, "source_project_id", source_ids)
+                scoped["project_id"] = project_id
             combined.setdefault(sheet_name, []).append(scoped)
     return {
         sheet_name: pd.concat(frames, ignore_index=True, sort=False).fillna("")
@@ -2185,6 +2194,17 @@ def style_plotly(fig, height=390):
 
 def dataframe_height(df: pd.DataFrame, max_height: int = 900, row_height: int = 35, base: int = 35) -> int:
     return min(base + (len(df) * row_height), max_height)
+
+
+def arrow_safe_display_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a display-only dataframe that avoids Streamlit Arrow mixed-type warnings."""
+    if df.empty:
+        return df
+    display = df.copy()
+    for col in display.columns:
+        if display[col].dtype == "object":
+            display[col] = display[col].astype(str).replace({"nan": "", "None": "", "<NA>": ""})
+    return display
 
 
 
@@ -8141,7 +8161,7 @@ with tabs[2]:
         if not critical_view.empty:
             critical_view["progress_variance"] = critical_view["progress_variance"].round(1)
             critical_view["finish_slip_days"] = critical_view["finish_slip_days"].astype(int)
-            st.dataframe(critical_view, width="stretch", hide_index=True, height=dataframe_height(critical_view))
+            st.dataframe(arrow_safe_display_df(critical_view), width="stretch", hide_index=True, height=dataframe_height(critical_view))
         else:
             st.info("No critical path activities flagged in activities.csv.")
 
@@ -8152,7 +8172,7 @@ with tabs[2]:
         if not deviated_view.empty:
             deviated_view["progress_variance"] = deviated_view["progress_variance"].round(1)
             deviated_view["finish_slip_days"] = deviated_view["finish_slip_days"].astype(int)
-            st.dataframe(deviated_view, width="stretch", hide_index=True, height=dataframe_height(deviated_view))
+            st.dataframe(arrow_safe_display_df(deviated_view), width="stretch", hide_index=True, height=dataframe_height(deviated_view))
         else:
             st.info("No deviated activities detected from planned vs actual progress or forecast finish slip.")
 
@@ -8163,7 +8183,7 @@ with tabs[2]:
         if not rft_view.empty:
             rft_view["progress_variance"] = rft_view["progress_variance"].round(1)
             rft_view["finish_slip_days"] = rft_view["finish_slip_days"].astype(int)
-            st.dataframe(rft_view, width="stretch", hide_index=True, height=dataframe_height(rft_view))
+            st.dataframe(arrow_safe_display_df(rft_view), width="stretch", hide_index=True, height=dataframe_height(rft_view))
         else:
             st.info("No RFT activities found in activities.csv.")
     else:
@@ -8518,7 +8538,7 @@ with tabs[6]:
         st.dataframe(contracts_df, width="stretch", hide_index=True, height=dataframe_height(contracts_df))
 
         st.markdown("#### Payments Table")
-        st.dataframe(payments_df, width="stretch", hide_index=True, height=dataframe_height(payments_df))
+        st.dataframe(arrow_safe_display_df(payments_df), width="stretch", hide_index=True, height=dataframe_height(payments_df))
     else:
         st.info("No contract data available.")
 
