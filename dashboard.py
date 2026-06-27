@@ -10403,7 +10403,22 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
             )
 
         rebuild_contract_library = st.button("Rebuild Contract Library", key="ccc_rebuild_contract_library")
+        with st.expander("What does Rebuild Contract Library do?", expanded=False):
+            st.markdown(
+                "- Re-scans only this selected project's contract source folder.\n"
+                "- Extracts clauses from supported contract files: PDF, DOCX, TXT, CSV, XLS, XLSX.\n"
+                "- Rebuilds this project's own SQLite knowledge base used for clause search, claim classification, evidence mapping, rebuttal drafting, and claim drafting.\n"
+                "- It does not read contracts from another project and does not update another project's database.\n"
+                "- Use it after adding, replacing, or correcting contract files."
+            )
+            st.code(f"Source folder: {CONTRACT_REPOSITORY_DIR}\nDatabase: {CONTRACT_CLAIMS_DB_PATH}", language="text")
         contract_repo_status = ccc.persist_contract_analysis(CONTRACT_CLAIMS_DB_PATH, CONTRACT_REPOSITORY_DIR, rebuild=rebuild_contract_library)
+        stale_documents_removed = int(contract_repo_status.get("stale_documents_removed") or 0)
+        if stale_documents_removed:
+            st.warning(
+                f"Cleaned {stale_documents_removed} stale contract source record(s) that were outside the active project folder. "
+                "This project now uses only its own contract repository."
+            )
         contract_clauses_df = ccc.load_contract_library(CONTRACT_CLAIMS_DB_PATH)
         contract_evidence_df = ccc.load_evidence_documents(CONTRACT_CLAIMS_DB_PATH)
         contract_evidence_mappings_df = ccc.load_evidence_mappings(CONTRACT_CLAIMS_DB_PATH)
@@ -10610,24 +10625,26 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
 
         if contract_view == "Ask Contract AI":
             st.markdown("#### Ask Contract AI")
+            ccc_query_state_key = f"ccc_last_query::{active_project_context.project_id}"
+            ccc_answer_state_key = f"ccc_last_answer::{active_project_context.project_id}"
             ask_query = st.text_area(
                 "Ask a contract / claims question",
                 value=st.session_state.get(
-                    "ccc_last_query",
+                    ccc_query_state_key,
                     "Can we claim EOT for late IFC drawings?",
                 ),
                 key="ccc_query_input",
                 height=120,
             )
             if st.button("Analyze Contract Question", key="ccc_analyze_question"):
-                st.session_state["ccc_last_query"] = ask_query
-                st.session_state["ccc_last_answer"] = ccc.answer_contract_question(CONTRACT_CLAIMS_DB_PATH, ask_query)
+                st.session_state[ccc_query_state_key] = ask_query
+                st.session_state[ccc_answer_state_key] = ccc.answer_contract_question(CONTRACT_CLAIMS_DB_PATH, ask_query)
 
             with st.expander("Built-in Contract AI Test Cases", expanded=False):
                 test_cases_df = ccc.get_contract_ai_test_cases()
                 st.dataframe(test_cases_df, width="stretch", hide_index=True, height=dataframe_height(test_cases_df, max_height=320))
 
-            last_answer = st.session_state.get("ccc_last_answer")
+            last_answer = st.session_state.get(ccc_answer_state_key)
             if last_answer:
                 answer_badge_tone = "green" if last_answer["entitlement_decision"] == "YES" else "amber" if last_answer["entitlement_decision"] == "POSSIBLE" else "red" if last_answer["entitlement_decision"] == "NO" else "slate"
                 risk_tone = "red" if str(last_answer["risk_assessment"]).lower() in {"critical", "high"} else "amber" if str(last_answer["risk_assessment"]).lower() == "medium" else "green"
@@ -10746,6 +10763,8 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
 
         if contract_view == "Client Rebuttal Engine":
             st.markdown("#### Client Rebuttal Engine")
+            ccc_rebuttal_text_state_key = f"ccc_last_rebuttal_text::{active_project_context.project_id}"
+            ccc_rebuttal_state_key = f"ccc_last_rebuttal_result::{active_project_context.project_id}"
             rebuttal_upload = st.file_uploader(
                 "Optional client rejection file",
                 type=["pdf", "docx", "txt", "csv", "html"],
@@ -10753,7 +10772,7 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
             )
             rebuttal_text = st.text_area(
                 "Paste the client / engineer rejection text",
-                value=st.session_state.get("ccc_last_rebuttal_text", ""),
+                value=st.session_state.get(ccc_rebuttal_text_state_key, ""),
                 key="ccc_rebuttal_text",
                 height=150,
             )
@@ -10763,9 +10782,9 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[12]:
                     rebuttal_text = extracted_rebuttal_text
                     st.text_area("Extracted rejection text", value=extracted_rebuttal_text, height=180, key="ccc_rebuttal_extracted")
             if st.button("Generate Contractor Rebuttal", key="ccc_generate_rebuttal") and rebuttal_text.strip():
-                st.session_state["ccc_last_rebuttal_text"] = rebuttal_text
-                st.session_state["ccc_last_rebuttal_result"] = ccc.build_client_rebuttal(CONTRACT_CLAIMS_DB_PATH, rebuttal_text)
-            rebuttal_result = st.session_state.get("ccc_last_rebuttal_result")
+                st.session_state[ccc_rebuttal_text_state_key] = rebuttal_text
+                st.session_state[ccc_rebuttal_state_key] = ccc.build_client_rebuttal(CONTRACT_CLAIMS_DB_PATH, rebuttal_text)
+            rebuttal_result = st.session_state.get(ccc_rebuttal_state_key)
             if rebuttal_result:
                 rebuttal_risk_tone = "red" if str(rebuttal_result["contractual_risk"]).lower() in {"critical", "high"} else "amber" if str(rebuttal_result["contractual_risk"]).lower() == "medium" else "green"
                 rebuttal_evidence_tone = "green" if str(rebuttal_result["evidence_strength_label"]).lower() in {"very strong", "strong"} else "amber" if str(rebuttal_result["evidence_strength_label"]).lower() == "medium" else "red"

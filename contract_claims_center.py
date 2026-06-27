@@ -613,6 +613,68 @@ def _seed_reference_data(cur: sqlite3.Cursor) -> None:
             )
 
 
+def _is_path_inside(child: Path, parent: Path) -> bool:
+    try:
+        child.resolve().relative_to(parent.resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def prune_contract_documents_outside_scope(db_path: Path, contracts_dir: Path) -> int:
+    """Remove stale analysis rows that point outside the active project's contract source folder."""
+    init_contract_claims_db(db_path)
+    conn = connect_db(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT id, file_path FROM contract_documents")
+    stale_document_ids: list[int] = []
+    for row in cur.fetchall():
+        stored_path = Path(str(row["file_path"] or ""))
+        if not stored_path.exists() or not _is_path_inside(stored_path, contracts_dir):
+            stale_document_ids.append(int(row["id"]))
+    if stale_document_ids:
+        placeholders = ",".join("?" for _ in stale_document_ids)
+        cur.execute(f"DELETE FROM contract_clauses WHERE document_id IN ({placeholders})", stale_document_ids)
+        cur.execute(f"DELETE FROM contract_knowledge_base WHERE document_id IN ({placeholders})", stale_document_ids)
+        cur.execute(f"DELETE FROM contract_versions WHERE document_id IN ({placeholders})", stale_document_ids)
+        cur.execute(f"DELETE FROM contract_analysis_status WHERE document_id IN ({placeholders})", stale_document_ids)
+        cur.execute("DELETE FROM contractor_rebuttals WHERE clause_id NOT IN (SELECT id FROM contract_clauses)")
+        cur.execute("DELETE FROM contract_risk_register WHERE clause_id NOT IN (SELECT id FROM contract_clauses)")
+        cur.execute("DELETE FROM evidence_mappings WHERE clause_id NOT IN (SELECT id FROM contract_clauses)")
+        cur.execute(f"DELETE FROM contract_documents WHERE id IN ({placeholders})", stale_document_ids)
+        stamp = now_iso()
+        cur.execute(
+            """
+            INSERT INTO contract_metadata (meta_key, meta_value, created_at, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(meta_key) DO UPDATE SET meta_value=excluded.meta_value, updated_at=excluded.updated_at
+            """,
+            ("scope_cleanup", f"Removed {len(stale_document_ids)} stale document(s) outside {contracts_dir}", stamp, stamp),
+        )
+    cur.execute(
+        """
+        SELECT file_hash, GROUP_CONCAT(id) AS ids, COUNT(*) AS duplicate_count
+        FROM contract_documents
+        GROUP BY file_hash
+        HAVING duplicate_count > 1
+        """
+    )
+    duplicate_document_ids: list[int] = []
+    for row in cur.fetchall():
+        ids = [int(value) for value in str(row["ids"] or "").split(",") if str(value).strip().isdigit()]
+        duplicate_document_ids.extend(sorted(ids)[:-1])
+    if duplicate_document_ids:
+        placeholders = ",".join("?" for _ in duplicate_document_ids)
+        cur.execute(f"DELETE FROM contract_clauses WHERE document_id IN ({placeholders})", duplicate_document_ids)
+        cur.execute(f"DELETE FROM contract_knowledge_base WHERE document_id IN ({placeholders})", duplicate_document_ids)
+        cur.execute(f"DELETE FROM contract_versions WHERE document_id IN ({placeholders})", duplicate_document_ids)
+        cur.execute(f"DELETE FROM contract_analysis_status WHERE document_id IN ({placeholders})", duplicate_document_ids)
+        cur.execute(f"DELETE FROM contract_documents WHERE id IN ({placeholders})", duplicate_document_ids)
+    conn.commit()
+    conn.close()
+    return len(stale_document_ids) + len(duplicate_document_ids)
+
+
 def contract_file_list(contracts_dir: Path) -> list[Path]:
     if not contracts_dir.exists():
         return []
@@ -1107,16 +1169,17 @@ def build_clause_record(document_id: int, clause_number: Any, clause_title: Any,
 
 def upsert_contract_document(cur: sqlite3.Cursor, path: Path, file_hash: str, content_text: str, contract_version: str) -> int:
     stamp = now_iso()
-    cur.execute("SELECT id FROM contract_documents WHERE file_path = ?", (str(path),))
+    clean_path = path.resolve()
+    cur.execute("SELECT id FROM contract_documents WHERE file_path = ? OR file_hash = ? ORDER BY id LIMIT 1", (str(clean_path), file_hash))
     existing = cur.fetchone()
     if existing:
         cur.execute(
             """
             UPDATE contract_documents
-            SET file_name=?, file_hash=?, file_type=?, upload_date=?, analysis_date=?, contract_version=?, processing_status=?, knowledge_base_status=?, content_text=?, updated_at=?
+            SET file_name=?, file_path=?, file_hash=?, file_type=?, upload_date=?, analysis_date=?, contract_version=?, processing_status=?, knowledge_base_status=?, content_text=?, updated_at=?
             WHERE id=?
             """,
-            (path.name, file_hash, path.suffix.lower(), stamp, stamp, contract_version, "Processed", "Ready", content_text, stamp, existing["id"]),
+            (clean_path.name, str(clean_path), file_hash, clean_path.suffix.lower(), stamp, stamp, contract_version, "Processed", "Ready", content_text, stamp, existing["id"]),
         )
         return int(existing["id"])
     cur.execute(
@@ -1124,13 +1187,15 @@ def upsert_contract_document(cur: sqlite3.Cursor, path: Path, file_hash: str, co
         INSERT INTO contract_documents (file_name, file_path, file_hash, file_type, upload_date, analysis_date, contract_version, processing_status, knowledge_base_status, content_text, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (path.name, str(path), file_hash, path.suffix.lower(), stamp, stamp, contract_version, "Processed", "Ready", content_text, stamp, stamp),
+        (clean_path.name, str(clean_path), file_hash, clean_path.suffix.lower(), stamp, stamp, contract_version, "Processed", "Ready", content_text, stamp, stamp),
     )
     return int(cur.lastrowid)
 
 
 def persist_contract_analysis(db_path: Path, contracts_dir: Path, rebuild: bool = False) -> dict[str, Any]:
     init_contract_claims_db(db_path)
+    contracts_dir = contracts_dir.resolve()
+    stale_documents_removed = prune_contract_documents_outside_scope(db_path, contracts_dir)
     files = contract_file_list(contracts_dir)
     analysis_files = [path for path in files if is_curated_contract_library_file(path)] or files
     supporting_files = [path for path in files if path not in analysis_files]
@@ -1159,6 +1224,7 @@ def persist_contract_analysis(db_path: Path, contracts_dir: Path, rebuild: bool 
         "supporting_files": [path.name for path in supporting_files],
         "source_warnings": source_warnings,
         "extraction_issue": "",
+        "stale_documents_removed": stale_documents_removed,
     }
     if not files:
         cur.execute(
@@ -1180,9 +1246,10 @@ def persist_contract_analysis(db_path: Path, contracts_dir: Path, rebuild: bool 
     if existing_clause_count == 0:
         needs_rebuild = True
     for path in analysis_files:
-        file_hash = compute_file_hash_from_bytes(path.read_bytes())
-        file_fingerprints.append((path, file_hash))
-        cur.execute("SELECT file_hash FROM contract_documents WHERE file_path = ?", (str(path),))
+        clean_path = path.resolve()
+        file_hash = compute_file_hash_from_bytes(clean_path.read_bytes())
+        file_fingerprints.append((clean_path, file_hash))
+        cur.execute("SELECT file_hash FROM contract_documents WHERE file_path = ?", (str(clean_path),))
         existing = cur.fetchone()
         if existing is None or existing["file_hash"] != file_hash:
             needs_rebuild = True
