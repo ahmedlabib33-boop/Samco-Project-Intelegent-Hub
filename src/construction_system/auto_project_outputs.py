@@ -93,6 +93,17 @@ def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def _remove_unexpected_output_items(output_dir: Path) -> None:
+    allowed = set(AUTO_HTML_REPORTS) | {".output_manifest.json"}
+    for child in output_dir.iterdir():
+        if child.name in allowed:
+            continue
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink(missing_ok=True)
+
+
 def _remove_old_auto_reports(output_dir: Path) -> None:
     for file_name in AUTO_HTML_REPORTS:
         (output_dir / file_name).unlink(missing_ok=True)
@@ -118,6 +129,7 @@ def refresh_project_outputs(
         output_dir = project_output_dir(root_outputs_dir, record)
         output_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = output_dir / ".output_manifest.json"
+        _remove_unexpected_output_items(output_dir)
         fingerprint = project_data_fingerprint(project_dir)
         manifest = _read_manifest(manifest_path)
         expected_files_exist = all((output_dir / file_name).exists() for file_name in AUTO_HTML_REPORTS)
@@ -127,7 +139,6 @@ def refresh_project_outputs(
             results.append(AutoOutputResult(project_id, project_name, output_dir, False, "unchanged", AUTO_HTML_REPORTS))
             continue
 
-        _remove_old_auto_reports(output_dir)
         html_reports = report_builder(record)
         for file_name in AUTO_HTML_REPORTS:
             html = html_reports.get(file_name, "")
