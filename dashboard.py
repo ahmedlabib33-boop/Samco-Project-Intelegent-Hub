@@ -245,7 +245,7 @@ def image_as_base64(path: Path) -> str:
 
 def require_openpyxl():
     if not OPENPYXL_AVAILABLE:
-        raise RuntimeError("openpyxl is required for the Detailed Progress report workbook export but is not installed.")
+        raise RuntimeError("openpyxl is required for workbook export but is not installed.")
 
 
 def egp(value) -> str:
