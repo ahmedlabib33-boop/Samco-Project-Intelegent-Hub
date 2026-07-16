@@ -121,6 +121,10 @@ from src.construction_system.project_catalog import (
     project_data_path,
     projects_frame,
 )
+from src.construction_system.auto_project_outputs import (
+    AUTO_HTML_REPORTS,
+    refresh_project_outputs,
+)
 from src.construction_system.project_context import build_project_context
 from src.construction_system.steel_delay_tia import (
     CANONICAL_STEEL_FIELDS,
@@ -226,7 +230,7 @@ def start_repository_sync_watch() -> None:
 
 
 def repository_sync_log_tail(max_lines: int = 8) -> str:
-    log_path = APP_DIR / "11-outputs" / "logs" / "github_sync.log"
+    log_path = APP_DIR / "12-logs" / "github_sync.log"
     if not log_path.exists():
         return "No synchronization run has been recorded."
     return "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-max_lines:])
