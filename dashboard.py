@@ -1535,6 +1535,259 @@ def clear_evm_comment_with_widget(section_key: str, widget_key: str) -> None:
     st.session_state[widget_key] = ""
 
 
+def build_master_dashboard_html(
+    overview_metrics: dict,
+    wbs_metrics: dict,
+    activity_metrics: dict,
+    milestone_metrics: dict,
+    s_curve_metrics: dict,
+    evm_metrics: dict,
+    contract_metrics: dict,
+    letters_data: dict | None,
+    risk_metrics: dict,
+    delay_metrics: dict,
+    project_record: pd.Series | dict | None = None,
+) -> str:
+    project_title = str(overview_metrics.get("project_name") or "Project")
+    generated_at = pd.Timestamp.today().strftime("%d %b %Y %H:%M")
+    project_id_label = selected_project_id() or "portfolio"
+    phase_df = _phase_progress_rows(activity_metrics, overview_metrics)
+
+    def clean(value: Any) -> str:
+        text = "" if value is None else str(value)
+        return html.escape(text.replace("nan", "").replace("None", "").strip() or "N/A")
+
+    def number(value: Any, decimals: int = 1) -> str:
+        try:
+            numeric = float(value)
+            if pd.isna(numeric):
+                return "N/A"
+            return f"{numeric:,.{decimals}f}"
+        except Exception:
+            return "N/A"
+
+    def mini_card(title: str, value: str, note: str = "", tone: str = "gold") -> str:
+        return (
+            f"<div class='md-kpi tone-{tone}'><div class='md-kpi-title'>{clean(title)}</div>"
+            f"<div class='md-kpi-value'>{clean(value)}</div><div class='md-kpi-note'>{clean(note)}</div></div>"
+        )
+
+    def table_html(df: pd.DataFrame, columns: list[str] | None = None, max_rows: int = 8) -> str:
+        if df is None or df.empty:
+            return "<div class='md-empty'>No project-scoped records available.</div>"
+        view = df.copy()
+        if columns:
+            view = view[[col for col in columns if col in view.columns]]
+        view = view.head(max_rows).fillna("").astype(str)
+        return view.to_html(index=False, escape=True, border=0, classes="md-table")
+
+    def dark_fig(fig: go.Figure, height: int = 330) -> str:
+        fig.update_layout(
+            height=height,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#f8fafc", family="Segoe UI, Arial, sans-serif"),
+            margin=dict(l=32, r=18, t=48, b=36),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10)),
+            xaxis=dict(gridcolor="rgba(148,163,184,.12)", zerolinecolor="rgba(148,163,184,.16)"),
+            yaxis=dict(gridcolor="rgba(148,163,184,.12)", zerolinecolor="rgba(148,163,184,.16)"),
+        )
+        return fig.to_html(include_plotlyjs=False, full_html=False, config={"displayModeBar": False, "responsive": True})
+
+    def safe_bar(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None) -> str:
+        if df.empty or x not in df.columns or y not in df.columns:
+            return "<div class='md-empty'>Chart data unavailable.</div>"
+        fig = px.bar(df, x=x, y=y, color=color, title=title, color_discrete_sequence=["#f59e0b", "#10b981", "#3b82f6", "#f43f5e"])
+        return dark_fig(fig)
+
+    def section(section_id: str, title: str, subtitle: str, body: str) -> str:
+        return (
+            f"<section id='{section_id}' class='md-section'>"
+            f"<div class='md-section-head'><span>{clean(title)}</span><small>{clean(subtitle)}</small></div>"
+            f"{body}</section>"
+        )
+
+    activities_df = activity_metrics.get("activities_df", pd.DataFrame()).copy()
+    critical_df = activity_metrics.get("critical_df", pd.DataFrame()).copy()
+    wbs_df = wbs_metrics.get("wbs_df", pd.DataFrame()).copy()
+    milestones_df = milestone_metrics.get("milestones_df", pd.DataFrame()).copy()
+    curve_df = s_curve_metrics.get("curve_df", pd.DataFrame()).copy()
+    contracts_df = contract_metrics.get("contracts_df", pd.DataFrame()).copy()
+    payments_df = contract_metrics.get("payments_df", pd.DataFrame()).copy()
+    risks_df = risk_metrics.get("risks_df", pd.DataFrame()).copy()
+    delays_df = delay_metrics.get("delays_df", pd.DataFrame()).copy()
+    display_delays_df = delay_metrics.get("display_delays_df", pd.DataFrame()).copy()
+    letters_data = letters_data or {}
+    threads_df = letters_data.get("Issue Threads", pd.DataFrame()) if isinstance(letters_data, dict) else pd.DataFrame()
+
+    overview_body = (
+        "<div class='md-kpi-grid'>"
+        + mini_card("Contract Value", egp(overview_metrics.get("contract_value")), "Project budget", "gold")
+        + mini_card("Overall Progress", pct(overview_metrics.get("overall_progress")), f"Planned {pct(overview_metrics.get('planned_progress'))}", "emerald")
+        + mini_card("Activities", str(int(overview_metrics.get("total_activities", 0) or 0)), f"Critical {int(overview_metrics.get('critical_activities', 0) or 0)}", "cyan")
+        + mini_card("Duration", f"{int(overview_metrics.get('duration_days', 0) or 0):,} days", f"Remaining {pct(overview_metrics.get('remaining_duration_pct'))}", "sapphire")
+        + "</div>"
+        + "<div class='md-grid two'>"
+        + f"<div class='md-card'><h3>Phase Progress</h3>{table_html(phase_df, max_rows=5)}</div>"
+        + f"<div class='md-card'><h3>Project Vitals</h3>{table_html(pd.DataFrame([{'Project': project_title, 'Start': format_project_date(overview_metrics.get('project_start')), 'Finish': format_project_date(overview_metrics.get('project_finish')), 'Project ID': project_id_label}]), max_rows=1)}</div>"
+        + "</div>"
+    )
+
+    if not wbs_df.empty:
+        wbs_chart_df = wbs_df.copy()
+        label_col = wbs_metrics.get("code_col") or wbs_chart_df.columns[0]
+        progress_col = "performance_%_complete_num" if "performance_%_complete_num" in wbs_chart_df.columns else ("schedule_%_complete_num" if "schedule_%_complete_num" in wbs_chart_df.columns else None)
+        wbs_chart_html = safe_bar(wbs_chart_df.head(12), label_col, progress_col, "WBS Progress", None) if progress_col else "<div class='md-empty'>WBS progress columns unavailable.</div>"
+    else:
+        wbs_chart_html = "<div class='md-empty'>No WBS data available.</div>"
+    wbs_body = f"<div class='md-grid two'><div class='md-card'>{wbs_chart_html}</div><div class='md-card'><h3>WBS Register</h3>{table_html(wbs_df, max_rows=10)}</div></div>"
+
+    if not activities_df.empty:
+        activity_status_col = "is_critical" if "is_critical" in activities_df.columns else None
+        progress_fig = px.scatter(
+            activities_df.head(300),
+            x="planned_progress_num" if "planned_progress_num" in activities_df.columns else activities_df.columns[0],
+            y="actual_progress_num" if "actual_progress_num" in activities_df.columns else activities_df.columns[0],
+            color=activity_status_col,
+            hover_name="activity_name" if "activity_name" in activities_df.columns else None,
+            title="Planned vs Actual Activity Progress",
+            color_discrete_sequence=["#10b981", "#f43f5e", "#3b82f6"],
+        )
+        activities_chart = dark_fig(progress_fig)
+    else:
+        activities_chart = "<div class='md-empty'>No activity data available.</div>"
+    activities_body = (
+        "<div class='md-kpi-grid'>"
+        + mini_card("Critical Activities", str(int(activity_metrics.get("critical_count", 0) or 0)), "Current critical path", "rose")
+        + mini_card("Deviated Activities", str(int(activity_metrics.get("deviated_count", 0) or 0)), "Progress or finish variance", "gold")
+        + mini_card("RFT Activities", str(int(activity_metrics.get("rft_count", 0) or 0)), "Steel/RFT related", "cyan")
+        + "</div>"
+        + f"<div class='md-grid two'><div class='md-card'>{activities_chart}</div><div class='md-card'><h3>Critical Activities</h3>{table_html(critical_df, max_rows=10)}</div></div>"
+    )
+
+    milestone_body = f"<div class='md-grid two'><div class='md-card'><h3>Main Milestones</h3>{table_html(milestones_df, max_rows=12)}</div><div class='md-card'><h3>Change Orders</h3>{table_html(milestone_metrics.get('change_orders_df', pd.DataFrame()), max_rows=10)}</div></div>"
+
+    if not curve_df.empty and {"Month", "Planned", "Actual"}.issubset(curve_df.columns):
+        scurve_long = curve_df[["Month", "Planned", "Actual", "Invoiced"]].melt(id_vars="Month", var_name="Curve", value_name="Value")
+        scurve_fig = px.line(scurve_long, x="Month", y="Value", color="Curve", markers=True, title="S-Curve and Invoicing Trend")
+        scurve_chart = dark_fig(scurve_fig, 360)
+    else:
+        scurve_chart = "<div class='md-empty'>No S-Curve data available.</div>"
+    scurve_body = f"<div class='md-grid two'><div class='md-card wide'>{scurve_chart}</div><div class='md-card'><h3>S-Curve Data</h3>{table_html(curve_df, max_rows=8)}</div></div>"
+
+    evm_table = pd.DataFrame(
+        [
+            {"Metric": "BAC", "Value": egp(evm_metrics.get("bac"))},
+            {"Metric": "PV", "Value": egp(evm_metrics.get("pv"))},
+            {"Metric": "EV", "Value": egp(evm_metrics.get("ev"))},
+            {"Metric": "AC", "Value": egp(evm_metrics.get("ac"))},
+            {"Metric": "SV", "Value": egp(evm_metrics.get("sv"))},
+            {"Metric": "CV", "Value": egp(evm_metrics.get("cv"))},
+            {"Metric": "EAC", "Value": egp(evm_metrics.get("eac"))},
+            {"Metric": "TCPI", "Value": f"{evm_metrics.get('tcpi'):.3f}" if evm_metrics.get("tcpi") is not None else "N/A"},
+        ]
+    )
+    evm_numeric = pd.DataFrame(
+        [
+            {"Metric": "BAC", "Value": float(evm_metrics.get("bac", 0) or 0)},
+            {"Metric": "PV", "Value": float(evm_metrics.get("pv", 0) or 0)},
+            {"Metric": "EV", "Value": float(evm_metrics.get("ev", 0) or 0)},
+            {"Metric": "AC", "Value": float(evm_metrics.get("ac", 0) or 0)},
+        ]
+    )
+    evm_body = f"<div class='md-grid two'><div class='md-card'>{safe_bar(evm_numeric, 'Metric', 'Value', 'EVM Value Comparison')}</div><div class='md-card'><h3>EVM Readout</h3>{table_html(evm_table)}</div></div>"
+
+    contract_body = (
+        "<div class='md-kpi-grid'>"
+        + mini_card("Contracts", str(int(contract_metrics.get("total_contracts", 0) or 0)), "Loaded records", "violet")
+        + mini_card("Contract Value", egp(contract_metrics.get("total_contract_value")), "Active contracts", "gold")
+        + mini_card("Certified", egp(contract_metrics.get("total_certified")), "Payment certificates", "sapphire")
+        + mini_card("Paid", egp(contract_metrics.get("total_paid")), "Actual paid", "emerald")
+        + "</div>"
+        + f"<div class='md-grid two'><div class='md-card'><h3>Contracts</h3>{table_html(contracts_df, max_rows=10)}</div><div class='md-card'><h3>Payments</h3>{table_html(payments_df, max_rows=10)}</div></div>"
+    )
+
+    letters_body = f"<div class='md-grid two'><div class='md-card'><h3>Top Correspondence Threads</h3>{table_html(threads_df, max_rows=8)}</div><div class='md-card'><h3>Letter Sources</h3>{table_html(pd.DataFrame([{'Workbook/Inboxes': 'Project letters workbook and project inbox folders', 'Project Scope': project_id_label, 'Thread Count': len(threads_df)}]), max_rows=1)}</div></div>"
+
+    if not risks_df.empty and "status" in risks_df.columns:
+        risk_counts = risks_df["status"].astype(str).value_counts().reset_index()
+        risk_counts.columns = ["Status", "Count"]
+        risk_chart = safe_bar(risk_counts, "Status", "Count", "Risk Status Breakdown")
+    else:
+        risk_chart = "<div class='md-empty'>No risk chart data available.</div>"
+    risk_body = (
+        "<div class='md-kpi-grid'>"
+        + mini_card("Total Risks", str(int(risk_metrics.get("total_risks", len(risks_df)) or 0)), "Risk register", "rose")
+        + mini_card("Steel Issues", str(int(risk_metrics.get("steel_issues", 0) or 0)), "Steel delay records", "gold")
+        + mini_card("RFIs", str(int(risk_metrics.get("rfi_items", 0) or 0)), "RFI status records", "sapphire")
+        + mini_card("IFC Conflicts", str(int(risk_metrics.get("ifc_conflicts", 0) or 0)), "Design conflict records", "violet")
+        + "</div>"
+        + f"<div class='md-grid two'><div class='md-card'>{risk_chart}</div><div class='md-card'><h3>Risk Register</h3>{table_html(risks_df, max_rows=10)}</div></div>"
+    )
+
+    if not delays_df.empty and "responsible_group" in delays_df.columns:
+        delay_counts = delays_df["responsible_group"].astype(str).value_counts().reset_index()
+        delay_counts.columns = ["Responsible Group", "Count"]
+        delay_chart = safe_bar(delay_counts, "Responsible Group", "Count", "Delay Responsibility")
+    else:
+        delay_chart = "<div class='md-empty'>No delay chart data available.</div>"
+    delay_body = (
+        "<div class='md-kpi-grid'>"
+        + mini_card("Delay Events", str(int(delay_metrics.get("total_delay_events", 0) or 0)), "Loaded events", "rose")
+        + mini_card("Delay Days", number(delay_metrics.get("total_delay_days", 0), 0), "Indicative days", "gold")
+        + mini_card("Employer Delays", str(int(delay_metrics.get("employer_delays", 0) or 0)), "Client/Employer", "sapphire")
+        + mini_card("EOT Potential", str(int(delay_metrics.get("eot_potential_count", 0) or 0)), "Potential items", "emerald")
+        + "</div>"
+        + f"<div class='md-grid two'><div class='md-card'>{delay_chart}</div><div class='md-card'><h3>Delay Register</h3>{table_html(display_delays_df if not display_delays_df.empty else delays_df, max_rows=10)}</div></div>"
+    )
+
+    plotly_script = "<script src='https://cdn.plot.ly/plotly-2.35.2.min.js'></script>"
+    nav = "".join(
+        f"<a href='#{sid}'>{label}</a>"
+        for sid, label in [
+            ("overview", "Overview"),
+            ("wbs", "WBS"),
+            ("activities", "Activities"),
+            ("milestones", "Milestones"),
+            ("s_curve", "S-Curve"),
+            ("evm", "EVM"),
+            ("contracts", "Contracts"),
+            ("letters", "Letters"),
+            ("risks", "Risks"),
+            ("delay", "Delay & TIA"),
+        ]
+    )
+    sections = "\n".join(
+        [
+            section("overview", "Project Overview", "Executive KPIs, health indicators, and project vitals", overview_body),
+            section("wbs", "Work Breakdown Structure", "Project WBS progress and register", wbs_body),
+            section("activities", "Activities", "Activity progress, critical path, and variance", activities_body),
+            section("milestones", "Main Milestones", "Milestones and change-order context", milestone_body),
+            section("s_curve", "S-Curve Analysis", "Planned, actual, and invoiced curves", scurve_body),
+            section("evm", "Earned Value Management", "BAC, PV, EV, AC, SPI/CPI support", evm_body),
+            section("contracts", "Contracts", "Contract, payment, and commercial position", contract_body),
+            section("letters", "Letters Intelligence", "Correspondence threads and source status", letters_body),
+            section("risks", "Risk Analysis", "Risk matrix inputs, RFIs, steel, and IFC conflicts", risk_body),
+            section("delay", "Delay & Time Impact", "Delay register, EOT signal, and responsibility split", delay_body),
+        ]
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Master Dashboard - {clean(project_title)}</title>
+{plotly_script}
+<style>
+:root{{--bg:#0a0e27;--card:rgba(15,23,42,.86);--card2:rgba(30,41,59,.62);--line:rgba(148,163,184,.18);--gold:#f59e0b;--emerald:#10b981;--rose:#f43f5e;--cyan:#06b6d4;--sapphire:#3b82f6;--violet:#8b5cf6;--text:#f8fafc;--muted:#94a3b8}}
+*{{box-sizing:border-box}} body{{margin:0;background:radial-gradient(circle at 18% 8%,rgba(59,130,246,.16),transparent 26%),radial-gradient(circle at 80% 4%,rgba(245,158,11,.14),transparent 24%),linear-gradient(180deg,#0a0e27,#111827 70%,#0a0e27);color:var(--text);font-family:Segoe UI,Arial,sans-serif}}
+.md-shell{{max-width:1480px;margin:0 auto;padding:28px 24px 46px}} .md-hero{{border:1px solid var(--line);border-radius:24px;padding:26px;background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(30,41,59,.74));box-shadow:0 24px 60px rgba(0,0,0,.32)}} .md-eyebrow{{color:var(--gold);font-weight:900;text-transform:uppercase;letter-spacing:.18em;font-size:12px}} h1{{margin:8px 0 6px;font-size:38px;line-height:1.05}} .md-sub{{color:var(--muted);font-size:15px}} .md-nav{{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}} .md-nav a{{color:var(--text);text-decoration:none;background:rgba(255,255,255,.06);border:1px solid var(--line);padding:8px 11px;border-radius:999px;font-size:12px;font-weight:700}} .md-section{{margin-top:22px;padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(15,23,42,.54);box-shadow:0 18px 42px rgba(0,0,0,.2)}} .md-section-head{{display:flex;justify-content:space-between;gap:14px;align-items:end;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:12px}} .md-section-head span{{font-size:22px;font-weight:900;color:var(--gold)}} .md-section-head small{{color:var(--muted);text-align:right}} .md-kpi-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}} .md-kpi{{border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:18px;background:linear-gradient(145deg,rgba(15,23,42,.95),rgba(30,41,59,.72));padding:16px;min-height:116px}} .tone-emerald{{border-top-color:var(--emerald)}}.tone-rose{{border-top-color:var(--rose)}}.tone-cyan{{border-top-color:var(--cyan)}}.tone-sapphire{{border-top-color:var(--sapphire)}}.tone-violet{{border-top-color:var(--violet)}} .md-kpi-title{{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:900;letter-spacing:.08em}} .md-kpi-value{{font-size:28px;font-weight:900;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}} .md-kpi-note{{font-size:12px;color:var(--muted);margin-top:8px}} .md-grid{{display:grid;gap:14px}} .md-grid.two{{grid-template-columns:1fr 1fr}} .md-card{{border:1px solid var(--line);border-radius:18px;background:var(--card);padding:14px;overflow:auto}} .md-card h3{{margin:0 0 10px;color:#fbbf24;font-size:16px}} .md-table{{width:100%;border-collapse:collapse;font-size:12px}} .md-table th{{background:rgba(245,158,11,.18);color:#f8fafc;text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}} .md-table td{{padding:7px 8px;border-bottom:1px solid rgba(148,163,184,.10);color:#dbeafe;vertical-align:top}} .md-empty{{border:1px dashed var(--line);border-radius:14px;padding:18px;color:var(--muted);text-align:center}} .footer{{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}}
+@media(max-width:900px){{.md-shell{{padding:14px 10px}} h1{{font-size:25px}} .md-kpi-grid,.md-grid.two{{grid-template-columns:1fr}} .md-section{{padding:12px}} .md-section-head{{display:block}} .md-section-head small{{display:block;text-align:left;margin-top:5px}} .md-kpi-value{{font-size:22px}}}}
+</style>
+</head>
+<body><main class="md-shell"><header class="md-hero"><div class="md-eyebrow">Master Dashboard</div><h1>{clean(project_title)}</h1><div class="md-sub">Project-scoped construction intelligence dashboard | Project ID: {clean(project_id_label)} | Generated {clean(generated_at)}</div><nav class="md-nav">{nav}</nav></header>{sections}<div class="footer">Generated from Project Intelligence Hub project-scoped data. No cross-project fallback is used for project-specific exports.</div></main></body></html>"""
+
+
 def build_contract_metrics():
     contracts_df = filter_active_project(load_core_csv(CONTRACTS_CSV_PATH))
     payments_df = filter_active_project(load_core_csv(PAYMENTS_CSV_PATH))
@@ -9960,7 +10213,7 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[13]:
             "Choose dashboard output",
             [
                 "Executive dashboard",
-                "Original presentation print-only",
+                "Master Dashboard",
                 "Linked executive dashboard",
                 "Detailed Progress report",
             ],
@@ -10011,42 +10264,29 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[13]:
                 mime="text/html",
                 width="stretch",
             )
-        elif output_mode == "Original presentation print-only":
-            original_template_bytes, original_template_unresolved = build_original_template_presentation(
+        elif output_mode == "Master Dashboard":
+            wbs_metrics_for_master = build_wbs_metrics()
+            master_dashboard_html = build_master_dashboard_html(
                 overview_metrics,
+                wbs_metrics_for_master,
+                activity_metrics,
+                milestone_metrics,
+                s_curve_metrics,
                 evm_metrics,
                 contract_metrics,
-                delay_metrics,
+                letters,
                 risk_metrics,
-                milestone_metrics,
-                activity_metrics,
-                s_curve_metrics,
+                delay_metrics,
+                active_project_record,
             )
-            c1, c2 = st.columns(2)
-            c1.download_button(
-                "Download Updated Original Presentation (.pptx)",
-                data=original_template_bytes,
-                file_name=f"{output_project_slug}_presentation.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            st.components.v1.html(master_dashboard_html, height=2300, scrolling=True)
+            st.download_button(
+                "Download Master Dashboard (.html)",
+                data=master_dashboard_html.encode("utf-8"),
+                file_name=f"{output_project_slug}_master_dashboard.html",
+                mime="text/html",
                 width="stretch",
-                disabled=not bool(original_template_bytes),
             )
-            c2.download_button(
-                "Download Updated Original Presentation for Print (.pptx)",
-                data=original_template_bytes,
-                file_name=f"{output_project_slug}_presentation_print.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                width="stretch",
-                disabled=not bool(original_template_bytes),
-            )
-            if original_template_unresolved:
-                st.markdown("#### Linking Items To Confirm")
-                st.dataframe(
-                    pd.DataFrame({"Unresolved Template Mapping": original_template_unresolved}),
-                    width="stretch",
-                    hide_index=True,
-                    height=dataframe_height(pd.DataFrame({"Unresolved Template Mapping": original_template_unresolved}), max_height=320),
-                )
         elif output_mode == "Linked executive dashboard":
             linked_selected_project_id = selected_project_id()
             linked_generation_project_id = linked_selected_project_id
