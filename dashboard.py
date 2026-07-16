@@ -1800,6 +1800,327 @@ def build_master_dashboard_html(
 </script></body></html>"""
 
 
+def _svg_clean(value: Any) -> str:
+    text = "" if value is None else str(value)
+    text = text.replace("nan", "").replace("None", "").strip()
+    return html.escape(text or "N/A")
+
+
+def _svg_number(value: Any, decimals: int = 1) -> str:
+    try:
+        numeric = float(value)
+        if pd.isna(numeric):
+            return "N/A"
+        return f"{numeric:,.{decimals}f}"
+    except Exception:
+        return "N/A"
+
+
+def _svg_float(value: Any, default: float = 0.0) -> float:
+    try:
+        numeric = float(value)
+        if pd.isna(numeric):
+            return default
+        return numeric
+    except Exception:
+        return default
+
+
+def _elite_svg_frame(title: str, subtitle: str, body: str, footer: str, width: int = 1400, height: int = 820) -> str:
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="100%" role="img" aria-label="{_svg_clean(title)}">
+  <defs>
+    <linearGradient id="eliteBg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#061528"/>
+      <stop offset="58%" stop-color="#0f2b45"/>
+      <stop offset="100%" stop-color="#08111f"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="{width}" height="{height}" rx="28" fill="url(#eliteBg)"/>
+  <circle cx="1125" cy="92" r="250" fill="#1dd3c7" opacity="0.10"/>
+  <circle cx="170" cy="720" r="220" fill="#f4b740" opacity="0.10"/>
+  <rect x="42" y="38" width="{width - 84}" height="{height - 76}" rx="24" fill="#0b1f35" opacity="0.82" stroke="#2d5676" stroke-width="1.2" filter="url(#softShadow)"/>
+  <text x="76" y="92" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">{_svg_clean(title)}</text>
+  <text x="76" y="124" fill="#a9c2d8" font-family="Segoe UI, Arial, sans-serif" font-size="16">{_svg_clean(subtitle)}</text>
+  <line x1="76" y1="150" x2="{width - 76}" y2="150" stroke="#d9a441" stroke-width="3" opacity="0.90"/>
+  {body}
+  <text x="76" y="{height - 58}" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="13">{_svg_clean(footer)}</text>
+</svg>"""
+
+
+def _elite_metric_tile(x: int, y: int, title: str, value: str, note: str, accent: str = "#d9a441") -> str:
+    return f"""
+  <rect x="{x}" y="{y}" width="284" height="142" rx="18" fill="#102b45" stroke="#315b79" stroke-width="1"/>
+  <rect x="{x}" y="{y}" width="284" height="5" rx="2.5" fill="{accent}"/>
+  <text x="{x + 24}" y="{y + 38}" fill="#9fbad0" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">{_svg_clean(title)}</text>
+  <text x="{x + 24}" y="{y + 82}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="31" font-weight="900">{_svg_clean(value)}</text>
+  <text x="{x + 24}" y="{y + 116}" fill="#b7c9d9" font-family="Segoe UI, Arial, sans-serif" font-size="14">{_svg_clean(note)}</text>"""
+
+
+def _elite_bar_svg(title: str, subtitle: str, rows: list[tuple[str, float, str]], footer: str, accent: str = "#4dd8d2") -> str:
+    rows = rows[:8]
+    max_value = max([abs(value) for _, value, _ in rows] + [1.0])
+    bars = []
+    y = 210
+    for label, value, note in rows:
+        bar_width = max(4, int((abs(value) / max_value) * 760))
+        bars.append(f"""
+  <text x="92" y="{y + 22}" fill="#dce9f5" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">{_svg_clean(label)}</text>
+  <rect x="410" y="{y}" width="790" height="30" rx="15" fill="#173653" stroke="#315b79" stroke-width="1"/>
+  <rect x="410" y="{y}" width="{bar_width}" height="30" rx="15" fill="{accent}"/>
+  <text x="1225" y="{y + 22}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="900">{_svg_clean(_svg_number(value, 1))}</text>
+  <text x="92" y="{y + 48}" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="12">{_svg_clean(note)}</text>""")
+        y += 72
+    if not rows:
+        bars.append("""<text x="92" y="250" fill="#a9c2d8" font-family="Segoe UI, Arial, sans-serif" font-size="20">No project-scoped chart data is available.</text>""")
+    return _elite_svg_frame(title, subtitle, "\n".join(bars), footer)
+
+
+def _elite_line_svg(title: str, subtitle: str, labels: list[str], series: dict[str, list[float]], footer: str) -> str:
+    labels = labels[:12]
+    chart_x, chart_y, chart_w, chart_h = 105, 210, 1120, 430
+    values = [value for data in series.values() for value in data[: len(labels)]]
+    max_value = max(values + [1.0])
+    min_value = min(values + [0.0])
+    span = max(max_value - min_value, 1.0)
+    colors = ["#4dd8d2", "#d9a441", "#60a5fa", "#f87171"]
+    grid = []
+    for i in range(6):
+        gy = chart_y + int(chart_h * i / 5)
+        grid.append(f"""<line x1="{chart_x}" y1="{gy}" x2="{chart_x + chart_w}" y2="{gy}" stroke="#264a67" stroke-width="1"/><text x="50" y="{gy + 5}" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="12">{_svg_clean(_svg_number(max_value - (span * i / 5), 1))}</text>""")
+    drawn = []
+    count = max(len(labels), 1)
+    for idx, (name, data) in enumerate(series.items()):
+        points = []
+        for i, value in enumerate(data[: len(labels)]):
+            x = chart_x + int((chart_w * i) / max(count - 1, 1))
+            y = chart_y + chart_h - int(((value - min_value) / span) * chart_h)
+            points.append(f"{x},{y}")
+        color = colors[idx % len(colors)]
+        if points:
+            drawn.append(f"""<polyline points="{' '.join(points)}" fill="none" stroke="{color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>""")
+            for point in points:
+                x, y = point.split(",")
+                drawn.append(f"""<circle cx="{x}" cy="{y}" r="5" fill="{color}" stroke="#082033" stroke-width="2"/>""")
+        drawn.append(f"""<rect x="{chart_x + idx * 220}" y="675" width="16" height="16" rx="4" fill="{color}"/><text x="{chart_x + 24 + idx * 220}" y="688" fill="#dce9f5" font-family="Segoe UI, Arial, sans-serif" font-size="14">{_svg_clean(name)}</text>""")
+    label_nodes = []
+    for i, label in enumerate(labels):
+        x = chart_x + int((chart_w * i) / max(count - 1, 1))
+        label_nodes.append(f"""<text x="{x}" y="662" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="11" text-anchor="middle">{_svg_clean(label)}</text>""")
+    body = f"""<rect x="{chart_x}" y="{chart_y}" width="{chart_w}" height="{chart_h}" rx="16" fill="#102b45" stroke="#315b79" stroke-width="1"/>
+  {''.join(grid)}
+  {''.join(drawn)}
+  {''.join(label_nodes)}"""
+    return _elite_svg_frame(title, subtitle, body, footer)
+
+
+def build_elite_svg_chart_catalog(
+    overview_metrics: dict,
+    wbs_metrics: dict,
+    activity_metrics: dict,
+    milestone_metrics: dict,
+    s_curve_metrics: dict,
+    evm_metrics: dict,
+    contract_metrics: dict,
+    risk_metrics: dict,
+    delay_metrics: dict,
+    project_record: pd.Series | dict | None = None,
+) -> list[dict[str, Any]]:
+    project_title = str(overview_metrics.get("project_name") or "Project")
+    project_id_label = selected_project_id() or "portfolio"
+    generated_at = pd.Timestamp.today().strftime("%d %b %Y %H:%M")
+    footer = f"Project: {project_title} | Project ID: {project_id_label} | Generated {generated_at} | Source: selected project data only"
+
+    charts: list[dict[str, Any]] = []
+    overview_body = (
+        _elite_metric_tile(92, 210, "Contract Value", egp(overview_metrics.get("contract_value")), "Project budget", "#d9a441")
+        + _elite_metric_tile(402, 210, "Overall Progress", pct(overview_metrics.get("overall_progress")), f"Planned {pct(overview_metrics.get('planned_progress'))}", "#4dd8d2")
+        + _elite_metric_tile(712, 210, "Total Activities", str(int(overview_metrics.get("total_activities", 0) or 0)), f"Critical {int(overview_metrics.get('critical_activities', 0) or 0)}", "#60a5fa")
+        + _elite_metric_tile(1022, 210, "Remaining Duration", pct(overview_metrics.get("remaining_duration_pct")), f"{int(overview_metrics.get('duration_days', 0) or 0):,} days total", "#f59e0b")
+        + _elite_metric_tile(92, 390, "Delay Events", str(int(delay_metrics.get("total_delay_events", 0) or 0)), "Delay register", "#f87171")
+        + _elite_metric_tile(402, 390, "Total Risks", str(int(risk_metrics.get("total_risks", 0) or 0)), "Risk register", "#fb7185")
+        + _elite_metric_tile(712, 390, "Total Paid", egp(contract_metrics.get("total_paid")), "Payment records", "#34d399")
+        + _elite_metric_tile(1022, 390, "SPI / CPI", f"{_svg_number(evm_metrics.get('spi'), 2)} / {_svg_number(evm_metrics.get('cpi'), 2)}", "Earned value", "#a78bfa")
+    )
+    charts.append({
+        "id": "project_command_center",
+        "title": "Project Command Center",
+        "section": "Overview",
+        "svg": _elite_svg_frame("Project Command Center", "Executive project controls SVG generated from active project data", overview_body, footer),
+        "sources": ["overview_metrics", "evm_metrics", "contract_metrics", "risk_metrics", "delay_metrics"],
+    })
+
+    evm_rows = [
+        ("BAC", _svg_float(evm_metrics.get("bac")), "Budget at completion"),
+        ("PV", _svg_float(evm_metrics.get("pv")), "Planned value"),
+        ("EV", _svg_float(evm_metrics.get("ev")), "Earned value"),
+        ("AC", _svg_float(evm_metrics.get("ac")), "Actual cost"),
+    ]
+    charts.append({
+        "id": "evm_value_comparison",
+        "title": "EVM Value Comparison",
+        "section": "Earned Value",
+        "svg": _elite_bar_svg("EVM Value Comparison", "BAC, PV, EV and AC comparison", evm_rows, footer, "#d9a441"),
+        "sources": ["evm_metrics"],
+    })
+
+    curve_df = s_curve_metrics.get("curve_df", pd.DataFrame()).copy()
+    if not curve_df.empty and "Month" in curve_df.columns:
+        labels = curve_df["Month"].astype(str).tolist()
+        series = {
+            "Planned": [float(v) for v in pd.to_numeric(curve_df.get("Planned", 0), errors="coerce").fillna(0).tolist()],
+            "Actual": [float(v) for v in pd.to_numeric(curve_df.get("Actual", 0), errors="coerce").fillna(0).tolist()],
+            "Invoiced": [float(v) for v in pd.to_numeric(curve_df.get("Invoiced", 0), errors="coerce").fillna(0).tolist()],
+        }
+    else:
+        labels, series = [], {}
+    charts.append({
+        "id": "s_curve_trend",
+        "title": "S-Curve Trend",
+        "section": "Progress",
+        "svg": _elite_line_svg("S-Curve Trend", "Planned, actual and invoiced trend", labels, series, footer),
+        "sources": ["s_curve_metrics.curve_df"],
+    })
+
+    wbs_df = wbs_metrics.get("wbs_df", pd.DataFrame()).copy()
+    wbs_rows: list[tuple[str, float, str]] = []
+    if not wbs_df.empty:
+        label_col = wbs_metrics.get("code_col") or wbs_df.columns[0]
+        progress_col = "performance_%_complete_num" if "performance_%_complete_num" in wbs_df.columns else ("schedule_%_complete_num" if "schedule_%_complete_num" in wbs_df.columns else None)
+        if progress_col:
+            for _, row in wbs_df.head(8).iterrows():
+                wbs_rows.append((str(row.get(label_col, "WBS")), _svg_float(row.get(progress_col)), "Progress complete"))
+    charts.append({
+        "id": "wbs_progress",
+        "title": "WBS Progress",
+        "section": "WBS",
+        "svg": _elite_bar_svg("WBS Progress", "Top WBS progress indicators", wbs_rows, footer, "#4dd8d2"),
+        "sources": ["wbs_metrics.wbs_df"],
+    })
+
+    risk_df = risk_metrics.get("risks_df", pd.DataFrame()).copy()
+    risk_rows: list[tuple[str, float, str]] = []
+    if not risk_df.empty and "status" in risk_df.columns:
+        for status, count in risk_df["status"].astype(str).value_counts().head(8).items():
+            risk_rows.append((status, float(count), "Risk status count"))
+    charts.append({
+        "id": "risk_status_breakdown",
+        "title": "Risk Status Breakdown",
+        "section": "Risks",
+        "svg": _elite_bar_svg("Risk Status Breakdown", "Project risk register status distribution", risk_rows, footer, "#fb7185"),
+        "sources": ["risk_metrics.risks_df"],
+    })
+
+    delay_df = delay_metrics.get("delays_df", pd.DataFrame()).copy()
+    delay_rows: list[tuple[str, float, str]] = []
+    if not delay_df.empty and "responsible_group" in delay_df.columns:
+        for group, count in delay_df["responsible_group"].astype(str).value_counts().head(8).items():
+            delay_rows.append((group, float(count), "Delay responsibility count"))
+    charts.append({
+        "id": "delay_responsibility",
+        "title": "Delay Responsibility",
+        "section": "Delay",
+        "svg": _elite_bar_svg("Delay Responsibility", "Delay events grouped by responsibility", delay_rows, footer, "#f87171"),
+        "sources": ["delay_metrics.delays_df"],
+    })
+
+    commercial_rows = [
+        ("Contract Value", _svg_float(contract_metrics.get("total_contract_value") or overview_metrics.get("contract_value")), "Active contract value"),
+        ("Certified", _svg_float(contract_metrics.get("total_certified")), "Certified amount"),
+        ("Paid", _svg_float(contract_metrics.get("total_paid")), "Paid amount"),
+        ("Remaining", max(_svg_float(contract_metrics.get("total_contract_value") or overview_metrics.get("contract_value")) - _svg_float(contract_metrics.get("total_paid")), 0.0), "Indicative remaining"),
+    ]
+    charts.append({
+        "id": "contract_payment_position",
+        "title": "Contract Payment Position",
+        "section": "Commercial",
+        "svg": _elite_bar_svg("Contract Payment Position", "Contract, certified, paid and remaining position", commercial_rows, footer, "#34d399"),
+        "sources": ["contract_metrics", "overview_metrics"],
+    })
+
+    activity_rows = [
+        ("Critical Activities", float(activity_metrics.get("critical_count", 0) or 0), "Current critical path"),
+        ("Deviated Activities", float(activity_metrics.get("deviated_count", 0) or 0), "Schedule or progress variance"),
+        ("RFT Activities", float(activity_metrics.get("rft_count", 0) or 0), "Steel/RFT related"),
+        ("Total Activities", float(overview_metrics.get("total_activities", 0) or 0), "Activity register"),
+    ]
+    charts.append({
+        "id": "activity_performance",
+        "title": "Activity Performance",
+        "section": "Activities",
+        "svg": _elite_bar_svg("Activity Performance", "Activity criticality and variance indicators", activity_rows, footer, "#60a5fa"),
+        "sources": ["activity_metrics", "overview_metrics"],
+    })
+    return charts
+
+
+def build_elite_svg_gallery_html(charts: list[dict[str, Any]], title: str) -> str:
+    clean_title = _svg_clean(title)
+    nav = "".join(
+        f"<button class='svg-tab-button' type='button' data-tab='{_svg_clean(chart['id'])}'>{_svg_clean(chart['title'])}</button>"
+        for chart in charts
+    )
+    panels = "".join(
+        f"<section id='{_svg_clean(chart['id'])}' class='svg-panel'><div class='svg-card'>{chart['svg']}</div></section>"
+        for chart in charts
+    )
+    generated_at = _svg_clean(pd.Timestamp.today().strftime("%d %b %Y %H:%M"))
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{clean_title} - Elite SVG Chart Gallery</title>
+<style>
+*{{box-sizing:border-box}} body{{margin:0;background:#eef5f8;color:#082033;font-family:Segoe UI,Arial,sans-serif}} .shell{{max-width:1540px;margin:0 auto;padding:22px}} .hero{{background:#fff;border:1px solid #c8d8e4;border-radius:18px;padding:18px 22px;box-shadow:0 14px 34px rgba(8,32,51,.10)}} h1{{margin:0 0 6px;font-size:28px}} .sub{{color:#526a7f}} .svg-tabs{{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}} .svg-tab-button{{border:1px solid #bdd1df;background:#fff;color:#082033;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}} .svg-tab-button.active{{background:#0b3658;color:white;border-color:#0b3658;box-shadow:0 8px 18px rgba(11,54,88,.20)}} .svg-panel{{display:none}} .svg-panel.active{{display:block}} .svg-card{{background:#fff;border:1px solid #c8d8e4;border-radius:18px;padding:12px;box-shadow:0 18px 38px rgba(8,32,51,.12)}} .svg-card svg{{display:block;width:100%;height:auto}} .footer{{margin:18px 0;text-align:center;color:#60788b;font-size:12px}}
+@media print{{.svg-tabs,.footer{{display:none}} .shell{{max-width:none;padding:0}} .hero{{box-shadow:none;border:0}} .svg-panel:not(.active){{display:none!important}} .svg-card{{box-shadow:none;border:0;padding:0}} body{{background:white}}}}
+</style>
+</head>
+<body><main class="shell"><header class="hero"><h1>{clean_title}</h1><div class="sub">Editable SVG chart gallery generated from selected project data | {generated_at}</div><nav class="svg-tabs">{nav}</nav></header>{panels}<div class="footer">Use the tabs to view one chart at a time. Print from the browser to export the active chart.</div></main><script>
+(function(){{
+  const buttons = Array.from(document.querySelectorAll('.svg-tab-button'));
+  const panels = Array.from(document.querySelectorAll('.svg-panel'));
+  function showTab(tabId){{
+    buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
+    panels.forEach(panel => panel.classList.toggle('active', panel.id === tabId));
+  }}
+  buttons.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+  showTab(buttons[0]?.dataset.tab || '');
+}})();
+</script></body></html>"""
+
+
+def build_elite_svg_package(charts: list[dict[str, Any]], gallery_html: str, title: str) -> bytes:
+    buffer = io.BytesIO()
+    manifest = {
+        "title": title,
+        "engine_profile": "Universal AI SVG Report Engine Elite v4.2 compatible chart package",
+        "generated_at": pd.Timestamp.today().isoformat(),
+        "project_id": selected_project_id() or "portfolio",
+        "chart_count": len(charts),
+        "charts": [
+            {"id": chart["id"], "title": chart["title"], "section": chart.get("section", ""), "sources": chart.get("sources", [])}
+            for chart in charts
+        ],
+    }
+    evidence_model = {
+        "traceability_rule": "Every chart is generated from the active project metrics already loaded by Project Intelligence Hub.",
+        "no_cross_project_fallback": True,
+        "project_id": selected_project_id() or "portfolio",
+        "source_groups": sorted({source for chart in charts for source in chart.get("sources", [])}),
+    }
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as package:
+        package.writestr("REPORT_GALLERY.html", gallery_html)
+        package.writestr("report_manifest.json", json.dumps(manifest, indent=2))
+        package.writestr("evidence_model.json", json.dumps(evidence_model, indent=2))
+        for chart in charts:
+            package.writestr(f"ELITE_CHARTS/{chart['id']}.svg", chart["svg"])
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def build_contract_metrics():
     contracts_df = filter_active_project(load_core_csv(CONTRACTS_CSV_PATH))
     payments_df = filter_active_project(load_core_csv(PAYMENTS_CSV_PATH))
@@ -10226,8 +10547,8 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[13]:
             [
                 "Executive dashboard",
                 "Master Dashboard",
+                "Elite SVG Charts",
                 "Linked executive dashboard",
-                "Detailed Progress report",
             ],
             horizontal=True,
         )
@@ -10299,6 +10620,73 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[13]:
                 mime="text/html",
                 width="stretch",
             )
+        elif output_mode == "Elite SVG Charts":
+            wbs_metrics_for_svg = build_wbs_metrics()
+            elite_charts = build_elite_svg_chart_catalog(
+                overview_metrics,
+                wbs_metrics_for_svg,
+                activity_metrics,
+                milestone_metrics,
+                s_curve_metrics,
+                evm_metrics,
+                contract_metrics,
+                risk_metrics,
+                delay_metrics,
+                active_project_record,
+            )
+            st.markdown("#### Elite SVG Chart Package")
+            st.caption("Select up to 6 charts for a combined downloadable package, or export all charts as a tabbed HTML gallery. Preview shows one chart at a time.")
+            export_mode = st.radio(
+                "Chart export mode",
+                ["Select up to 6 charts", "All charts"],
+                horizontal=True,
+                key="elite_svg_export_mode",
+            )
+            chart_title_map = {chart["title"]: chart for chart in elite_charts}
+            if export_mode == "Select up to 6 charts":
+                selected_titles = st.multiselect(
+                    "Choose charts to combine",
+                    options=list(chart_title_map.keys()),
+                    default=list(chart_title_map.keys())[:4],
+                    key="elite_svg_selected_charts",
+                )
+                if len(selected_titles) > 6:
+                    st.warning("Only the first 6 selected charts are included in the combined package.")
+                    selected_titles = selected_titles[:6]
+                selected_charts = [chart_title_map[title] for title in selected_titles if title in chart_title_map]
+            else:
+                selected_charts = elite_charts
+
+            if not selected_charts:
+                st.info("Select at least one chart to preview and download.")
+            else:
+                preview_title = st.radio(
+                    "Preview chart",
+                    options=[chart["title"] for chart in selected_charts],
+                    horizontal=True,
+                    key="elite_svg_preview_chart",
+                )
+                preview_chart = next((chart for chart in selected_charts if chart["title"] == preview_title), selected_charts[0])
+                st.components.v1.html(preview_chart["svg"], height=720, scrolling=True)
+
+                gallery_title = f"{overview_metrics.get('project_name') or 'Project'} - Elite SVG Charts"
+                elite_gallery_html = build_elite_svg_gallery_html(selected_charts, gallery_title)
+                elite_package = build_elite_svg_package(selected_charts, elite_gallery_html, gallery_title)
+                dl1, dl2 = st.columns(2)
+                dl1.download_button(
+                    "Download Combined SVG Gallery (.html)",
+                    data=elite_gallery_html.encode("utf-8"),
+                    file_name=f"{output_project_slug}_elite_svg_chart_gallery.html",
+                    mime="text/html",
+                    width="stretch",
+                )
+                dl2.download_button(
+                    "Download SVG Chart Package (.zip)",
+                    data=elite_package,
+                    file_name=f"{output_project_slug}_elite_svg_chart_package.zip",
+                    mime="application/zip",
+                    width="stretch",
+                )
         elif output_mode == "Linked executive dashboard":
             linked_selected_project_id = selected_project_id()
             linked_generation_project_id = linked_selected_project_id
