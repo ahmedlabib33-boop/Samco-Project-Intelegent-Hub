@@ -10104,7 +10104,7 @@ if active_slide_name == PROJECT_HUB_SLIDE_NAMES[13]:
                     key="elite_svg_preview_chart",
                 )
                 preview_chart = next((chart for chart in selected_charts if chart["title"] == preview_title), selected_charts[0])
-                st.components.v1.html(preview_chart["svg"], height=720, scrolling=True)
+                st.html(preview_chart["svg"])
 
                 gallery_title = f"{overview_metrics.get('project_name') or 'Project'} - Elite SVG Charts"
                 elite_gallery_html = build_elite_svg_gallery_html(selected_charts, gallery_title)
