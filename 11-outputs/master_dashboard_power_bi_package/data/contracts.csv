@@ -1,9 +1,0 @@
-contract_id,project_name,sector_name,project_id,package,contractor,contract_type,original_value,approved_variations,pending_variations,paid_to_date,retention_percent,status,source_file
-LB-PH-01,LMD Bridge & Road Interchange,Bridges,LMD-Bridge,1,Prime Roads & Bridges,Unit rate,850000000,29750000,10200000,197625000,5%,Active,projects\Bridges\LMD-Bridgs\01-data\import_templates\contracts.csv
-LB-PH-02,LMD Bridge & Road Interchange,Bridges,LMD-Bridge,2,Prime Roads & Bridges,Lump sum,153000000,1530000,3060000,16600500,5%,Active,projects\Bridges\LMD-Bridgs\01-data\import_templates\contracts.csv
-PH-01,ROYA-BIG PROJECT PHASE01 (B1-4),Buildings,The Big -P.01-UP-20-April-26,1,SAMCO,Unite rate,367286025,17671310,0,17671310,5%,Active,projects\Buildings\The BIG - PH01\01-data\import_templates\contracts.csv
-PH-02,ROYA-BIG PROJECT PHASE01 (B1-4),Buildings,The Big -P.01-UP-20-April-26,2,SAMCO,Unite rate,900000000,0,0,0,5%,In-Active,projects\Buildings\The BIG - PH01\01-data\import_templates\contracts.csv
-SM-PH-01,Sophia Mall Mixed-Use Development,Buildings,Sophia-Mall,1,Delta Build Contractors,Unit rate,2100000000,73500000,25200000,519750000,5%,Active,projects\Buildings\Sophia-Mall\01-data\import_templates\contracts.csv
-SM-PH-02,Sophia Mall Mixed-Use Development,Buildings,Sophia-Mall,2,Delta Build Contractors,Lump sum,378000000,3780000,7560000,43659000,5%,Active,projects\Buildings\Sophia-Mall\01-data\import_templates\contracts.csv
-ST-PH-01,Suez Tunnel Civil & MEP Works,Tunnels,Suez-Tunnel,1,Nile Infra JV,Unit rate,1250000000,43750000,15000000,328125000,5%,Active,projects\Tunnels\Suez-Tunnel\01-data\import_templates\contracts.csv
-ST-PH-02,Suez Tunnel Civil & MEP Works,Tunnels,Suez-Tunnel,2,Nile Infra JV,Lump sum,225000000,2250000,4500000,27562500,5%,Active,projects\Tunnels\Suez-Tunnel\01-data\import_templates\contracts.csv
