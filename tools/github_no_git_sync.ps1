@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $configPath = Join-Path $PSScriptRoot "github_sync_config.json"
-$logPath = Join-Path $root "11-outputs\logs\github_sync.log"
+$logPath = Join-Path $root "12-logs\github_sync.log"
 $statePath = Join-Path $root ".sync_state\local_manifest.json"
 New-Item -ItemType Directory -Force -Path (Split-Path $logPath -Parent), (Split-Path $statePath -Parent) | Out-Null
 

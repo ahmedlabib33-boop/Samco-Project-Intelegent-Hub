@@ -2125,6 +2125,100 @@ def build_elite_svg_package(charts: list[dict[str, Any]], gallery_html: str, tit
     return buffer.getvalue()
 
 
+def build_auto_project_html_reports(project_record: dict[str, Any]) -> dict[str, str]:
+    previous_active_project_id = st.session_state.get("active_project_id", "")
+    target_project_id = str(project_record.get("project_id") or "").strip()
+    st.session_state["active_project_id"] = target_project_id
+    try:
+        auto_overview_metrics = build_overview_metrics()
+        auto_evm_metrics = build_evm_metrics()
+        auto_contract_metrics = build_contract_metrics()
+        auto_delay_metrics = build_delay_metrics()
+        auto_risk_metrics = build_risk_metrics()
+        auto_milestone_metrics = build_milestone_metrics()
+        auto_s_curve_metrics = build_s_curve_metrics()
+        auto_activity_metrics = build_activity_metrics()
+        auto_wbs_metrics = build_wbs_metrics()
+        auto_letters = load_letters_workbook()
+        auto_project_rows = load_core_csv(PROJECTS_CSV_PATH, project_id=target_project_id)
+        auto_project_record = {
+            **project_record,
+            **(auto_project_rows.iloc[0].to_dict() if not auto_project_rows.empty else {}),
+        }
+        executive_html = build_the_big_decision_dashboard_html(
+            auto_overview_metrics,
+            auto_evm_metrics,
+            auto_contract_metrics,
+            auto_delay_metrics,
+            auto_risk_metrics,
+            auto_milestone_metrics,
+            auto_activity_metrics,
+            auto_s_curve_metrics,
+            auto_project_record,
+        )
+        master_html = build_master_dashboard_html(
+            auto_overview_metrics,
+            auto_wbs_metrics,
+            auto_activity_metrics,
+            auto_milestone_metrics,
+            auto_s_curve_metrics,
+            auto_evm_metrics,
+            auto_contract_metrics,
+            auto_letters,
+            auto_risk_metrics,
+            auto_delay_metrics,
+            auto_project_record,
+        )
+        elite_charts = build_elite_svg_chart_catalog(
+            auto_overview_metrics,
+            auto_wbs_metrics,
+            auto_activity_metrics,
+            auto_milestone_metrics,
+            auto_s_curve_metrics,
+            auto_evm_metrics,
+            auto_contract_metrics,
+            auto_risk_metrics,
+            auto_delay_metrics,
+            auto_project_record,
+        )
+        elite_html = build_elite_svg_gallery_html(
+            elite_charts,
+            f"{auto_overview_metrics.get('project_name') or auto_project_record.get('project_name') or 'Project'} - Elite SVG Charts",
+        )
+        auto_evm_data = build_earned_value_analysis_data(auto_evm_metrics)
+        root_cause_df = build_evm_root_cause_rows(auto_delay_metrics, auto_risk_metrics, auto_contract_metrics)
+        mitigation_df = build_evm_mitigation_rows()
+        linked_html = build_linked_executive_dashboard_html(
+            auto_overview_metrics,
+            auto_evm_metrics,
+            auto_contract_metrics,
+            auto_delay_metrics,
+            auto_risk_metrics,
+            auto_milestone_metrics,
+            auto_activity_metrics,
+            auto_evm_data,
+            root_cause_df,
+            mitigation_df,
+            get_evm_comments(),
+        )
+        return {
+            "01_executive_dashboard.html": executive_html,
+            "02_master_dashboard.html": master_html,
+            "03_elite_svg_charts.html": elite_html,
+            "04_linked_executive_dashboard.html": linked_html,
+        }
+    finally:
+        st.session_state["active_project_id"] = previous_active_project_id
+
+
+def refresh_auto_project_outputs(project_records: list[dict[str, Any]]) -> list:
+    return refresh_project_outputs(
+        project_records=project_records,
+        root_outputs_dir=APP_DIR / "11-outputs",
+        report_builder=build_auto_project_html_reports,
+    )
+
+
 def build_contract_metrics():
     contracts_df = filter_active_project(load_core_csv(CONTRACTS_CSV_PATH))
     payments_df = filter_active_project(load_core_csv(PAYMENTS_CSV_PATH))
@@ -5241,6 +5335,12 @@ st.markdown(
 )
 
 projects_for_selector_df = projects_frame(PROJECTS_DIR)
+auto_output_results = []
+if not projects_for_selector_df.empty:
+    try:
+        auto_output_results = refresh_auto_project_outputs(projects_for_selector_df.to_dict("records"))
+    except Exception as exc:
+        st.warning(f"Automatic project output refresh could not complete: {exc}")
 project_selector_options = project_filter_options(projects_for_selector_df)
 project_selector_labels = [option["label"] for option in project_selector_options]
 current_project_id = selected_project_id()
