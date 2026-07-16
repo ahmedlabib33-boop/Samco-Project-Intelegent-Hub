@@ -18,6 +18,7 @@ from src.construction_system.project_catalog import (
     ensure_project_structure,
     project_data_path,
 )
+from src.construction_system.auto_project_outputs import AUTO_HTML_REPORTS, project_output_dir
 from src.construction_system.project_context import build_project_context
 
 
@@ -147,7 +148,7 @@ def main() -> int:
     results.check("12. project_manifest.json exists", not missing_manifests, ", ".join(missing_manifests))
     results.check("13. data_to_program.md exists", (ROOT / "data_to_program.md").stat().st_size > 1000)
     results.check("14. RUN_FULL_PROJECT_NO_GIT_SYNC.bat exists", (ROOT / "RUN_FULL_PROJECT_NO_GIT_SYNC.bat").exists())
-    sync_files = [ROOT / "tools/github_no_git_sync.ps1", ROOT / "tools/github_sync_config.json", ROOT / "11-outputs/logs/github_sync.log", ROOT / ".sync_state/local_manifest.json"]
+    sync_files = [ROOT / "tools/github_no_git_sync.ps1", ROOT / "tools/github_sync_config.json", ROOT / "12-logs/github_sync.log", ROOT / ".sync_state/local_manifest.json"]
     results.check("15. Synchronization configuration exists", all(path.exists() for path in sync_files))
     sync_text = (ROOT / "tools/github_no_git_sync.ps1").read_text(encoding="utf-8") + (ROOT / "RUN_FULL_PROJECT_NO_GIT_SYNC.bat").read_text(encoding="utf-8")
     forbidden_git_cli = any(token in sync_text.lower() for token in ["git add", "git commit", "git push", "git status", "git.exe"])
@@ -160,6 +161,26 @@ def main() -> int:
     state = json.loads((ROOT / ".sync_state/local_manifest.json").read_text(encoding="utf-8-sig"))
     results.check("21. Synchronization manifest updates", bool(state.get("generated_at")) and bool(state.get("files")))
     results.check("27. Data lineage JSON is populated", len(json.loads((ROOT / "data_lineage.json").read_text(encoding="utf-8"))) >= 25)
+
+    root_outputs = ROOT / "11-outputs"
+    expected_output_dirs = {project_output_dir(root_outputs, record).resolve() for record in records}
+    actual_output_dirs = {path.resolve() for path in root_outputs.iterdir() if path.is_dir()} if root_outputs.exists() else set()
+    root_output_files = [path.name for path in root_outputs.iterdir() if path.is_file()] if root_outputs.exists() else []
+    results.check("28. Root 11-outputs contains only project folders", not root_output_files and actual_output_dirs.issubset(expected_output_dirs), f"files={root_output_files[:3]}")
+    missing_auto_outputs = []
+    extra_generated_files = []
+    for record in records:
+        output_dir = project_output_dir(root_outputs, record)
+        for file_name in AUTO_HTML_REPORTS:
+            if not (output_dir / file_name).exists():
+                missing_auto_outputs.append(f"{output_dir.name}/{file_name}")
+        if not (output_dir / ".output_manifest.json").exists():
+            missing_auto_outputs.append(f"{output_dir.name}/.output_manifest.json")
+        for path in output_dir.iterdir() if output_dir.exists() else []:
+            if path.is_file() and path.name not in set(AUTO_HTML_REPORTS) | {".output_manifest.json"}:
+                extra_generated_files.append(f"{output_dir.name}/{path.name}")
+    results.check("29. Project auto HTML outputs exist", not missing_auto_outputs, ", ".join(missing_auto_outputs[:3]))
+    results.check("30. Project output folders contain only HTML reports and manifest", not extra_generated_files, ", ".join(extra_generated_files[:3]))
 
     if args.sync_probe:
         probe = ROOT / "sync_validation_probe.validation"
