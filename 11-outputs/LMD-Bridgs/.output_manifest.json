@@ -3,7 +3,7 @@
   "project_name": "LMD Bridge & Road Interchange",
   "project_folder_name": "LMD-Bridgs",
   "fingerprint": "a950723cf57c6ec4d34e590657c9ed87499851ae7dbf6a9006829608c9b5cb59",
-  "report_builder_version": "2026-07-20-mobile-tabs-v2",
+  "report_builder_version": "2026-07-20-tab-pages-v3",
   "files": [
     "01_executive_dashboard.html",
     "02_master_dashboard.html",

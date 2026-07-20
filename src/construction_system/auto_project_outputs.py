@@ -16,7 +16,7 @@ AUTO_HTML_REPORTS = (
     "03_elite_svg_charts.html",
     "04_linked_executive_dashboard.html",
 )
-REPORT_BUILDER_VERSION = "2026-07-20-mobile-tabs-v2"
+REPORT_BUILDER_VERSION = "2026-07-20-tab-pages-v3"
 
 
 @dataclass(frozen=True)

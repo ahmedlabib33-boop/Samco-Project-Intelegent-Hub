@@ -1759,13 +1759,22 @@ def build_master_dashboard_html(
         ("risks", "Risks"),
         ("delay", "Delay & TIA"),
     ]
-    nav = "".join(
-        f"<a class='md-tab-button{' active' if index == 0 else ''}' href='#{sid}' data-tab='{sid}'>{label}</a>"
+    tab_inputs = "".join(
+        f"<input class='md-tab-radio' type='radio' name='md-tabs' id='md-tab-{sid}'{' checked' if index == 0 else ''}>"
         for index, (sid, label) in enumerate(nav_items)
+    )
+    nav = "".join(
+        f"<label class='md-tab-button' for='md-tab-{sid}'>{label}</label>"
+        for sid, label in nav_items
+    )
+    tab_css = " ".join(
+        f"#md-tab-{sid}:checked ~ .md-sections #{sid}{{display:block}} "
+        f"#md-tab-{sid}:checked ~ .md-hero .md-nav label[for='md-tab-{sid}']{{background:linear-gradient(135deg,rgba(245,158,11,.95),rgba(251,191,36,.82));border-color:rgba(245,158,11,.75);color:#111827;box-shadow:0 10px 24px rgba(245,158,11,.18)}}"
+        for sid, label in nav_items
     )
     sections = "\n".join(
         [
-            section("overview", "Project Overview", "Executive KPIs, health indicators, and project vitals", overview_body, True),
+            section("overview", "Project Overview", "Executive KPIs, health indicators, and project vitals", overview_body),
             section("wbs", "Work Breakdown Structure", "Project WBS progress and register", wbs_body),
             section("activities", "Activities", "Activity progress, critical path, and variance", activities_body),
             section("milestones", "Main Milestones", "Milestones and change-order context", milestone_body),
@@ -1787,24 +1796,24 @@ def build_master_dashboard_html(
 <style>
 :root{{--bg:#0a0e27;--card:rgba(15,23,42,.86);--card2:rgba(30,41,59,.62);--line:rgba(148,163,184,.18);--gold:#f59e0b;--emerald:#10b981;--rose:#f43f5e;--cyan:#06b6d4;--sapphire:#3b82f6;--violet:#8b5cf6;--text:#f8fafc;--muted:#94a3b8}}
 *{{box-sizing:border-box}} body{{margin:0;background:radial-gradient(circle at 18% 8%,rgba(59,130,246,.16),transparent 26%),radial-gradient(circle at 80% 4%,rgba(245,158,11,.14),transparent 24%),linear-gradient(180deg,#0a0e27,#111827 70%,#0a0e27);color:var(--text);font-family:Segoe UI,Arial,sans-serif}}
-.md-shell{{max-width:1480px;margin:0 auto;padding:28px 24px 46px}} .md-hero{{border:1px solid var(--line);border-radius:24px;padding:26px;background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(30,41,59,.74));box-shadow:0 24px 60px rgba(0,0,0,.32)}} .md-eyebrow{{color:var(--gold);font-weight:900;text-transform:uppercase;letter-spacing:.18em;font-size:12px}} h1{{margin:8px 0 6px;font-size:38px;line-height:1.05}} .md-sub{{color:var(--muted);font-size:15px}} .md-nav{{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}} .md-tab-button{{display:inline-flex;text-decoration:none;color:var(--text);background:rgba(255,255,255,.06);border:1px solid var(--line);padding:9px 12px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer}} .md-tab-button.active{{background:linear-gradient(135deg,rgba(245,158,11,.95),rgba(251,191,36,.82));border-color:rgba(245,158,11,.75);color:#111827;box-shadow:0 10px 24px rgba(245,158,11,.18)}} .md-section{{display:none;margin-top:22px;padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(15,23,42,.54);box-shadow:0 18px 42px rgba(0,0,0,.2);scroll-margin-top:14px}} .md-section.active{{display:block}} .md-section:target{{display:block}} .md-shell:has(.md-section:target) .md-section.active:not(:target){{display:none}} .md-section-head{{display:flex;justify-content:space-between;gap:14px;align-items:end;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:12px}} .md-section-head span{{font-size:22px;font-weight:900;color:var(--gold)}} .md-section-head small{{color:var(--muted);text-align:right}} .md-kpi-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}} .md-kpi{{border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:18px;background:linear-gradient(145deg,rgba(15,23,42,.95),rgba(30,41,59,.72));padding:16px;min-height:116px}} .tone-emerald{{border-top-color:var(--emerald)}}.tone-rose{{border-top-color:var(--rose)}}.tone-cyan{{border-top-color:var(--cyan)}}.tone-sapphire{{border-top-color:var(--sapphire)}}.tone-violet{{border-top-color:var(--violet)}} .md-kpi-title{{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:900;letter-spacing:.08em}} .md-kpi-value{{font-size:28px;font-weight:900;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}} .md-kpi-note{{font-size:12px;color:var(--muted);margin-top:8px}} .md-grid{{display:grid;gap:14px}} .md-grid.two{{grid-template-columns:1fr 1fr}} .md-card{{border:1px solid var(--line);border-radius:18px;background:var(--card);padding:14px;overflow:auto}} .md-card h3{{margin:0 0 10px;color:#fbbf24;font-size:16px}} .md-table{{width:100%;border-collapse:collapse;font-size:12px}} .md-table th{{background:rgba(245,158,11,.18);color:#f8fafc;text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}} .md-table td{{padding:7px 8px;border-bottom:1px solid rgba(148,163,184,.10);color:#dbeafe;vertical-align:top}} .md-empty{{border:1px dashed var(--line);border-radius:14px;padding:18px;color:var(--muted);text-align:center}} .footer{{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}}
+.md-shell{{max-width:1480px;margin:0 auto;padding:28px 24px 46px}} .md-tab-radio{{position:absolute;left:-9999px;opacity:0}} .md-hero{{border:1px solid var(--line);border-radius:24px;padding:26px;background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(30,41,59,.74));box-shadow:0 24px 60px rgba(0,0,0,.32)}} .md-eyebrow{{color:var(--gold);font-weight:900;text-transform:uppercase;letter-spacing:.18em;font-size:12px}} h1{{margin:8px 0 6px;font-size:38px;line-height:1.05}} .md-sub{{color:var(--muted);font-size:15px}} .md-nav{{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 6px}} .md-tab-button{{display:inline-flex;text-decoration:none;color:var(--text);background:rgba(255,255,255,.06);border:1px solid var(--line);padding:9px 12px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;user-select:none}} .md-section{{display:none;margin-top:22px;padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(15,23,42,.54);box-shadow:0 18px 42px rgba(0,0,0,.2)}} {tab_css} .md-section-head{{display:flex;justify-content:space-between;gap:14px;align-items:end;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:12px}} .md-section-head span{{font-size:22px;font-weight:900;color:var(--gold)}} .md-section-head small{{color:var(--muted);text-align:right}} .md-kpi-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}} .md-kpi{{border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:18px;background:linear-gradient(145deg,rgba(15,23,42,.95),rgba(30,41,59,.72));padding:16px;min-height:116px}} .tone-emerald{{border-top-color:var(--emerald)}}.tone-rose{{border-top-color:var(--rose)}}.tone-cyan{{border-top-color:var(--cyan)}}.tone-sapphire{{border-top-color:var(--sapphire)}}.tone-violet{{border-top-color:var(--violet)}} .md-kpi-title{{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:900;letter-spacing:.08em}} .md-kpi-value{{font-size:28px;font-weight:900;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}} .md-kpi-note{{font-size:12px;color:var(--muted);margin-top:8px}} .md-grid{{display:grid;gap:14px}} .md-grid.two{{grid-template-columns:1fr 1fr}} .md-card{{border:1px solid var(--line);border-radius:18px;background:var(--card);padding:14px;overflow:auto}} .md-card h3{{margin:0 0 10px;color:#fbbf24;font-size:16px}} .md-table{{width:100%;border-collapse:collapse;font-size:12px}} .md-table th{{background:rgba(245,158,11,.18);color:#f8fafc;text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}} .md-table td{{padding:7px 8px;border-bottom:1px solid rgba(148,163,184,.10);color:#dbeafe;vertical-align:top}} .md-empty{{border:1px dashed var(--line);border-radius:14px;padding:18px;color:var(--muted);text-align:center}} .footer{{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}}
 @media(max-width:900px){{.md-shell{{padding:14px 10px}} h1{{font-size:25px}} .md-kpi-grid,.md-grid.two{{grid-template-columns:1fr}} .md-section{{padding:12px}} .md-section-head{{display:block}} .md-section-head small{{display:block;text-align:left;margin-top:5px}} .md-kpi-value{{font-size:22px}}}}
 </style>
 </head>
-<body><main class="md-shell"><header class="md-hero"><div class="md-eyebrow">Master Dashboard</div><h1>{clean(project_title)}</h1><div class="md-sub">Project-scoped construction intelligence dashboard | Project ID: {clean(project_id_label)} | Generated {clean(generated_at)}</div><nav class="md-nav">{nav}</nav></header>{sections}<div class="footer">Generated from Project Intelligence Hub project-scoped data. No cross-project fallback is used for project-specific exports.</div></main><script>
+<body><main class="md-shell">{tab_inputs}<header class="md-hero"><div class="md-eyebrow">Master Dashboard</div><h1>{clean(project_title)}</h1><div class="md-sub">Project-scoped construction intelligence dashboard | Project ID: {clean(project_id_label)} | Generated {clean(generated_at)}</div><nav class="md-nav">{nav}</nav></header><div class="md-sections">{sections}</div><div class="footer">Generated from Project Intelligence Hub project-scoped data. No cross-project fallback is used for project-specific exports.</div></main><script>
 (function(){{
   const buttons = Array.from(document.querySelectorAll('.md-tab-button'));
   const sections = Array.from(document.querySelectorAll('.md-section'));
   function showTab(tabId){{
-    buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
-    sections.forEach(section => section.classList.toggle('active', section.id === tabId));
+    buttons.forEach(function(btn) {{ btn.classList.toggle('active', btn.getAttribute('for') === 'md-tab-' + tabId); }});
+    sections.forEach(function(section) {{ section.classList.toggle('active', section.id === tabId); }});
     window.dispatchEvent(new Event('resize'));
   }}
   buttons.forEach(function(btn) {{
-    btn.addEventListener('click', function() {{ showTab(btn.getAttribute('data-tab')); }});
+    btn.addEventListener('click', function() {{ showTab(btn.getAttribute('for').replace('md-tab-', '')); }});
   }});
   if (buttons.length && !document.querySelector('.md-section.active')) {{
-    showTab(buttons[0].getAttribute('data-tab') || 'overview');
+    showTab(buttons[0].getAttribute('for').replace('md-tab-', '') || 'overview');
   }}
 }})();
 </script></body></html>"""
@@ -2068,13 +2077,22 @@ def build_elite_svg_chart_catalog(
 
 def build_elite_svg_gallery_html(charts: list[dict[str, Any]], title: str) -> str:
     clean_title = _svg_clean(title)
-    nav = "".join(
-        f"<a class='svg-tab-button{' active' if index == 0 else ''}' href='#{_svg_clean(chart['id'])}' data-tab='{_svg_clean(chart['id'])}'>{_svg_clean(chart['title'])}</a>"
+    tab_inputs = "".join(
+        f"<input class='svg-tab-radio' type='radio' name='svg-tabs' id='svg-tab-{_svg_clean(chart['id'])}'{' checked' if index == 0 else ''}>"
         for index, chart in enumerate(charts)
     )
+    nav = "".join(
+        f"<label class='svg-tab-button' for='svg-tab-{_svg_clean(chart['id'])}'>{_svg_clean(chart['title'])}</label>"
+        for chart in charts
+    )
     panels = "".join(
-        f"<section id='{_svg_clean(chart['id'])}' class='svg-panel{' active' if index == 0 else ''}'><div class='svg-card'>{chart['svg']}</div></section>"
-        for index, chart in enumerate(charts)
+        f"<section id='{_svg_clean(chart['id'])}' class='svg-panel'><div class='svg-card'>{chart['svg']}</div></section>"
+        for chart in charts
+    )
+    tab_css = " ".join(
+        f"#svg-tab-{_svg_clean(chart['id'])}:checked ~ .svg-panels #{_svg_clean(chart['id'])}{{display:block}} "
+        f"#svg-tab-{_svg_clean(chart['id'])}:checked ~ .hero .svg-tabs label[for='svg-tab-{_svg_clean(chart['id'])}']{{background:#0b3658;color:white;border-color:#0b3658;box-shadow:0 8px 18px rgba(11,54,88,.20)}}"
+        for chart in charts
     )
     generated_at = _svg_clean(pd.Timestamp.today().strftime("%d %b %Y %H:%M"))
     return f"""<!doctype html>
@@ -2084,23 +2102,23 @@ def build_elite_svg_gallery_html(charts: list[dict[str, Any]], title: str) -> st
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{clean_title} - Elite SVG Chart Gallery</title>
 <style>
-*{{box-sizing:border-box}} body{{margin:0;background:#eef5f8;color:#082033;font-family:Segoe UI,Arial,sans-serif}} .shell{{max-width:1540px;margin:0 auto;padding:22px}} .hero{{background:#fff;border:1px solid #c8d8e4;border-radius:18px;padding:18px 22px;box-shadow:0 14px 34px rgba(8,32,51,.10)}} h1{{margin:0 0 6px;font-size:28px}} .sub{{color:#526a7f}} .svg-tabs{{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}} .svg-tab-button{{display:inline-flex;text-decoration:none;border:1px solid #bdd1df;background:#fff;color:#082033;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}} .svg-tab-button.active{{background:#0b3658;color:white;border-color:#0b3658;box-shadow:0 8px 18px rgba(11,54,88,.20)}} .svg-panel{{display:none;scroll-margin-top:14px}} .svg-panel.active{{display:block}} .svg-panel:target{{display:block}} .shell:has(.svg-panel:target) .svg-panel.active:not(:target){{display:none}} .svg-card{{background:#fff;border:1px solid #c8d8e4;border-radius:18px;padding:12px;box-shadow:0 18px 38px rgba(8,32,51,.12)}} .svg-card svg{{display:block;width:100%;height:auto}} .footer{{margin:18px 0;text-align:center;color:#60788b;font-size:12px}}
+*{{box-sizing:border-box}} body{{margin:0;background:#eef5f8;color:#082033;font-family:Segoe UI,Arial,sans-serif}} .shell{{max-width:1540px;margin:0 auto;padding:22px}} .svg-tab-radio{{position:absolute;left:-9999px;opacity:0}} .hero{{background:#fff;border:1px solid #c8d8e4;border-radius:18px;padding:18px 22px;box-shadow:0 14px 34px rgba(8,32,51,.10)}} h1{{margin:0 0 6px;font-size:28px}} .sub{{color:#526a7f}} .svg-tabs{{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}} .svg-tab-button{{display:inline-flex;text-decoration:none;border:1px solid #bdd1df;background:#fff;color:#082033;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;user-select:none}} .svg-panel{{display:none}} {tab_css} .svg-card{{background:#fff;border:1px solid #c8d8e4;border-radius:18px;padding:12px;box-shadow:0 18px 38px rgba(8,32,51,.12)}} .svg-card svg{{display:block;width:100%;height:auto}} .footer{{margin:18px 0;text-align:center;color:#60788b;font-size:12px}}
 @media print{{.svg-tabs,.footer{{display:none}} .shell{{max-width:none;padding:0}} .hero{{box-shadow:none;border:0}} .svg-panel:not(.active){{display:none!important}} .svg-card{{box-shadow:none;border:0;padding:0}} body{{background:white}}}}
 </style>
 </head>
-<body><main class="shell"><header class="hero"><h1>{clean_title}</h1><div class="sub">Editable SVG chart gallery generated from selected project data | {generated_at}</div><nav class="svg-tabs">{nav}</nav></header>{panels}<div class="footer">Use the tabs to view one chart at a time. Print from the browser to export the active chart.</div></main><script>
+<body><main class="shell">{tab_inputs}<header class="hero"><h1>{clean_title}</h1><div class="sub">Editable SVG chart gallery generated from selected project data | {generated_at}</div><nav class="svg-tabs">{nav}</nav></header><div class="svg-panels">{panels}</div><div class="footer">Use the tabs to view one chart at a time. Print from the browser to export the active chart.</div></main><script>
 (function(){{
   const buttons = Array.from(document.querySelectorAll('.svg-tab-button'));
   const panels = Array.from(document.querySelectorAll('.svg-panel'));
   function showTab(tabId){{
-    buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
-    panels.forEach(panel => panel.classList.toggle('active', panel.id === tabId));
+    buttons.forEach(function(btn) {{ btn.classList.toggle('active', btn.getAttribute('for') === 'svg-tab-' + tabId); }});
+    panels.forEach(function(panel) {{ panel.classList.toggle('active', panel.id === tabId); }});
   }}
   buttons.forEach(function(btn) {{
-    btn.addEventListener('click', function() {{ showTab(btn.getAttribute('data-tab')); }});
+    btn.addEventListener('click', function() {{ showTab(btn.getAttribute('for').replace('svg-tab-', '')); }});
   }});
   if (buttons.length && !document.querySelector('.svg-panel.active')) {{
-    showTab(buttons[0].getAttribute('data-tab') || '');
+    showTab(buttons[0].getAttribute('for').replace('svg-tab-', '') || '');
   }}
 }})();
 </script></body></html>"""
