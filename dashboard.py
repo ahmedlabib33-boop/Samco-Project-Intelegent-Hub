@@ -1845,37 +1845,73 @@ def _svg_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+ELITE_SVG_COLORS = {
+    "navy_900": "#061526",
+    "navy_800": "#09233A",
+    "navy_700": "#0E3556",
+    "panel": "#102B45",
+    "panel_2": "#143A5A",
+    "line": "#376684",
+    "text": "#F8FAFC",
+    "muted": "#B8C9D8",
+    "gold": "#D6A23A",
+    "gold_2": "#F3C969",
+    "cyan": "#39D7D2",
+    "cyan_2": "#8CF3EE",
+    "blue": "#63A8FF",
+    "green": "#4ADE80",
+    "red": "#FB7185",
+    "violet": "#A78BFA",
+    "orange": "#F59E0B",
+}
+
+
 def _elite_svg_frame(title: str, subtitle: str, body: str, footer: str, width: int = 1400, height: int = 820) -> str:
+    c = ELITE_SVG_COLORS
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="100%" height="100%" role="img" aria-label="{_svg_clean(title)}">
   <defs>
     <linearGradient id="eliteBg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#061528"/>
-      <stop offset="58%" stop-color="#0f2b45"/>
-      <stop offset="100%" stop-color="#08111f"/>
+      <stop offset="0%" stop-color="{c['navy_900']}"/>
+      <stop offset="48%" stop-color="{c['navy_800']}"/>
+      <stop offset="100%" stop-color="#02101F"/>
+    </linearGradient>
+    <linearGradient id="elitePanel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#123B5D"/>
+      <stop offset="55%" stop-color="#0B263E"/>
+      <stop offset="100%" stop-color="#071A2E"/>
+    </linearGradient>
+    <linearGradient id="eliteAccent" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="{c['gold_2']}"/>
+      <stop offset="42%" stop-color="{c['cyan']}"/>
+      <stop offset="100%" stop-color="{c['blue']}"/>
     </linearGradient>
     <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.28"/>
     </filter>
   </defs>
   <rect width="{width}" height="{height}" rx="28" fill="url(#eliteBg)"/>
-  <circle cx="1125" cy="92" r="250" fill="#1dd3c7" opacity="0.10"/>
-  <circle cx="170" cy="720" r="220" fill="#f4b740" opacity="0.10"/>
-  <rect x="42" y="38" width="{width - 84}" height="{height - 76}" rx="24" fill="#0b1f35" opacity="0.82" stroke="#2d5676" stroke-width="1.2" filter="url(#softShadow)"/>
-  <text x="76" y="92" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">{_svg_clean(title)}</text>
-  <text x="76" y="124" fill="#a9c2d8" font-family="Segoe UI, Arial, sans-serif" font-size="16">{_svg_clean(subtitle)}</text>
-  <line x1="76" y1="150" x2="{width - 76}" y2="150" stroke="#d9a441" stroke-width="3" opacity="0.90"/>
+  <circle cx="1130" cy="100" r="260" fill="{c['cyan']}" opacity="0.14"/>
+  <circle cx="190" cy="720" r="230" fill="{c['gold_2']}" opacity="0.13"/>
+  <circle cx="1230" cy="690" r="170" fill="{c['violet']}" opacity="0.11"/>
+  <rect x="42" y="38" width="{width - 84}" height="{height - 76}" rx="24" fill="url(#elitePanel)" opacity="0.94" stroke="{c['line']}" stroke-width="1.5" filter="url(#softShadow)"/>
+  <rect x="42" y="38" width="{width - 84}" height="7" rx="3.5" fill="url(#eliteAccent)"/>
+  <text x="76" y="92" fill="{c['text']}" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800">{_svg_clean(title)}</text>
+  <text x="76" y="124" fill="{c['muted']}" font-family="Segoe UI, Arial, sans-serif" font-size="16">{_svg_clean(subtitle)}</text>
+  <line x1="76" y1="150" x2="{width - 76}" y2="150" stroke="url(#eliteAccent)" stroke-width="3.5" opacity="0.98"/>
   {body}
-  <text x="76" y="{height - 58}" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="13">{_svg_clean(footer)}</text>
+  <text x="76" y="{height - 58}" fill="{c['muted']}" font-family="Segoe UI, Arial, sans-serif" font-size="13">{_svg_clean(footer)}</text>
 </svg>"""
 
 
 def _elite_metric_tile(x: int, y: int, title: str, value: str, note: str, accent: str = "#d9a441") -> str:
     return f"""
-  <rect x="{x}" y="{y}" width="284" height="142" rx="18" fill="#102b45" stroke="#315b79" stroke-width="1"/>
+  <rect x="{x}" y="{y}" width="284" height="142" rx="18" fill="#123653" stroke="#4C7895" stroke-width="1.2"/>
+  <rect x="{x + 10}" y="{y + 12}" width="52" height="52" rx="16" fill="{accent}" opacity="0.16"/>
+  <circle cx="{x + 36}" cy="{y + 38}" r="9" fill="{accent}"/>
   <rect x="{x}" y="{y}" width="284" height="5" rx="2.5" fill="{accent}"/>
-  <text x="{x + 24}" y="{y + 38}" fill="#9fbad0" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">{_svg_clean(title)}</text>
+  <text x="{x + 74}" y="{y + 38}" fill="#C5D6E3" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="800">{_svg_clean(title)}</text>
   <text x="{x + 24}" y="{y + 82}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="31" font-weight="900">{_svg_clean(value)}</text>
-  <text x="{x + 24}" y="{y + 116}" fill="#b7c9d9" font-family="Segoe UI, Arial, sans-serif" font-size="14">{_svg_clean(note)}</text>"""
+  <text x="{x + 24}" y="{y + 116}" fill="#D6E4EF" font-family="Segoe UI, Arial, sans-serif" font-size="14">{_svg_clean(note)}</text>"""
 
 
 def _elite_bar_svg(title: str, subtitle: str, rows: list[tuple[str, float, str]], footer: str, accent: str = "#4dd8d2") -> str:
@@ -1886,14 +1922,15 @@ def _elite_bar_svg(title: str, subtitle: str, rows: list[tuple[str, float, str]]
     for label, value, note in rows:
         bar_width = max(4, int((abs(value) / max_value) * 760))
         bars.append(f"""
-  <text x="92" y="{y + 22}" fill="#dce9f5" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">{_svg_clean(label)}</text>
-  <rect x="410" y="{y}" width="790" height="30" rx="15" fill="#173653" stroke="#315b79" stroke-width="1"/>
+  <text x="92" y="{y + 22}" fill="#F1F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="800">{_svg_clean(label)}</text>
+  <rect x="410" y="{y}" width="790" height="30" rx="15" fill="#0B2136" stroke="#4C7895" stroke-width="1.2"/>
   <rect x="410" y="{y}" width="{bar_width}" height="30" rx="15" fill="{accent}"/>
+  <rect x="410" y="{y}" width="{bar_width}" height="11" rx="5.5" fill="#FFFFFF" opacity="0.20"/>
   <text x="1225" y="{y + 22}" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="900">{_svg_clean(_svg_number(value, 1))}</text>
-  <text x="92" y="{y + 48}" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="12">{_svg_clean(note)}</text>""")
+  <text x="92" y="{y + 48}" fill="#B8C9D8" font-family="Segoe UI, Arial, sans-serif" font-size="12">{_svg_clean(note)}</text>""")
         y += 72
     if not rows:
-        bars.append("""<text x="92" y="250" fill="#a9c2d8" font-family="Segoe UI, Arial, sans-serif" font-size="20">No project-scoped chart data is available.</text>""")
+        bars.append("""<rect x="92" y="210" width="1110" height="120" rx="18" fill="#123653" stroke="#4C7895"/><text x="124" y="278" fill="#D6E4EF" font-family="Segoe UI, Arial, sans-serif" font-size="20">No project-scoped chart data is available.</text>""")
     return _elite_svg_frame(title, subtitle, "\n".join(bars), footer)
 
 
@@ -1904,11 +1941,11 @@ def _elite_line_svg(title: str, subtitle: str, labels: list[str], series: dict[s
     max_value = max(values + [1.0])
     min_value = min(values + [0.0])
     span = max(max_value - min_value, 1.0)
-    colors = ["#4dd8d2", "#d9a441", "#60a5fa", "#f87171"]
+    colors = [ELITE_SVG_COLORS["cyan"], ELITE_SVG_COLORS["gold_2"], ELITE_SVG_COLORS["blue"], ELITE_SVG_COLORS["red"]]
     grid = []
     for i in range(6):
         gy = chart_y + int(chart_h * i / 5)
-        grid.append(f"""<line x1="{chart_x}" y1="{gy}" x2="{chart_x + chart_w}" y2="{gy}" stroke="#264a67" stroke-width="1"/><text x="50" y="{gy + 5}" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="12">{_svg_clean(_svg_number(max_value - (span * i / 5), 1))}</text>""")
+        grid.append(f"""<line x1="{chart_x}" y1="{gy}" x2="{chart_x + chart_w}" y2="{gy}" stroke="#376684" stroke-width="1" opacity="0.65"/><text x="50" y="{gy + 5}" fill="#B8C9D8" font-family="Segoe UI, Arial, sans-serif" font-size="12">{_svg_clean(_svg_number(max_value - (span * i / 5), 1))}</text>""")
     drawn = []
     count = max(len(labels), 1)
     for idx, (name, data) in enumerate(series.items()):
@@ -1922,13 +1959,13 @@ def _elite_line_svg(title: str, subtitle: str, labels: list[str], series: dict[s
             drawn.append(f"""<polyline points="{' '.join(points)}" fill="none" stroke="{color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>""")
             for point in points:
                 x, y = point.split(",")
-                drawn.append(f"""<circle cx="{x}" cy="{y}" r="5" fill="{color}" stroke="#082033" stroke-width="2"/>""")
-        drawn.append(f"""<rect x="{chart_x + idx * 220}" y="675" width="16" height="16" rx="4" fill="{color}"/><text x="{chart_x + 24 + idx * 220}" y="688" fill="#dce9f5" font-family="Segoe UI, Arial, sans-serif" font-size="14">{_svg_clean(name)}</text>""")
+                drawn.append(f"""<circle cx="{x}" cy="{y}" r="6" fill="{color}" stroke="#F8FAFC" stroke-width="2"/>""")
+        drawn.append(f"""<rect x="{chart_x + idx * 220}" y="675" width="16" height="16" rx="4" fill="{color}"/><text x="{chart_x + 24 + idx * 220}" y="688" fill="#F1F7FB" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">{_svg_clean(name)}</text>""")
     label_nodes = []
     for i, label in enumerate(labels):
         x = chart_x + int((chart_w * i) / max(count - 1, 1))
-        label_nodes.append(f"""<text x="{x}" y="662" fill="#8fb0c7" font-family="Segoe UI, Arial, sans-serif" font-size="11" text-anchor="middle">{_svg_clean(label)}</text>""")
-    body = f"""<rect x="{chart_x}" y="{chart_y}" width="{chart_w}" height="{chart_h}" rx="16" fill="#102b45" stroke="#315b79" stroke-width="1"/>
+        label_nodes.append(f"""<text x="{x}" y="662" fill="#B8C9D8" font-family="Segoe UI, Arial, sans-serif" font-size="11" text-anchor="middle">{_svg_clean(label)}</text>""")
+    body = f"""<rect x="{chart_x}" y="{chart_y}" width="{chart_w}" height="{chart_h}" rx="16" fill="#102B45" stroke="#4C7895" stroke-width="1.4"/>
   {''.join(grid)}
   {''.join(drawn)}
   {''.join(label_nodes)}"""
@@ -1954,14 +1991,14 @@ def build_elite_svg_chart_catalog(
 
     charts: list[dict[str, Any]] = []
     overview_body = (
-        _elite_metric_tile(92, 210, "Contract Value", egp(overview_metrics.get("contract_value")), "Project budget", "#d9a441")
-        + _elite_metric_tile(402, 210, "Overall Progress", pct(overview_metrics.get("overall_progress")), f"Planned {pct(overview_metrics.get('planned_progress'))}", "#4dd8d2")
-        + _elite_metric_tile(712, 210, "Total Activities", str(int(overview_metrics.get("total_activities", 0) or 0)), f"Critical {int(overview_metrics.get('critical_activities', 0) or 0)}", "#60a5fa")
-        + _elite_metric_tile(1022, 210, "Remaining Duration", pct(overview_metrics.get("remaining_duration_pct")), f"{int(overview_metrics.get('duration_days', 0) or 0):,} days total", "#f59e0b")
-        + _elite_metric_tile(92, 390, "Delay Events", str(int(delay_metrics.get("total_delay_events", 0) or 0)), "Delay register", "#f87171")
-        + _elite_metric_tile(402, 390, "Total Risks", str(int(risk_metrics.get("total_risks", 0) or 0)), "Risk register", "#fb7185")
-        + _elite_metric_tile(712, 390, "Total Paid", egp(contract_metrics.get("total_paid")), "Payment records", "#34d399")
-        + _elite_metric_tile(1022, 390, "SPI / CPI", f"{_svg_number(evm_metrics.get('spi'), 2)} / {_svg_number(evm_metrics.get('cpi'), 2)}", "Earned value", "#a78bfa")
+        _elite_metric_tile(92, 210, "Contract Value", egp(overview_metrics.get("contract_value")), "Project budget", ELITE_SVG_COLORS["gold"])
+        + _elite_metric_tile(402, 210, "Overall Progress", pct(overview_metrics.get("overall_progress")), f"Planned {pct(overview_metrics.get('planned_progress'))}", ELITE_SVG_COLORS["cyan"])
+        + _elite_metric_tile(712, 210, "Total Activities", str(int(overview_metrics.get("total_activities", 0) or 0)), f"Critical {int(overview_metrics.get('critical_activities', 0) or 0)}", ELITE_SVG_COLORS["blue"])
+        + _elite_metric_tile(1022, 210, "Remaining Duration", pct(overview_metrics.get("remaining_duration_pct")), f"{int(overview_metrics.get('duration_days', 0) or 0):,} days total", ELITE_SVG_COLORS["orange"])
+        + _elite_metric_tile(92, 390, "Delay Events", str(int(delay_metrics.get("total_delay_events", 0) or 0)), "Delay register", ELITE_SVG_COLORS["red"])
+        + _elite_metric_tile(402, 390, "Total Risks", str(int(risk_metrics.get("total_risks", 0) or 0)), "Risk register", ELITE_SVG_COLORS["violet"])
+        + _elite_metric_tile(712, 390, "Total Paid", egp(contract_metrics.get("total_paid")), "Payment records", ELITE_SVG_COLORS["green"])
+        + _elite_metric_tile(1022, 390, "SPI / CPI", f"{_svg_number(evm_metrics.get('spi'), 2)} / {_svg_number(evm_metrics.get('cpi'), 2)}", "Earned value", ELITE_SVG_COLORS["cyan_2"])
     )
     charts.append({
         "id": "project_command_center",
@@ -1981,7 +2018,7 @@ def build_elite_svg_chart_catalog(
         "id": "evm_value_comparison",
         "title": "EVM Value Comparison",
         "section": "Earned Value",
-        "svg": _elite_bar_svg("EVM Value Comparison", "BAC, PV, EV and AC comparison", evm_rows, footer, "#d9a441"),
+        "svg": _elite_bar_svg("EVM Value Comparison", "BAC, PV, EV and AC comparison", evm_rows, footer, ELITE_SVG_COLORS["gold"]),
         "sources": ["evm_metrics"],
     })
 
@@ -2015,7 +2052,7 @@ def build_elite_svg_chart_catalog(
         "id": "wbs_progress",
         "title": "WBS Progress",
         "section": "WBS",
-        "svg": _elite_bar_svg("WBS Progress", "Top WBS progress indicators", wbs_rows, footer, "#4dd8d2"),
+        "svg": _elite_bar_svg("WBS Progress", "Top WBS progress indicators", wbs_rows, footer, ELITE_SVG_COLORS["cyan"]),
         "sources": ["wbs_metrics.wbs_df"],
     })
 
@@ -2028,7 +2065,7 @@ def build_elite_svg_chart_catalog(
         "id": "risk_status_breakdown",
         "title": "Risk Status Breakdown",
         "section": "Risks",
-        "svg": _elite_bar_svg("Risk Status Breakdown", "Project risk register status distribution", risk_rows, footer, "#fb7185"),
+        "svg": _elite_bar_svg("Risk Status Breakdown", "Project risk register status distribution", risk_rows, footer, ELITE_SVG_COLORS["violet"]),
         "sources": ["risk_metrics.risks_df"],
     })
 
@@ -2041,7 +2078,7 @@ def build_elite_svg_chart_catalog(
         "id": "delay_responsibility",
         "title": "Delay Responsibility",
         "section": "Delay",
-        "svg": _elite_bar_svg("Delay Responsibility", "Delay events grouped by responsibility", delay_rows, footer, "#f87171"),
+        "svg": _elite_bar_svg("Delay Responsibility", "Delay events grouped by responsibility", delay_rows, footer, ELITE_SVG_COLORS["red"]),
         "sources": ["delay_metrics.delays_df"],
     })
 
@@ -2055,7 +2092,7 @@ def build_elite_svg_chart_catalog(
         "id": "contract_payment_position",
         "title": "Contract Payment Position",
         "section": "Commercial",
-        "svg": _elite_bar_svg("Contract Payment Position", "Contract, certified, paid and remaining position", commercial_rows, footer, "#34d399"),
+        "svg": _elite_bar_svg("Contract Payment Position", "Contract, certified, paid and remaining position", commercial_rows, footer, ELITE_SVG_COLORS["green"]),
         "sources": ["contract_metrics", "overview_metrics"],
     })
 
@@ -2069,7 +2106,7 @@ def build_elite_svg_chart_catalog(
         "id": "activity_performance",
         "title": "Activity Performance",
         "section": "Activities",
-        "svg": _elite_bar_svg("Activity Performance", "Activity criticality and variance indicators", activity_rows, footer, "#60a5fa"),
+        "svg": _elite_bar_svg("Activity Performance", "Activity criticality and variance indicators", activity_rows, footer, ELITE_SVG_COLORS["blue"]),
         "sources": ["activity_metrics", "overview_metrics"],
     })
     return charts
