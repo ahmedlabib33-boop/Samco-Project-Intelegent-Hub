@@ -3,6 +3,7 @@
   "project_name": "Suez Tunnel Civil & MEP Works",
   "project_folder_name": "Suez-Tunnel",
   "fingerprint": "627228c9f917f87f1b487038b7575a0e5d78c9c349a477240a476fe46aaed7d1",
+  "report_builder_version": "2026-07-20-mobile-tabs-v2",
   "files": [
     "01_executive_dashboard.html",
     "02_master_dashboard.html",

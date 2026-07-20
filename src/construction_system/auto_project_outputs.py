@@ -16,6 +16,7 @@ AUTO_HTML_REPORTS = (
     "03_elite_svg_charts.html",
     "04_linked_executive_dashboard.html",
 )
+REPORT_BUILDER_VERSION = "2026-07-20-mobile-tabs-v2"
 
 
 @dataclass(frozen=True)
@@ -133,7 +134,11 @@ def refresh_project_outputs(
         fingerprint = project_data_fingerprint(project_dir)
         manifest = _read_manifest(manifest_path)
         expected_files_exist = all((output_dir / file_name).exists() for file_name in AUTO_HTML_REPORTS)
-        unchanged = manifest.get("fingerprint") == fingerprint and expected_files_exist
+        unchanged = (
+            manifest.get("fingerprint") == fingerprint
+            and manifest.get("report_builder_version") == REPORT_BUILDER_VERSION
+            and expected_files_exist
+        )
 
         if unchanged:
             results.append(AutoOutputResult(project_id, project_name, output_dir, False, "unchanged", AUTO_HTML_REPORTS))
@@ -150,6 +155,7 @@ def refresh_project_outputs(
                 "project_name": project_name,
                 "project_folder_name": output_dir.name,
                 "fingerprint": fingerprint,
+                "report_builder_version": REPORT_BUILDER_VERSION,
                 "files": list(AUTO_HTML_REPORTS),
             },
         )
