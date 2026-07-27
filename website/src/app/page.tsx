@@ -29,6 +29,7 @@ type ProjectRecord = {
   activity_count: number;
   milestone_count: number;
   last_updated: string | null;
+  meeting_url?: string | null;
   source_files: Record<string, number>;
   features: FeaturePayload;
   reports: Record<ReportKey, string>;
@@ -147,6 +148,7 @@ const workspaceTabs = [
   "Letters Intelligence",
   "Delay Analysis",
   "Contract & Claims",
+  "Conference",
   "Output Studio"
 ] as const;
 
@@ -485,6 +487,51 @@ function WorkbookSummary({ workbook, title }: { workbook: XlsxSummary; title: st
   );
 }
 
+function ConferencePanel({ project }: { project: ProjectRecord }) {
+  const meetingUrl = project.meeting_url?.trim();
+  const canEmbed = Boolean(meetingUrl && !meetingUrl.includes("teams.microsoft.com") && !meetingUrl.includes("zoom.us"));
+  return (
+    <div className="feature-stack">
+      <div className="workspace-two">
+        <div>
+          <h3>Conference Call</h3>
+          <p>
+            Use this panel during review meetings while the project tabs remain available on the same page.
+            The call link is project-specific and can be changed in the selected project `project.json`.
+          </p>
+          <DataStatus label="Meeting Link" count={meetingUrl ? 1 : 0} />
+          <DataStatus label="Project Tabs Available" count={workspaceTabs.length} />
+        </div>
+        <section className="conference-card">
+          <FeatureSvg mode="watcher" />
+          <div className="conference-actions">
+            {meetingUrl ? (
+              <a href={meetingUrl} target="_blank" rel="noreferrer">Join Conference</a>
+            ) : (
+              <span>Add `meeting_url` to this project's `project.json` to activate the join button.</span>
+            )}
+          </div>
+        </section>
+      </div>
+      {meetingUrl && canEmbed ? (
+        <iframe className="wide-embed conference-embed" src={meetingUrl} title={`${project.project_display_name} conference`} />
+      ) : (
+        <section className="feature-card">
+          <div className="feature-card-head">
+            <h3>Same-Page Meeting Setup</h3>
+            <span>{meetingUrl ? "External Join" : "Not Configured"}</span>
+          </div>
+          <p>
+            Teams and Zoom usually block iframe embedding for security, so the dashboard keeps the project visible
+            and opens the meeting in a controlled new browser tab when required. Google Meet links may also require
+            account permission before joining.
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}
+
 function WorkspaceTabContent({
   project,
   activeTab,
@@ -716,6 +763,10 @@ function WorkspaceTabContent({
         </div>
       </div>
     );
+  }
+
+  if (activeTab === "Conference") {
+    return <ConferencePanel project={project} />;
   }
 
   return (

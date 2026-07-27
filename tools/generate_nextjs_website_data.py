@@ -357,6 +357,13 @@ def discover_projects() -> list[dict[str, Any]]:
                     "project_folder_name": project_dir.name,
                     "project_display_name": str(display_name),
                     "sector": sector_dir.name,
+                    "meeting_url": (
+                        project_json.get("meeting_url")
+                        or project_json.get("conference_url")
+                        or project_json.get("teams_url")
+                        or project_json.get("zoom_url")
+                        or project_json.get("google_meet_url")
+                    ),
                     "path": project_dir,
                 }
             )

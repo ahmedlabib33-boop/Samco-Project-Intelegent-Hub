@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-27T16:48:47",
+  "generated_at": "2026-07-27T17:11:50",
   "project_count": 4,
   "sector_count": 3,
   "totals": {
@@ -64,6 +64,7 @@
       "project_folder_name": "LMD-Bridgs",
       "project_display_name": "LMD Bridge & Road Interchange",
       "sector": "Bridges",
+      "meeting_url": null,
       "status": "Delayed",
       "contract_value": 850000000.0,
       "paid_amount": null,
@@ -3748,6 +3749,7 @@
       "project_folder_name": "The BIG - PH01",
       "project_display_name": "ROYA-BIG PROJECT PHASE01 (B1-4)",
       "sector": "Buildings",
+      "meeting_url": null,
       "status": "Active",
       "contract_value": 0.0,
       "paid_amount": null,
@@ -8850,6 +8852,7 @@
       "project_folder_name": "Sophia-Mall",
       "project_display_name": "Sophia Mall Mixed-Use Development",
       "sector": "Buildings",
+      "meeting_url": null,
       "status": "On Track",
       "contract_value": 2100000000.0,
       "paid_amount": null,
@@ -12534,6 +12537,7 @@
       "project_folder_name": "Suez-Tunnel",
       "project_display_name": "Suez Tunnel Civil & MEP Works",
       "sector": "Tunnels",
+      "meeting_url": null,
       "status": "Delayed",
       "contract_value": 1250000000.0,
       "paid_amount": null,
