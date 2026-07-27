@@ -1,5 +1,9 @@
-import Link from "next/link";
+"use client";
+
+import { useMemo, useState } from "react";
 import portfolio from "../../public/data/portfolio.json";
+
+type ReportKey = "executive_dashboard" | "master_dashboard" | "elite_svg_charts" | "linked_executive_dashboard";
 
 type ProjectRecord = {
   project_id: string;
@@ -22,6 +26,11 @@ type ProjectRecord = {
   claims_exposure: number | null;
   data_quality: number | null;
   decision_required: boolean;
+  activity_count: number;
+  milestone_count: number;
+  last_updated: string | null;
+  source_files: Record<string, number>;
+  reports: Record<ReportKey, string>;
 };
 
 type SectorRecord = {
@@ -42,6 +51,13 @@ const projects = portfolio.projects as ProjectRecord[];
 const sectors = portfolio.sectors as SectorRecord[];
 const totals = portfolio.totals;
 
+const reportTabs: Array<{ key: ReportKey; label: string; note: string }> = [
+  { key: "executive_dashboard", label: "Executive Dashboard", note: "Portfolio-style project summary" },
+  { key: "master_dashboard", label: "Master Dashboard", note: "Detailed section dashboard" },
+  { key: "elite_svg_charts", label: "Elite SVG Charts", note: "Digital chart package" },
+  { key: "linked_executive_dashboard", label: "Linked Dashboard", note: "Linked executive HTML" }
+];
+
 function numberValue(value: number | null | undefined, digits = 0) {
   if (value === null || value === undefined || Number.isNaN(value) || !Number.isFinite(value)) return "N/A";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value);
@@ -57,108 +73,67 @@ function percent(value: number | null | undefined) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function statusClass(value: number | null | undefined, target = 1) {
+function safeRatio(value: number | null | undefined, target = 1) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return 0;
+  return Math.max(0.03, Math.min(1, value / target));
+}
+
+function statusTone(value: number | null | undefined, target = 1) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "neutral";
   if (value >= target) return "good";
   if (value >= target * 0.9) return "watch";
   return "critical";
 }
 
-function KpiCard({
-  label,
+function HoloKpi({
+  title,
   value,
   note,
-  status
+  tone = "neutral"
 }: {
-  label: string;
+  title: string;
   value: string;
   note: string;
-  status: "good" | "watch" | "critical" | "neutral";
+  tone?: "cyan" | "gold" | "blue" | "green" | "red" | "violet" | "neutral" | "good" | "watch" | "critical";
 }) {
   return (
-    <article className="kpi-card">
-      <div className="kpi-top">
-        <span>{label}</span>
-        <b className={`badge ${status}`}>{status}</b>
-      </div>
+    <article className={`holo-kpi tone-${tone}`}>
+      <div className="holo-kpi__signal" />
+      <span>{title}</span>
       <strong>{value}</strong>
       <small>{note}</small>
     </article>
   );
 }
 
-function BarChart({ rows, field }: { rows: ProjectRecord[]; field: keyof ProjectRecord }) {
-  const max = Math.max(...rows.map((row) => Number(row[field] || 0)), 1);
+function ProjectNetwork({ selectedProject }: { selectedProject: ProjectRecord }) {
   return (
-    <div className="bars">
-      {rows.map((row) => {
-        const value = Number(row[field] || 0);
-        return (
-          <div className="bar-row" key={`${row.project_key}-${String(field)}`}>
-            <span>{row.project_display_name}</span>
-            <div><i style={{ width: `${Math.max(4, (value / max) * 100)}%` }} /></div>
-            <b>{field.toString().includes("progress") ? percent(value) : money(value)}</b>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function DonutChart() {
-  const total = Math.max(sectors.reduce((sum, sector) => sum + sector.project_count, 0), 1);
-  let offset = 0;
-  const colors = ["#38d7d2", "#d6a23a", "#63a8ff", "#a78bfa", "#4ade80"];
-  return (
-    <div className="donut-wrap">
-      <svg viewBox="0 0 42 42" className="donut">
-        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#183b5a" strokeWidth="6" />
-        {sectors.map((sector, index) => {
-          const value = (sector.project_count / total) * 100;
-          const dash = `${value} ${100 - value}`;
-          const currentOffset = offset;
-          offset -= value;
-          return (
-            <circle
-              key={sector.sector}
-              cx="21"
-              cy="21"
-              r="15.915"
-              fill="transparent"
-              stroke={colors[index % colors.length]}
-              strokeWidth="6"
-              strokeDasharray={dash}
-              strokeDashoffset={currentOffset}
-            />
-          );
-        })}
-      </svg>
-      <div className="legend">
-        {sectors.map((sector, index) => (
-          <span key={sector.sector}><i style={{ background: colors[index % colors.length] }} />{sector.sector}: {sector.project_count}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Scatter() {
-  return (
-    <svg viewBox="0 0 720 330" className="chart-svg">
-      <rect x="40" y="25" width="650" height="260" rx="14" />
-      <line x1="70" y1="250" x2="660" y2="250" />
-      <line x1="70" y1="250" x2="70" y2="55" />
-      <text x="70" y="302">SPI / progress position</text>
+    <svg className="network-map" viewBox="0 0 720 390" role="img" aria-label="Interactive project network">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <path className="network-line dashed" d="M76 300 C174 130 302 292 420 106 C510 8 566 142 640 72" />
+      <path className="network-line" d="M95 292 L285 214 L432 120 L636 78" />
+      <path className="network-line soft" d="M285 214 L360 318 L636 78" />
       {projects.map((project, index) => {
-        const progress = Math.max(0, Math.min(1, project.actual_progress ?? 0));
-        const risk = Math.max(0, Math.min(100, project.risk_score ?? 40));
-        const x = 80 + progress * 560;
-        const y = 245 - (Math.min(project.spi ?? 0.8, 1.2) / 1.2) * 180;
-        const size = 10 + risk / 10;
+        const points = [
+          { x: 95, y: 292, color: "#39d7d2" },
+          { x: 285, y: 214, color: "#d6a23a" },
+          { x: 432, y: 120, color: "#63a8ff" },
+          { x: 636, y: 78, color: "#a78bfa" }
+        ];
+        const point = points[index % points.length];
+        const active = project.project_key === selectedProject.project_key;
         return (
-          <g key={project.project_key}>
-            <circle cx={x} cy={y} r={size} className={`bubble ${project.decision_required ? "critical-fill" : "good-fill"}`} opacity="0.9" />
-            <text x={x + 14} y={y + 4}>{project.project_display_name}</text>
+          <g key={project.project_key} className={active ? "network-node active" : "network-node"}>
+            <circle cx={point.x} cy={point.y} r={active ? 43 : 32} fill={point.color} filter="url(#glow)" />
+            <text x={point.x + 48} y={point.y + 5}>{project.project_folder_name}</text>
           </g>
         );
       })}
@@ -166,94 +141,229 @@ function Scatter() {
   );
 }
 
-export default function HomePage() {
+function SignalBar({ label, value, tone }: { label: string; value: number | null | undefined; tone: string }) {
+  const width = `${Math.round(safeRatio(value, 1) * 100)}%`;
   return (
-    <main>
-      <section className="hero">
+    <div className="signal-bar">
+      <span>{label}</span>
+      <div><i className={`tone-${tone}`} style={{ width }} /></div>
+      <b>{percent(value)}</b>
+    </div>
+  );
+}
+
+function Gauge({ label, value, tone }: { label: string; value: number | null | undefined; tone: string }) {
+  const percentValue = Math.round(safeRatio(value, 1) * 100);
+  return (
+    <article className={`gauge tone-${tone}`}>
+      <svg viewBox="0 0 160 100">
+        <path d="M24 78 A56 56 0 0 1 136 78" className="gauge-track" />
+        <path
+          d="M24 78 A56 56 0 0 1 136 78"
+          className="gauge-fill"
+          pathLength="100"
+          strokeDasharray={`${percentValue} ${100 - percentValue}`}
+        />
+      </svg>
+      <strong>{numberValue(value, 2)}</strong>
+      <span>{label}</span>
+    </article>
+  );
+}
+
+function ProjectConsole({ selectedProject }: { selectedProject: ProjectRecord }) {
+  return (
+    <section className="project-console">
+      <div className="console-head">
         <div>
+          <p className="eyebrow">Active Project Digital Twin</p>
+          <h2>{selectedProject.project_display_name}</h2>
+          <span>{selectedProject.sector} / {selectedProject.status} / Last update: {selectedProject.last_updated || "N/A"}</span>
+        </div>
+        <b className={`decision-pill ${selectedProject.decision_required ? "critical" : "good"}`}>
+          {selectedProject.decision_required ? "Decision Required" : "No Immediate Decision"}
+        </b>
+      </div>
+      <div className="console-grid">
+        <HoloKpi title="Contract Value" value={money(selectedProject.contract_value)} note="Selected project value" tone="gold" />
+        <HoloKpi title="Actual Progress" value={percent(selectedProject.actual_progress)} note={`Planned ${percent(selectedProject.planned_progress)}`} tone="cyan" />
+        <HoloKpi title="SPI" value={numberValue(selectedProject.spi, 2)} note="Schedule performance" tone={statusTone(selectedProject.spi) as "good" | "watch" | "critical" | "neutral"} />
+        <HoloKpi title="CPI" value={numberValue(selectedProject.cpi, 2)} note="Cost performance" tone={statusTone(selectedProject.cpi) as "good" | "watch" | "critical" | "neutral"} />
+        <HoloKpi title="Activities" value={numberValue(selectedProject.activity_count)} note="Activity records loaded" tone="blue" />
+        <HoloKpi title="Data Quality" value={`${numberValue(selectedProject.data_quality, 1)}%`} note="Source completeness" tone="violet" />
+      </div>
+    </section>
+  );
+}
+
+function SourceRegister({ project }: { project: ProjectRecord }) {
+  return (
+    <section className="glass-panel source-register">
+      <div className="section-header">
+        <div>
+          <p className="eyebrow">Source Register</p>
+          <h2>Selected Project Data Feed</h2>
+        </div>
+        <span>{Object.values(project.source_files).reduce((sum, count) => sum + count, 0)} rows recognized</span>
+      </div>
+      <div className="source-grid">
+        {Object.entries(project.source_files).map(([name, count]) => (
+          <span key={name}>{name}<b>{count}</b></span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function HomePage() {
+  const [selectedProjectKey, setSelectedProjectKey] = useState(projects[0]?.project_key ?? "");
+  const [selectedReport, setSelectedReport] = useState<ReportKey>("executive_dashboard");
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.project_key === selectedProjectKey) ?? projects[0],
+    [selectedProjectKey]
+  );
+
+  return (
+    <main className="future-shell">
+      <section className="future-hero">
+        <div className="hero-copy">
           <p className="eyebrow">Decision Making Dashboard</p>
-          <h1>Project Intelligence Hub</h1>
-          <p>Executive portfolio website generated from isolated project folders and synced through GitHub for Vercel deployment.</p>
+          <h1>Digital Twin Command Deck</h1>
+          <p>
+            Same-page executive portfolio, project selector, live project cockpit, report viewer,
+            and source register generated from the existing GitHub-synced project data pipeline.
+          </p>
         </div>
-        <div className="hero-panel">
-          <b>{portfolio.project_count}</b>
-          <span>recognized projects</span>
-          <small>Last generated: {portfolio.generated_at}</small>
-        </div>
+        <label className="holo-select">
+          <span>Active Project</span>
+          <select value={selectedProjectKey} onChange={(event) => setSelectedProjectKey(event.target.value)}>
+            {projects.map((project) => (
+              <option value={project.project_key} key={project.project_key}>
+                {project.project_display_name}
+              </option>
+            ))}
+          </select>
+          <small>Changing this dropdown updates all panels below in the same page.</small>
+        </label>
       </section>
 
-      <section className="kpi-grid">
-        <KpiCard label="Total Projects" value={numberValue(portfolio.project_count)} note={`${portfolio.sector_count} sectors`} status="neutral" />
-        <KpiCard label="Total Contract Value" value={money(totals.contract_value)} note="Portfolio BAC / contract value" status="neutral" />
-        <KpiCard label="Total Paid" value={money(totals.paid_amount)} note="From project payment files" status="neutral" />
-        <KpiCard label="Remaining Value" value={money(totals.remaining_value)} note="Contract less paid/spent" status="watch" />
-        <KpiCard label="Average Progress" value={percent(totals.average_progress)} note="Weighted where contract value exists" status={statusClass(totals.average_progress, 0.75)} />
-        <KpiCard label="Delayed Projects" value={numberValue(totals.delayed_projects)} note="Delay days or SPI below 1.00" status={totals.delayed_projects > 0 ? "critical" : "good"} />
-        <KpiCard label="Average SPI" value={numberValue(totals.average_spi, 2)} note="Earned value schedule index" status={statusClass(totals.average_spi)} />
-        <KpiCard label="Average CPI" value={numberValue(totals.average_cpi, 2)} note="Earned value cost index" status={statusClass(totals.average_cpi)} />
+      <section className="holo-kpi-grid">
+        <HoloKpi title="Projects" value={numberValue(portfolio.project_count)} note={`${portfolio.sector_count} sectors recognized`} tone="cyan" />
+        <HoloKpi title="Portfolio Value" value={money(totals.contract_value)} note="Aggregated contract value" tone="gold" />
+        <HoloKpi title="Average Progress" value={percent(totals.average_progress)} note="Weighted where possible" tone="green" />
+        <HoloKpi title="Average SPI" value={numberValue(totals.average_spi, 2)} note="Portfolio schedule signal" tone={statusTone(totals.average_spi) as "good" | "watch" | "critical" | "neutral"} />
+        <HoloKpi title="Average CPI" value={numberValue(totals.average_cpi, 2)} note="Portfolio cost signal" tone={statusTone(totals.average_cpi) as "good" | "watch" | "critical" | "neutral"} />
+        <HoloKpi title="Decisions" value={numberValue(totals.decisions_required)} note="Management action triggers" tone={totals.decisions_required > 0 ? "red" : "green"} />
       </section>
 
-      <section className="tabs">
-        <input id="tab-overall" name="dashboard-tab" type="radio" defaultChecked />
-        <input id="tab-sector" name="dashboard-tab" type="radio" />
-        <input id="tab-projects" name="dashboard-tab" type="radio" />
-        <div className="tab-labels">
-          <label htmlFor="tab-overall">Overall Portfolio</label>
-          <label htmlFor="tab-sector">Sector Analysis</label>
-          <label htmlFor="tab-projects">Projects Analysis</label>
+      <section className="command-tabs">
+        <input id="deck-command" name="deck-tab" type="radio" defaultChecked />
+        <input id="deck-sectors" name="deck-tab" type="radio" />
+        <input id="deck-projects" name="deck-tab" type="radio" />
+        <input id="deck-reports" name="deck-tab" type="radio" />
+        <div className="deck-labels">
+          <label htmlFor="deck-command">Command Deck</label>
+          <label htmlFor="deck-sectors">Sector Matrix</label>
+          <label htmlFor="deck-projects">Projects Console</label>
+          <label htmlFor="deck-reports">Report Viewer</label>
         </div>
-        <div className="tab-panels">
-          <section id="overall" className="tab-panel">
-            <div className="section-title"><h2>Overall Portfolio</h2><span>Portfolio-level command view</span></div>
-            <div className="dashboard-grid">
-              <article className="panel"><h3>Sector Distribution</h3><DonutChart /></article>
-              <article className="panel"><h3>Budget Allocation</h3><BarChart rows={projects} field="contract_value" /></article>
-              <article className="panel wide"><h3>Progress Overview</h3><Scatter /></article>
-            </div>
-          </section>
-          <section id="sector" className="tab-panel">
-            <div className="section-title"><h2>Sector Analysis</h2><span>Grouped by sector folder</span></div>
-            <div className="sector-grid">
-              {sectors.map((sector) => (
-                <article className="panel" key={sector.sector}>
-                  <h3>{sector.sector}</h3>
-                  <div className="metric-list">
-                    <span>Projects <b>{sector.project_count}</b></span>
-                    <span>Budget <b>{money(sector.contract_value)}</b></span>
-                    <span>Paid <b>{money(sector.paid_amount)}</b></span>
-                    <span>Progress <b>{percent(sector.average_progress)}</b></span>
-                    <span>SPI <b>{numberValue(sector.average_spi, 2)}</b></span>
-                    <span>CPI <b>{numberValue(sector.average_cpi, 2)}</b></span>
-                    <span>Decisions <b>{sector.decisions_required}</b></span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-          <section id="projects" className="tab-panel">
-            <div className="section-title"><h2>Projects Analysis</h2><span>Open any isolated project deep dive</span></div>
-            <div className="project-grid">
-              {projects.map((project) => (
-                <article className="project-card" key={project.project_key}>
+
+        <div className="deck-panels">
+          <section id="command-panel" className="deck-panel">
+            <div className="twin-grid">
+              <article className="glass-panel digital-map">
+                <div className="section-header">
                   <div>
-                    <b>{project.project_display_name}</b>
-                    <span>{project.sector} / {project.status}</span>
+                    <p className="eyebrow">Interactive Network</p>
+                    <h2>Project Digital Twin</h2>
                   </div>
-                  <div className="metric-list">
-                    <span>Contract <b>{money(project.contract_value)}</b></span>
-                    <span>Paid <b>{money(project.paid_amount)}</b></span>
-                    <span>Progress <b>{percent(project.actual_progress)}</b></span>
-                    <span>SPI <b>{numberValue(project.spi, 2)}</b></span>
-                    <span>CPI <b>{numberValue(project.cpi, 2)}</b></span>
-                    <span>Risk <b>{numberValue(project.risk_score, 1)}</b></span>
+                  <span>{selectedProject.project_folder_name}</span>
+                </div>
+                <ProjectNetwork selectedProject={selectedProject} />
+              </article>
+              <article className="glass-panel neural-console">
+                <div className="section-header">
+                  <div>
+                    <p className="eyebrow">Performance Signals</p>
+                    <h2>Neural Console</h2>
                   </div>
-                  <Link href={`/project/${project.project_key}`}>Open project website</Link>
+                  <span>{selectedProject.status}</span>
+                </div>
+                <div className="gauge-grid">
+                  <Gauge label="SPI" value={selectedProject.spi} tone={statusTone(selectedProject.spi)} />
+                  <Gauge label="CPI" value={selectedProject.cpi} tone={statusTone(selectedProject.cpi)} />
+                  <Gauge label="Progress" value={selectedProject.actual_progress} tone="cyan" />
+                </div>
+                <SignalBar label="Planned progress" value={selectedProject.planned_progress} tone="gold" />
+                <SignalBar label="Actual progress" value={selectedProject.actual_progress} tone="cyan" />
+                <SignalBar label="Data quality" value={(selectedProject.data_quality ?? 0) / 100} tone="violet" />
+              </article>
+            </div>
+          </section>
+
+          <section id="sectors-panel" className="deck-panel">
+            <div className="sector-future-grid">
+              {sectors.map((sector) => (
+                <article className="glass-panel sector-orb" key={sector.sector}>
+                  <h2>{sector.sector}</h2>
+                  <div className="orb-value">{sector.project_count}</div>
+                  <SignalBar label="Progress" value={sector.average_progress} tone="cyan" />
+                  <SignalBar label="SPI" value={sector.average_spi} tone={statusTone(sector.average_spi)} />
+                  <SignalBar label="CPI" value={sector.average_cpi} tone={statusTone(sector.average_cpi)} />
+                  <div className="metric-row"><span>Budget</span><b>{money(sector.contract_value)}</b></div>
+                  <div className="metric-row"><span>Decisions</span><b>{sector.decisions_required}</b></div>
                 </article>
               ))}
             </div>
           </section>
+
+          <section id="projects-panel" className="deck-panel">
+            <ProjectConsole selectedProject={selectedProject} />
+            <div className="project-strip">
+              {projects.map((project) => (
+                <button
+                  type="button"
+                  className={project.project_key === selectedProject.project_key ? "project-chip active" : "project-chip"}
+                  key={project.project_key}
+                  onClick={() => setSelectedProjectKey(project.project_key)}
+                >
+                  <b>{project.project_folder_name}</b>
+                  <span>{project.sector} / SPI {numberValue(project.spi, 2)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section id="reports-panel" className="deck-panel">
+            <section className="glass-panel report-hologram">
+              <div className="section-header">
+                <div>
+                  <p className="eyebrow">Same-Page Outputs</p>
+                  <h2>Holographic Report Viewer</h2>
+                </div>
+                <span>{selectedProject.project_display_name}</span>
+              </div>
+              <div className="report-switcher">
+                {reportTabs.map((tab) => (
+                  <button
+                    type="button"
+                    key={tab.key}
+                    className={tab.key === selectedReport ? "report-tab active" : "report-tab"}
+                    onClick={() => setSelectedReport(tab.key)}
+                  >
+                    <b>{tab.label}</b>
+                    <span>{tab.note}</span>
+                  </button>
+                ))}
+              </div>
+              <iframe src={selectedProject.reports[selectedReport]} title={`${selectedProject.project_display_name} - ${selectedReport}`} />
+            </section>
+          </section>
         </div>
       </section>
+
+      <ProjectConsole selectedProject={selectedProject} />
+      <SourceRegister project={selectedProject} />
     </main>
   );
 }
