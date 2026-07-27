@@ -6,6 +6,7 @@ import json
 import math
 import re
 import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -68,6 +69,211 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         except Exception:
             continue
     return []
+
+
+def compact_file_record(path: Path, base: Path) -> dict[str, Any]:
+    stat = path.stat()
+    return {
+        "name": path.name,
+        "relative_path": path.relative_to(base).as_posix(),
+        "extension": path.suffix.lower().lstrip(".") or "file",
+        "size_kb": round(stat.st_size / 1024, 1),
+        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+    }
+
+
+def list_project_files(path: Path, base: Path, limit: int = 120) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    files = [
+        compact_file_record(child, base)
+        for child in sorted(path.rglob("*"))
+        if child.is_file() and not child.name.startswith(".")
+    ]
+    return files[:limit]
+
+
+def preview_table(path: Path, limit: int = 8) -> dict[str, Any]:
+    rows = read_csv_rows(path)
+    columns: list[str] = []
+    if rows:
+        columns = list(rows[0].keys())
+    elif path.exists():
+        try:
+            with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                reader = csv.reader(handle)
+                columns = next(reader, [])
+        except Exception:
+            columns = []
+    return {
+        "file": path.name,
+        "exists": path.exists(),
+        "row_count": len(rows),
+        "column_count": len(columns),
+        "columns": columns,
+        "rows": rows[:limit],
+    }
+
+
+def xlsx_summary(path: Path, limit: int = 8) -> dict[str, Any]:
+    summary = {"file": path.name, "exists": path.exists(), "sheets": []}
+    if not path.exists():
+        return summary
+    try:
+        from openpyxl import load_workbook  # type: ignore
+
+        workbook = load_workbook(path, read_only=True, data_only=True)
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+            rows_iter = sheet.iter_rows(values_only=True)
+            headers = [str(value or "").strip() for value in next(rows_iter, [])]
+            preview_rows = []
+            row_count = 0
+            for row in rows_iter:
+                row_count += 1
+                if len(preview_rows) < limit:
+                    preview_rows.append({headers[idx] if idx < len(headers) and headers[idx] else f"Column {idx + 1}": value for idx, value in enumerate(row)})
+            summary["sheets"].append(
+                {
+                    "name": sheet_name,
+                    "row_count": row_count,
+                    "column_count": len(headers),
+                    "columns": headers,
+                    "rows": preview_rows,
+                }
+            )
+    except Exception as exc:
+        summary["error"] = str(exc)
+    return summary
+
+
+def sqlite_table_counts(path: Path) -> dict[str, Any]:
+    result: dict[str, Any] = {"exists": path.exists(), "tables": {}, "error": None}
+    if not path.exists():
+        return result
+    try:
+        connection = sqlite3.connect(path)
+        cursor = connection.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        for (table_name,) in cursor.fetchall():
+            try:
+                count = connection.execute(f'SELECT COUNT(*) FROM "{table_name}"').fetchone()[0]
+            except Exception:
+                count = None
+            result["tables"][table_name] = count
+        connection.close()
+    except Exception as exc:
+        result["error"] = str(exc)
+    return result
+
+
+def build_feature_payload(project: dict[str, Any], rows: dict[str, list[dict[str, str]]]) -> dict[str, Any]:
+    base = Path(project["path"])
+    data_dir = base / "01-data" / "import_templates"
+    delay_dir = base / "02-delay_analysis" / "steel_delay_tia_templates"
+    schedule_dir = base / "03-schedule"
+    contracts_dir = base / "05-contracts"
+    evidence_dir = base / "06-evidence"
+    letters_dir = base / "07-letters_intelligence"
+    outputs_dir = OUTPUTS_ROOT / project["project_folder_name"]
+
+    delay_templates = [
+        preview_table(path)
+        for path in sorted(delay_dir.glob("*.csv"))
+    ]
+    delay_required_names = [
+        "01-project_metadata_template.csv",
+        "02-master_activity_steel_analysis.csv",
+        "03-employer_steel_supply_at_site.csv",
+        "04-p6_activity_export.csv",
+        "05-relationship_file.csv",
+        "06-contract_library.csv",
+        "07-ifc_conflict.csv",
+        "08-payments.csv",
+        "09-rfi_status.csv",
+        "10-contractor_steel_supplied_at_site.csv",
+        "11-concurrency_matrix_template.updated.csv",
+    ]
+    normalized_delay_files = {re.sub(r"\s+", "", item["file"].lower()): item for item in delay_templates}
+    missing_delay = [
+        name for name in delay_required_names
+        if re.sub(r"\s+", "", name.lower()) not in normalized_delay_files
+    ]
+
+    letter_files = list_project_files(letters_dir / "inbox", base, 160)
+    letter_workbook = xlsx_summary(letters_dir / "letters_intelligence.xlsx")
+    contract_files = list_project_files(contracts_dir / "source", base, 80)
+    evidence_files = list_project_files(evidence_dir, base, 80)
+    output_files = list_project_files(outputs_dir, OUTPUTS_ROOT, 20)
+
+    return {
+        "overview": {
+            "data_sources": {key: len(value) for key, value in rows.items()},
+            "source_tables": {
+                "projects": preview_table(data_dir / "projects.csv"),
+                "activities": preview_table(data_dir / "activities.csv"),
+                "progress_updates": preview_table(data_dir / "progress_updates.csv"),
+                "evm": preview_table(data_dir / "evm.csv"),
+                "risks": preview_table(data_dir / "risks.csv"),
+                "claims": preview_table(data_dir / "claims.csv"),
+                "contracts": preview_table(data_dir / "contracts.csv"),
+                "payments": preview_table(data_dir / "payments.csv"),
+                "milestones": preview_table(data_dir / "milestones.csv"),
+                "delay_events": preview_table(data_dir / "delay_events.csv"),
+                "wbs": preview_table(data_dir / "wbs.csv"),
+                "s_curve": preview_table(data_dir / "s_curve.csv"),
+            },
+        },
+        "letters_intelligence": {
+            "folder": "07-letters_intelligence",
+            "inbox_files": letter_files,
+            "inbox_file_count": len(letter_files),
+            "workbook": letter_workbook,
+            "detectors": [
+                {"name": "Inbox folder detector", "status": "Active" if (letters_dir / "inbox").exists() else "Missing", "detail": "Recognizes new PDF, DOCX, XLSX, CSV, and message files under project letters inbox."},
+                {"name": "Letters workbook detector", "status": "Active" if (letters_dir / "letters_intelligence.xlsx").exists() else "Missing", "detail": "Reads the project-specific letters intelligence workbook when available."},
+                {"name": "Project isolation", "status": "Active", "detail": "Only files inside the selected project folder are listed."},
+            ],
+        },
+        "delay_analysis": {
+            "folder": "02-delay_analysis/steel_delay_tia_templates",
+            "templates": delay_templates,
+            "required_file_count": len(delay_required_names),
+            "recognized_file_count": len(delay_templates),
+            "missing_required_files": missing_delay,
+            "schedule_tables": {
+                "MEP Activities": preview_table(schedule_dir / "MEP Activities.csv"),
+                "MEP Schedule": preview_table(schedule_dir / "MEP Schedule.csv"),
+                "MEP Civil Logic": preview_table(schedule_dir / "MEP Civil Logic.csv"),
+                "BL Schedule": preview_table(schedule_dir / "BL Schedule.csv"),
+            },
+            "detectors": [
+                {"name": "Delay TIA template detector", "status": "Ready" if not missing_delay else "Needs files", "detail": f"{len(delay_templates)} CSV files recognized in the selected project."},
+                {"name": "Column inspector", "status": "Active", "detail": "Every detected CSV includes row count, column count, and preview rows."},
+                {"name": "MEP schedule detector", "status": "Active" if (schedule_dir / "MEP Schedule.csv").exists() else "Missing", "detail": "Recognizes project-specific MEP schedule and civil logic tables."},
+            ],
+        },
+        "contract_claims": {
+            "folder": "05-contracts",
+            "source_files": contract_files,
+            "evidence_files": evidence_files,
+            "database": sqlite_table_counts(contracts_dir / "contract_claims.db"),
+            "clause_library": xlsx_summary(contracts_dir / "source" / "Overall_Contract_clause_library.xlsx"),
+            "detectors": [
+                {"name": "Contract source detector", "status": "Active" if contract_files else "Missing", "detail": "Finds contract PDFs and clause libraries inside the selected project only."},
+                {"name": "Knowledge base detector", "status": "Active" if (contracts_dir / "contract_claims.db").exists() else "Missing", "detail": "Uses the selected project's own SQLite knowledge base."},
+                {"name": "Evidence detector", "status": "Active" if evidence_files else "Missing", "detail": "Maps claim evidence files from the selected project evidence folder."},
+            ],
+        },
+        "outputs_and_watchers": {
+            "outputs_folder": f"11-outputs/{project['project_folder_name']}",
+            "output_files": output_files,
+            "watchers": [
+                {"name": "Project data detector", "status": "Active", "detail": "Website data generator fingerprints every selected project folder."},
+                {"name": "No-Git sync watcher", "status": "Configured" if (ROOT / "RUN_FULL_PROJECT_NO_GIT_SYNC.bat").exists() else "Missing", "detail": "Syncs local code, project folders, generated HTML, and website files to GitHub."},
+                {"name": "Generated HTML output watcher", "status": "Configured" if outputs_dir.exists() else "Missing", "detail": "Publishes project-specific HTML outputs from 11-outputs."},
+            ],
+        },
+    }
 
 
 def pick(row: dict[str, Any], names: list[str]) -> Any:
@@ -253,6 +459,7 @@ def build_project_record(project: dict[str, Any]) -> dict[str, Any]:
         "source_files": {
             key: len(value) for key, value in rows.items()
         },
+        "features": build_feature_payload(project, rows),
         "reports": {
             "executive_dashboard": f"/generated/{slugify(project['project_folder_name'])}/01_executive_dashboard.html",
             "master_dashboard": f"/generated/{slugify(project['project_folder_name'])}/02_master_dashboard.html",

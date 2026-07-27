@@ -30,6 +30,7 @@ type ProjectRecord = {
   milestone_count: number;
   last_updated: string | null;
   source_files: Record<string, number>;
+  features: FeaturePayload;
   reports: Record<ReportKey, string>;
 };
 
@@ -45,6 +46,82 @@ type SectorRecord = {
   average_risk_score: number | null;
   delayed_projects: number;
   decisions_required: number;
+};
+
+type FileRecord = {
+  name: string;
+  relative_path: string;
+  extension: string;
+  size_kb: number;
+  modified: string;
+};
+
+type DetectorRecord = {
+  name: string;
+  status: string;
+  detail: string;
+};
+
+type TablePreview = {
+  file: string;
+  exists: boolean;
+  row_count: number;
+  column_count: number;
+  columns: string[];
+  rows: Record<string, unknown>[];
+};
+
+type XlsxSummary = {
+  file: string;
+  exists: boolean;
+  sheets?: Array<{
+    name: string;
+    row_count: number;
+    column_count: number;
+    columns: string[];
+    rows: Record<string, unknown>[];
+  }>;
+  error?: string;
+};
+
+type FeaturePayload = {
+  overview: {
+    data_sources: Record<string, number>;
+    source_tables: Record<string, TablePreview>;
+  };
+  letters_intelligence: {
+    folder: string;
+    inbox_files: FileRecord[];
+    inbox_file_count: number;
+    workbook: XlsxSummary;
+    detectors: DetectorRecord[];
+  };
+  delay_analysis: {
+    folder: string;
+    templates: TablePreview[];
+    required_file_count: number;
+    recognized_file_count: number;
+    missing_required_files: string[];
+    schedule_tables: Record<string, TablePreview>;
+    detectors: DetectorRecord[];
+  };
+  contract_claims: {
+    folder: string;
+    source_files: FileRecord[];
+    evidence_files: FileRecord[];
+    database: {
+      exists: boolean;
+      tables: Record<string, number | null>;
+      error: string | null;
+    };
+    clause_library: XlsxSummary;
+    detectors: DetectorRecord[];
+  };
+  outputs_and_watchers: {
+    outputs_folder: string;
+    output_files: FileRecord[];
+    watchers: DetectorRecord[];
+  };
 };
 
 const projects = portfolio.projects as ProjectRecord[];
@@ -251,6 +328,163 @@ function DataStatus({ label, count }: { label: string; count: number | undefined
   );
 }
 
+function displayCell(value: unknown) {
+  if (value === null || value === undefined || value === "") return "N/A";
+  if (typeof value === "number") return numberValue(value, Number.isInteger(value) ? 0 : 2);
+  return String(value);
+}
+
+function FeatureSvg({ mode }: { mode: "letters" | "delay" | "claims" | "watcher" | "portfolio" }) {
+  const palette = {
+    letters: ["#39d7d2", "#63a8ff", "#d6a23a"],
+    delay: ["#d6a23a", "#fb7185", "#39d7d2"],
+    claims: ["#a78bfa", "#d6a23a", "#63a8ff"],
+    watcher: ["#4ade80", "#39d7d2", "#63a8ff"],
+    portfolio: ["#39d7d2", "#d6a23a", "#a78bfa"]
+  }[mode];
+  return (
+    <svg className="feature-svg" viewBox="0 0 520 220" role="img" aria-label={`${mode} feature diagram`}>
+      <defs>
+        <linearGradient id={`grad-${mode}`} x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stopColor={palette[0]} />
+          <stop offset="55%" stopColor={palette[1]} />
+          <stop offset="100%" stopColor={palette[2]} />
+        </linearGradient>
+        <filter id={`soft-${mode}`}>
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <rect x="18" y="22" width="484" height="176" rx="28" fill="rgba(4,13,24,.72)" stroke={`url(#grad-${mode})`} />
+      <path d="M60 150 C130 42 210 166 275 86 S390 56 455 118" fill="none" stroke={`url(#grad-${mode})`} strokeWidth="8" strokeLinecap="round" filter={`url(#soft-${mode})`} />
+      {[70, 180, 290, 405].map((x, index) => (
+        <g key={x}>
+          <circle cx={x} cy={index % 2 ? 76 : 144} r="22" fill={palette[index % palette.length]} filter={`url(#soft-${mode})`} />
+          <circle cx={x} cy={index % 2 ? 76 : 144} r="8" fill="#06101e" />
+        </g>
+      ))}
+      <text x="44" y="58" fill="#f4fbff" fontSize="18" fontWeight="800">{mode.toUpperCase()}</text>
+      <text x="44" y="180" fill="#9bb8ca" fontSize="13">Project-scoped detector and analytics flow</text>
+    </svg>
+  );
+}
+
+function DetectorGrid({ detectors }: { detectors: DetectorRecord[] }) {
+  return (
+    <div className="detector-grid">
+      {detectors.map((detector) => (
+        <article className="detector-card" key={detector.name}>
+          <span className={detector.status.toLowerCase().includes("missing") || detector.status.toLowerCase().includes("needs") ? "detector-badge alert" : "detector-badge"}>
+            {detector.status}
+          </span>
+          <h3>{detector.name}</h3>
+          <p>{detector.detail}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function FileList({ title, files, emptyText = "No files detected" }: { title: string; files: FileRecord[]; emptyText?: string }) {
+  return (
+    <section className="feature-card">
+      <div className="feature-card-head">
+        <h3>{title}</h3>
+        <span>{files.length} files</span>
+      </div>
+      {files.length === 0 ? (
+        <p className="empty-note">{emptyText}</p>
+      ) : (
+        <div className="file-list">
+          {files.slice(0, 14).map((file) => (
+            <div key={file.relative_path}>
+              <b>{file.name}</b>
+              <span>{file.extension.toUpperCase()} / {numberValue(file.size_kb, 1)} KB / {file.modified}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TablePreviewPanel({ table, title }: { table: TablePreview | undefined; title?: string }) {
+  if (!table || !table.exists) {
+    return (
+      <section className="feature-card">
+        <div className="feature-card-head"><h3>{title || "Table Preview"}</h3><span>Missing</span></div>
+        <p className="empty-note">No source table detected for this selected project.</p>
+      </section>
+    );
+  }
+  const columns = table.columns.slice(0, 8);
+  return (
+    <section className="feature-card table-preview-card">
+      <div className="feature-card-head">
+        <h3>{title || table.file}</h3>
+        <span>{table.row_count} rows / {table.column_count} cols</span>
+      </div>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr>
+          </thead>
+          <tbody>
+            {table.rows.slice(0, 6).map((row, index) => (
+              <tr key={index}>
+                {columns.map((column) => <td key={column}>{displayCell(row[column])}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function TemplateInventory({ templates }: { templates: TablePreview[] }) {
+  return (
+    <section className="feature-card">
+      <div className="feature-card-head">
+        <h3>Recognized TIA Template Files</h3>
+        <span>{templates.length} files</span>
+      </div>
+      <div className="template-grid">
+        {templates.map((template) => (
+          <div key={template.file}>
+            <b>{template.file}</b>
+            <span>{template.row_count} rows / {template.column_count} columns</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WorkbookSummary({ workbook, title }: { workbook: XlsxSummary; title: string }) {
+  return (
+    <section className="feature-card">
+      <div className="feature-card-head">
+        <h3>{title}</h3>
+        <span>{workbook.exists ? `${workbook.sheets?.length || 0} sheets` : "Missing"}</span>
+      </div>
+      {!workbook.exists ? <p className="empty-note">Workbook not available for this project.</p> : null}
+      {workbook.error ? <p className="empty-note">{workbook.error}</p> : null}
+      <div className="template-grid">
+        {(workbook.sheets || []).map((sheet) => (
+          <div key={sheet.name}>
+            <b>{sheet.name}</b>
+            <span>{sheet.row_count} rows / {sheet.column_count} columns</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function WorkspaceTabContent({
   project,
   activeTab,
@@ -264,47 +498,62 @@ function WorkspaceTabContent({
 }) {
   if (activeTab === "Overview") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="Project" value={project.project_folder_name} note={project.project_display_name} />
-        <MiniMetric label="Status" value={project.status} note={`${project.sector} sector`} />
-        <MiniMetric label="Contract Value" value={money(project.contract_value)} note="Project source value" />
-        <MiniMetric label="Remaining Value" value={money(project.remaining_value)} note="Contract less paid/spent" />
-        <MiniMetric label="Planned Progress" value={percent(project.planned_progress)} note="Planned progress source" />
-        <MiniMetric label="Actual Progress" value={percent(project.actual_progress)} note="Actual progress source" />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="Project" value={project.project_folder_name} note={project.project_display_name} />
+          <MiniMetric label="Status" value={project.status} note={`${project.sector} sector`} />
+          <MiniMetric label="Contract Value" value={money(project.contract_value)} note="Project source value" />
+          <MiniMetric label="Remaining Value" value={money(project.remaining_value)} note="Contract less paid/spent" />
+          <MiniMetric label="Planned Progress" value={percent(project.planned_progress)} note="Planned progress source" />
+          <MiniMetric label="Actual Progress" value={percent(project.actual_progress)} note="Actual progress source" />
+        </div>
+        <div className="workspace-two">
+          <FeatureSvg mode="portfolio" />
+          <TablePreviewPanel table={project.features.overview.source_tables.projects} title="Project Overview Source" />
+        </div>
       </div>
     );
   }
 
   if (activeTab === "EBS / WBS") {
     return (
-      <div className="workspace-two">
-        <div>
-          <h3>EBS / WBS Register</h3>
-          <p>Shows the selected project structure and work breakdown availability from its own folder only.</p>
-          <DataStatus label="WBS" count={project.source_files.projects ? project.source_files.projects : undefined} />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="WBS Rows" value={numberValue(project.features.overview.source_tables.wbs?.row_count)} note="Work breakdown records" />
+          <MiniMetric label="Activity Rows" value={numberValue(project.source_files.activities)} note="Activity records linked to WBS" />
+          <MiniMetric label="Project Scope" value={project.sector} note="Sector-based project grouping" />
         </div>
-        <iframe src={project.reports.master_dashboard} title={`${project.project_display_name} master dashboard WBS`} />
+        <div className="workspace-two">
+          <TablePreviewPanel table={project.features.overview.source_tables.wbs} title="EBS / WBS Source Table" />
+          <iframe src={project.reports.master_dashboard} title={`${project.project_display_name} master dashboard WBS`} />
+        </div>
       </div>
     );
   }
 
   if (activeTab === "Activities") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="Activities Loaded" value={numberValue(project.activity_count)} note="Activity source records" />
-        <MiniMetric label="Progress Records" value={numberValue(project.source_files.progress)} note="Progress update rows" />
-        <MiniMetric label="EVM Records" value={numberValue(project.source_files.evm)} note="Earned value rows" />
-        <MiniMetric label="Delay Events" value={numberValue(project.source_files.delay_events)} note="Delay event records" />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="Activities Loaded" value={numberValue(project.activity_count)} note="Activity source records" />
+          <MiniMetric label="Progress Records" value={numberValue(project.source_files.progress)} note="Progress update rows" />
+          <MiniMetric label="EVM Records" value={numberValue(project.source_files.evm)} note="Earned value rows" />
+          <MiniMetric label="Delay Events" value={numberValue(project.source_files.delay_events)} note="Delay event records" />
+        </div>
+        <TablePreviewPanel table={project.features.overview.source_tables.activities} title="Activities Register Preview" />
       </div>
     );
   }
 
   if (activeTab === "Milestones") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="Milestones" value={numberValue(project.milestone_count)} note="Milestone records loaded" />
-        <MiniMetric label="Schedule Health" value={numberValue(project.spi, 2)} note="SPI schedule indicator" />
-        <MiniMetric label="Delayed Days" value={numberValue(project.delay_days)} note="Delay days from project data" />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="Milestones" value={numberValue(project.milestone_count)} note="Milestone records loaded" />
+          <MiniMetric label="Schedule Health" value={numberValue(project.spi, 2)} note="SPI schedule indicator" />
+          <MiniMetric label="Delayed Days" value={numberValue(project.delay_days)} note="Delay days from project data" />
+        </div>
+        <TablePreviewPanel table={project.features.overview.source_tables.milestones} title="Milestone Register Preview" />
       </div>
     );
   }
@@ -315,7 +564,9 @@ function WorkspaceTabContent({
         <div>
           <h3>S-Curve</h3>
           <p>Uses the selected project progress and generated dashboard outputs. If the source S-curve file is missing, the report remains available with controlled source notes.</p>
+          <DataStatus label="S-Curve Rows" count={project.features.overview.source_tables.s_curve?.row_count} />
           <DataStatus label="Progress Updates" count={project.source_files.progress} />
+          <TablePreviewPanel table={project.features.overview.source_tables.s_curve} title="S-Curve Source" />
         </div>
         <iframe src={project.reports.linked_executive_dashboard} title={`${project.project_display_name} linked dashboard`} />
       </div>
@@ -324,76 +575,145 @@ function WorkspaceTabContent({
 
   if (activeTab === "EVM") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="BAC" value={money(project.contract_value)} note="Budget at completion" />
-        <MiniMetric label="PV" value={money(project.contract_value !== null && project.planned_progress !== null ? project.contract_value * project.planned_progress : null)} note="Planned value" />
-        <MiniMetric label="EV" value={money(project.contract_value !== null && project.actual_progress !== null ? project.contract_value * project.actual_progress : null)} note="Earned value" />
-        <MiniMetric label="AC" value={money(project.spent_amount)} note="Actual cost / spent" />
-        <MiniMetric label="SPI" value={numberValue(project.spi, 2)} note="EV / PV" />
-        <MiniMetric label="CPI" value={numberValue(project.cpi, 2)} note="EV / AC" />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="BAC" value={money(project.contract_value)} note="Budget at completion" />
+          <MiniMetric label="PV" value={money(project.contract_value !== null && project.planned_progress !== null ? project.contract_value * project.planned_progress : null)} note="Planned value" />
+          <MiniMetric label="EV" value={money(project.contract_value !== null && project.actual_progress !== null ? project.contract_value * project.actual_progress : null)} note="Earned value" />
+          <MiniMetric label="AC" value={money(project.spent_amount)} note="Actual cost / spent" />
+          <MiniMetric label="SPI" value={numberValue(project.spi, 2)} note="EV / PV" />
+          <MiniMetric label="CPI" value={numberValue(project.cpi, 2)} note="EV / AC" />
+        </div>
+        <TablePreviewPanel table={project.features.overview.source_tables.evm} title="EVM Source Table" />
       </div>
     );
   }
 
   if (activeTab === "Contracts") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="Contract Value" value={money(project.contract_value)} note="Current contract value" />
-        <MiniMetric label="Paid Amount" value={money(project.paid_amount)} note="Payment file amount" />
-        <MiniMetric label="Spent Amount" value={money(project.spent_amount)} note="Actual cost / spent" />
-        <MiniMetric label="Remaining" value={money(project.remaining_value)} note="Commercial balance" />
-        <MiniMetric label="Contract Rows" value={numberValue(project.source_files.contracts)} note="Contract records" />
-        <MiniMetric label="Payment Rows" value={numberValue(project.source_files.payments)} note="Payment records" />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="Contract Value" value={money(project.contract_value)} note="Current contract value" />
+          <MiniMetric label="Paid Amount" value={money(project.paid_amount)} note="Payment file amount" />
+          <MiniMetric label="Spent Amount" value={money(project.spent_amount)} note="Actual cost / spent" />
+          <MiniMetric label="Remaining" value={money(project.remaining_value)} note="Commercial balance" />
+          <MiniMetric label="Contract Rows" value={numberValue(project.source_files.contracts)} note="Contract records" />
+          <MiniMetric label="Payment Rows" value={numberValue(project.source_files.payments)} note="Payment records" />
+        </div>
+        <div className="workspace-two">
+          <TablePreviewPanel table={project.features.overview.source_tables.contracts} title="Contracts Register Preview" />
+          <TablePreviewPanel table={project.features.overview.source_tables.payments} title="Payments Register Preview" />
+        </div>
       </div>
     );
   }
 
   if (activeTab === "Risk Matrix") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="Risk Score" value={numberValue(project.risk_score, 1)} note="Average risk indicator" />
-        <MiniMetric label="Risk Records" value={numberValue(project.source_files.risks)} note="Risk rows loaded" />
-        <MiniMetric label="Decision Required" value={project.decision_required ? "Yes" : "No"} note="Rule-based management trigger" />
-        <MiniMetric label="Delay Days" value={numberValue(project.delay_days)} note="Delay exposure" />
+      <div className="feature-stack">
+        <div className="workspace-grid">
+          <MiniMetric label="Risk Score" value={numberValue(project.risk_score, 1)} note="Average risk indicator" />
+          <MiniMetric label="Risk Records" value={numberValue(project.source_files.risks)} note="Risk rows loaded" />
+          <MiniMetric label="Decision Required" value={project.decision_required ? "Yes" : "No"} note="Rule-based management trigger" />
+          <MiniMetric label="Delay Days" value={numberValue(project.delay_days)} note="Delay exposure" />
+        </div>
+        <TablePreviewPanel table={project.features.overview.source_tables.risks} title="Risk Matrix Source Table" />
       </div>
     );
   }
 
   if (activeTab === "Letters Intelligence") {
     return (
-      <div className="workspace-two">
-        <div>
-          <h3>Letters Intelligence</h3>
-          <p>Correspondence is project-isolated. The website shows availability and links to the generated project output package where correspondence intelligence is represented.</p>
-          <DataStatus label="Claims Rows" count={project.source_files.claims} />
-          <DataStatus label="Delay Events" count={project.source_files.delay_events} />
+      <div className="feature-stack">
+        <div className="workspace-two">
+          <div>
+            <h3>Letters Intelligence</h3>
+            <p>Correspondence is project-isolated. New letters added inside this project's inbox folder are recognized by the generator and reflected after sync/deploy.</p>
+            <DataStatus label="Inbox Files" count={project.features.letters_intelligence.inbox_file_count} />
+            <DataStatus label="Claims Rows" count={project.source_files.claims} />
+            <DataStatus label="Delay Events" count={project.source_files.delay_events} />
+          </div>
+          <FeatureSvg mode="letters" />
         </div>
-        <iframe src={project.reports.master_dashboard} title={`${project.project_display_name} letters intelligence`} />
+        <DetectorGrid detectors={project.features.letters_intelligence.detectors} />
+        <div className="workspace-two">
+          <WorkbookSummary workbook={project.features.letters_intelligence.workbook} title="Letters Intelligence Workbook" />
+          <FileList title="Detected Letter Files" files={project.features.letters_intelligence.inbox_files} />
+        </div>
+        <iframe className="wide-embed" src={project.reports.master_dashboard} title={`${project.project_display_name} letters intelligence`} />
       </div>
     );
   }
 
   if (activeTab === "Delay Analysis") {
     return (
-      <div className="workspace-two">
-        <div>
-          <h3>Delay Analysis - Time Impact Analysis</h3>
-          <p>Selected project delay logic is shown from the project-specific generated outputs and source registers. No fallback project data is used.</p>
-          <DataStatus label="Delay Events" count={project.source_files.delay_events} />
-          <DataStatus label="Activities" count={project.source_files.activities} />
+      <div className="feature-stack">
+        <div className="workspace-two">
+          <div>
+            <h3>Delay Analysis - Time Impact Analysis</h3>
+            <p>Shows upload recognition, template inventory, schedule inputs, MEP support tables, question data, and generated delay outputs for the selected project only.</p>
+            <DataStatus label="Recognized TIA Files" count={project.features.delay_analysis.recognized_file_count} />
+            <DataStatus label="Required TIA Files" count={project.features.delay_analysis.required_file_count} />
+            <DataStatus label="Delay Events" count={project.source_files.delay_events} />
+          </div>
+          <FeatureSvg mode="delay" />
         </div>
-        <iframe src={project.reports.elite_svg_charts} title={`${project.project_display_name} delay analysis charts`} />
+        <DetectorGrid detectors={project.features.delay_analysis.detectors} />
+        {project.features.delay_analysis.missing_required_files.length ? (
+          <section className="feature-card warning-card">
+            <div className="feature-card-head"><h3>Missing Required TIA Files</h3><span>{project.features.delay_analysis.missing_required_files.length}</span></div>
+            <p>{project.features.delay_analysis.missing_required_files.join(", ")}</p>
+          </section>
+        ) : null}
+        <TemplateInventory templates={project.features.delay_analysis.templates} />
+        <div className="workspace-two">
+          <TablePreviewPanel table={project.features.delay_analysis.schedule_tables["MEP Activities"]} title="MEP Activities" />
+          <TablePreviewPanel table={project.features.delay_analysis.schedule_tables["MEP Schedule"]} title="MEP Schedule" />
+        </div>
+        <div className="workspace-two">
+          <TablePreviewPanel table={project.features.delay_analysis.schedule_tables["MEP Civil Logic"]} title="MEP Civil Logic" />
+          <TablePreviewPanel table={project.features.delay_analysis.schedule_tables["BL Schedule"]} title="BL Schedule" />
+        </div>
+        <iframe className="wide-embed" src={project.reports.elite_svg_charts} title={`${project.project_display_name} delay analysis charts`} />
       </div>
     );
   }
 
   if (activeTab === "Contract & Claims") {
     return (
-      <div className="workspace-grid">
-        <MiniMetric label="Claims / EOT Exposure" value={money(project.claims_exposure)} note="Claims and EOT source exposure" />
-        <MiniMetric label="Claims Rows" value={numberValue(project.source_files.claims)} note="Claims records loaded" />
-        <MiniMetric label="Contracts Rows" value={numberValue(project.source_files.contracts)} note="Contract source rows" />
-        <MiniMetric label="Evidence Readiness" value={`${numberValue(project.data_quality, 1)}%`} note="Source completeness indicator" />
+      <div className="feature-stack">
+        <div className="workspace-two">
+          <div>
+            <h3>Contract & Claims Intelligence Center</h3>
+            <p>Uses the selected project's contract source folder, evidence folder, and project-specific SQLite knowledge base. It does not read another project's claim library.</p>
+            <DataStatus label="Contract Files" count={project.features.contract_claims.source_files.length} />
+            <DataStatus label="Evidence Files" count={project.features.contract_claims.evidence_files.length} />
+            <DataStatus label="Knowledge Tables" count={Object.keys(project.features.contract_claims.database.tables || {}).length} />
+          </div>
+          <FeatureSvg mode="claims" />
+        </div>
+        <div className="workspace-grid">
+          <MiniMetric label="Claims / EOT Exposure" value={money(project.claims_exposure)} note="Claims and EOT source exposure" />
+          <MiniMetric label="Claims Rows" value={numberValue(project.source_files.claims)} note="Claims records loaded" />
+          <MiniMetric label="Contracts Rows" value={numberValue(project.source_files.contracts)} note="Contract source rows" />
+          <MiniMetric label="Evidence Readiness" value={`${numberValue(project.data_quality, 1)}%`} note="Source completeness indicator" />
+        </div>
+        <DetectorGrid detectors={project.features.contract_claims.detectors} />
+        <div className="workspace-two">
+          <WorkbookSummary workbook={project.features.contract_claims.clause_library} title="Overall Contract Clause Library" />
+          <section className="feature-card">
+            <div className="feature-card-head"><h3>Knowledge Base Tables</h3><span>{project.features.contract_claims.database.exists ? "SQLite" : "Missing"}</span></div>
+            <div className="template-grid">
+              {Object.entries(project.features.contract_claims.database.tables || {}).map(([table, count]) => (
+                <div key={table}><b>{table}</b><span>{count ?? "N/A"} rows</span></div>
+              ))}
+            </div>
+          </section>
+        </div>
+        <div className="workspace-two">
+          <FileList title="Contract Source Files" files={project.features.contract_claims.source_files} />
+          <FileList title="Evidence Files" files={project.features.contract_claims.evidence_files} />
+        </div>
       </div>
     );
   }
@@ -420,6 +740,8 @@ function WorkspaceTabContent({
           </button>
         ))}
       </div>
+      <DetectorGrid detectors={project.features.outputs_and_watchers.watchers} />
+      <FileList title="Automatic HTML Outputs" files={project.features.outputs_and_watchers.output_files} />
       <iframe src={project.reports[selectedReport]} title={`${project.project_display_name} - ${selectedReport}`} />
     </section>
   );
