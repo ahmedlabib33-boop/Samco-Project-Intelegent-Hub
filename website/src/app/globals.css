@@ -100,6 +100,47 @@ select {
   z-index: 1;
 }
 
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 10px 14px 10px 10px;
+  border: 1px solid rgba(57, 215, 210, 0.34);
+  border-radius: 18px;
+  background: rgba(4, 13, 24, 0.48);
+}
+
+.brand-lockup img {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 6px;
+}
+
+.brand-lockup span,
+.brand-lockup small {
+  display: block;
+}
+
+.brand-lockup span {
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.brand-lockup small {
+  margin-top: 4px;
+  color: var(--cyan);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .eyebrow {
   margin: 0 0 10px;
   color: var(--gold);
@@ -610,6 +651,23 @@ h2 {
   margin-top: 22px;
 }
 
+.app-credit {
+  margin-top: 22px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: var(--muted);
+  background: rgba(4, 13, 24, 0.52);
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.app-credit strong {
+  color: var(--gold);
+  font-weight: 900;
+}
+
 .project-workspace {
   margin-top: 24px;
   padding: 24px;
@@ -1002,6 +1060,15 @@ h2 {
 
   h1 {
     font-size: 2.6rem;
+  }
+
+  .brand-lockup {
+    width: 100%;
+  }
+
+  .brand-lockup img {
+    width: 54px;
+    height: 54px;
   }
 
   .holo-kpi-grid,

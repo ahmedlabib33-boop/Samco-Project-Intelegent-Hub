@@ -853,6 +853,13 @@ export default function HomePage() {
     <main className="future-shell">
       <section className="future-hero">
         <div className="hero-copy">
+          <div className="brand-lockup">
+            <img src="/assets/logo.png" alt="SAMCO Egypt logo" />
+            <div>
+              <span>SAMCO Egypt</span>
+              <small>Project Intelligence Hub</small>
+            </div>
+          </div>
           <p className="eyebrow">Decision Making Dashboard</p>
           <h1>Decision Making Dashboard</h1>
           <p>
@@ -990,6 +997,9 @@ export default function HomePage() {
 
       <ProjectWorkspace project={selectedProject} selectedReport={selectedReport} setSelectedReport={setSelectedReport} />
       <SourceRegister project={selectedProject} />
+      <footer className="app-credit">
+        Designed &amp; Created | <strong>Engr. Ahmed Labib</strong>
+      </footer>
     </main>
   );
 }
