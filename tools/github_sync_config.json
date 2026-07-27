@@ -18,6 +18,9 @@
                                  ".tmp",
                                  ".streamlit/delay_tia_upload_cache",
                                  "node_modules",
+                                 ".next",
+                                 ".vercel",
+                                 "out",
                                  "backups",
                                  ".sync_state",
                                  "logs"
