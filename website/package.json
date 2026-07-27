@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "predev": "python ../tools/generate_nextjs_website_data.py",
+    "generate-data": "python ../tools/generate_nextjs_website_data.py",
     "dev": "next dev",
-    "prebuild": "python ../tools/generate_nextjs_website_data.py",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
