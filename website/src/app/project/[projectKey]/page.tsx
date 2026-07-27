@@ -41,8 +41,9 @@ function percent(value: number | null | undefined) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-export default function ProjectPage({ params }: { params: { projectKey: string } }) {
-  const project = projects.find((item) => item.project_key === params.projectKey);
+export default async function ProjectPage({ params }: { params: Promise<{ projectKey: string }> }) {
+  const { projectKey } = await params;
+  const project = projects.find((item) => item.project_key === projectKey);
   if (!project) {
     return (
       <main>
