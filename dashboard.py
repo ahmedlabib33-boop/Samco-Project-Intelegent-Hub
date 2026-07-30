@@ -863,18 +863,18 @@ def render_decision_kpi_cards(registry_df: pd.DataFrame) -> None:
     avg_risk = registry_df["Risk Score"].replace(0, pd.NA).dropna().mean()
     decisions_required = int(registry_df["Required Decision"].astype(str).ne("Monitor").sum())
     cards = [
-        ("Total Projects", len(registry_df), "??", "Neutral", "Total discovered project folders in the selected portfolio scope."),
-        ("Total Contract Value", egp(total_value), "??", "Neutral", "Sum of selected projects contract value or BAC when available."),
-        ("Total Paid", egp(total_paid), "??", "Neutral", "Payments paid from project payment records."),
-        ("Remaining Value", egp(remaining), "??", "Neutral", "Contract value less paid value where both are available."),
-        ("Average Progress", pct(registry_df["Progress"].mean()), "??", "Healthy" if registry_df["Progress"].mean() >= registry_df["Planned Progress"].mean() else "Watchlist", "Average actual progress for selected projects."),
-        ("Delayed Projects", delayed_projects, "?", "Critical" if delayed_projects else "Healthy", "Projects with delay days in delay event records."),
-        ("High-Risk Projects", high_risk_projects, "?", "Critical" if high_risk_projects else "Healthy", "Projects with normalized risk score >= 70."),
-        ("Average SPI", f"{avg_spi:.2f}" if pd.notna(avg_spi) else "N/A", "??", "On Track" if pd.notna(avg_spi) and avg_spi >= 1 else ("Watchlist" if pd.notna(avg_spi) and avg_spi >= 0.9 else "Critical"), "Schedule Performance Index: EV / PV."),
-        ("Average CPI", f"{avg_cpi:.2f}" if pd.notna(avg_cpi) else "N/A", "??", "Cost Efficient" if pd.notna(avg_cpi) and avg_cpi >= 1 else ("Cost Watch" if pd.notna(avg_cpi) and avg_cpi >= 0.9 else "Cost Critical"), "Cost Performance Index: EV / AC."),
-        ("Average Risk Score", f"{avg_risk:.1f}" if pd.notna(avg_risk) else "N/A", "??", "Critical" if pd.notna(avg_risk) and avg_risk >= 70 else ("Watchlist" if pd.notna(avg_risk) and avg_risk >= 35 else "Healthy"), "Normalized 0-100 risk score from available risk data."),
-        ("Claims / EOT Exposure", f"{registry_df['Claims / EOT Exposure'].fillna(0).sum():,.0f}", "??", "Watchlist" if registry_df["Claims / EOT Exposure"].fillna(0).sum() else "Neutral", "Sum of available claim amount, EOT days, or delay impact fields."),
-        ("Decisions Required", decisions_required, "??", "Critical" if decisions_required else "Healthy", "Triggered by SPI/CPI/risk/delay thresholds."),
+        ("Total Projects", len(registry_df), "PRJ", "Neutral", "Total discovered project folders in the selected portfolio scope."),
+        ("Total Contract Value", egp(total_value), "EGP", "Neutral", "Sum of selected projects contract value or BAC when available."),
+        ("Total Paid", egp(total_paid), "PAY", "Neutral", "Payments paid from project payment records."),
+        ("Remaining Value", egp(remaining), "REM", "Neutral", "Contract value less paid value where both are available."),
+        ("Average Progress", pct(registry_df["Progress"].mean()), "PRG", "Healthy" if registry_df["Progress"].mean() >= registry_df["Planned Progress"].mean() else "Watchlist", "Average actual progress for selected projects."),
+        ("Delayed Projects", delayed_projects, "DLY", "Critical" if delayed_projects else "Healthy", "Projects with delay days in delay event records."),
+        ("High-Risk Projects", high_risk_projects, "RSK", "Critical" if high_risk_projects else "Healthy", "Projects with normalized risk score >= 70."),
+        ("Average SPI", f"{avg_spi:.2f}" if pd.notna(avg_spi) else "N/A", "SPI", "On Track" if pd.notna(avg_spi) and avg_spi >= 1 else ("Watchlist" if pd.notna(avg_spi) and avg_spi >= 0.9 else "Critical"), "Schedule Performance Index: EV / PV."),
+        ("Average CPI", f"{avg_cpi:.2f}" if pd.notna(avg_cpi) else "N/A", "CPI", "Cost Efficient" if pd.notna(avg_cpi) and avg_cpi >= 1 else ("Cost Watch" if pd.notna(avg_cpi) and avg_cpi >= 0.9 else "Cost Critical"), "Cost Performance Index: EV / AC."),
+        ("Average Risk Score", f"{avg_risk:.1f}" if pd.notna(avg_risk) else "N/A", "RSC", "Critical" if pd.notna(avg_risk) and avg_risk >= 70 else ("Watchlist" if pd.notna(avg_risk) and avg_risk >= 35 else "Healthy"), "Normalized 0-100 risk score from available risk data."),
+        ("Claims / EOT Exposure", f"{registry_df['Claims / EOT Exposure'].fillna(0).sum():,.0f}", "EOT", "Watchlist" if registry_df["Claims / EOT Exposure"].fillna(0).sum() else "Neutral", "Sum of available claim amount, EOT days, or delay impact fields."),
+        ("Decisions Required", decisions_required, "ACT", "Critical" if decisions_required else "Healthy", "Triggered by SPI/CPI/risk/delay thresholds."),
     ]
     for chunk_start in (0, 4, 8):
         cols = st.columns(4, gap="medium")
